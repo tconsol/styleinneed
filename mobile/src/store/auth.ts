@@ -13,6 +13,7 @@ interface AuthState {
   register: (payload: { name: string; email: string; phone: string; password: string }) => Promise<void>;
   verifyEmail: (email: string, otp: string) => Promise<void>;
   resendOtp: (email: string) => Promise<void>;
+  forgotPassword: (email: string) => Promise<string>;
   logout: () => Promise<void>;
   hydrate: () => Promise<void>;
 }
@@ -49,6 +50,13 @@ export const useAuth = create<AuthState>((set) => ({
 
   resendOtp: async (email) => {
     await api.post('/auth/resend-otp', { email });
+  },
+
+  // Server always responds success (doesn't leak whether the email exists) and,
+  // if the account is real, emails a web link to finish the reset there.
+  forgotPassword: async (email) => {
+    const { data } = await api.post('/auth/forgot-password', { email });
+    return data.message as string;
   },
 
   logout: async () => {

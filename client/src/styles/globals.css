@@ -21,6 +21,7 @@
     --color-border: 232 221 212;         /* #E8DDD4 */
     --header-height: 56px;
     --topbar-height: 96px; /* announcement (~40px) + nav (56px) */
+    --bottomnav-height: 64px;
   }
 
   @media (min-width: 768px) {

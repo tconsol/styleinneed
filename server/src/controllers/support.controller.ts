@@ -52,6 +52,22 @@ export const getTicketById = async (req: AuthRequest, res: Response, next: NextF
     }).populate('messages.sender', 'name role');
 
     if (!ticket) { sendError(res, 'Ticket not found', 404); return; }
+    const sanitized = ticket.toObject();
+    sanitized.messages = sanitized.messages.filter((m) => !m.isInternal);
+    sendSuccess(res, 'Ticket details', sanitized);
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const getTicketByIdAdmin = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const ticket = await SupportTicket.findById(req.params.id)
+      .populate('user', 'name email phone')
+      .populate('assignedTo', 'name')
+      .populate('messages.sender', 'name role');
+
+    if (!ticket) { sendError(res, 'Ticket not found', 404); return; }
     sendSuccess(res, 'Ticket details', ticket);
   } catch (err) {
     next(err);

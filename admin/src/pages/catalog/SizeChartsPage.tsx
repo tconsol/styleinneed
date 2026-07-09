@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Plus, Edit2, Trash2, Ruler, X, GripVertical } from 'lucide-react';
+import { Plus, Edit2, Trash2, Ruler, X } from 'lucide-react';
 import { sizeChartApi } from '../../api';
 import type { SizeChart, SizeChartRow } from '../../types';
 import Modal from '../../components/common/Modal';

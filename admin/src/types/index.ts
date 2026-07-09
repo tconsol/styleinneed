@@ -252,15 +252,28 @@ export interface Review {
   createdAt: string;
 }
 
+export interface SupportTicketMessage {
+  _id?: string;
+  sender: { _id: string; name: string; role: string } | string;
+  senderRole: string;
+  content: string;
+  isInternal: boolean;
+  createdAt: string;
+}
+
 export interface SupportTicket {
   _id: string;
   ticketId: string;
-  user: { _id: string; name: string; email: string };
+  user: { _id: string; name: string; email: string; phone?: string };
   subject: string;
   category: string;
+  description?: string;
+  images?: string[];
   status: 'open' | 'pending' | 'resolved' | 'closed';
   priority: 'low' | 'medium' | 'high';
   assignedTo?: { name: string };
+  messages?: SupportTicketMessage[];
+  resolvedAt?: string;
   createdAt: string;
 }
 

@@ -21,6 +21,7 @@ const LoginPage = lazy(() => import('./pages/auth/LoginPage'));
 const RegisterPage = lazy(() => import('./pages/auth/RegisterPage'));
 const VerifyEmailPage = lazy(() => import('./pages/auth/VerifyEmailPage'));
 const ForgotPasswordPage = lazy(() => import('./pages/auth/ForgotPasswordPage'));
+const ResetPasswordPage = lazy(() => import('./pages/auth/ResetPasswordPage'));
 const OrderTrackingPage = lazy(() => import('./pages/OrderTrackingPage'));
 const PaymentReturnPage = lazy(() => import('./pages/PaymentReturnPage'));
 
@@ -70,6 +71,7 @@ export default function App() {
               <Route path="/auth/register" element={<RegisterPage />} />
               <Route path="/auth/verify-email" element={<VerifyEmailPage />} />
               <Route path="/auth/forgot-password" element={<ForgotPasswordPage />} />
+              <Route path="/reset-password" element={<ResetPasswordPage />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Route>
           </Routes>

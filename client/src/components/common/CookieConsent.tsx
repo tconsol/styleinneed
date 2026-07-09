@@ -21,7 +21,7 @@ export default function CookieConsent() {
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: 100, opacity: 0 }}
           transition={{ type: 'tween', duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
-          className="fixed bottom-4 inset-x-4 md:inset-x-auto md:right-6 md:max-w-md z-[80]"
+          className="fixed inset-x-4 lg:inset-x-auto lg:right-6 lg:max-w-md lg:bottom-6 z-[80] bottom-[calc(var(--bottomnav-height)+env(safe-area-inset-bottom)+1rem)]"
         >
           <div className="bg-white border border-brand-border rounded-2xl shadow-luxury p-5">
             <div className="flex items-start gap-3">

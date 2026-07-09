@@ -49,7 +49,7 @@ export default function ProductCard({ product, width }: { product: Product; widt
           />
         </Pressable>
         {/* Out of stock overlay */}
-        {product.totalStock === 0 && (
+        {product.variants.reduce((s, v) => s + v.stock, 0) === 0 && (
           <View style={styles.oos}>
             <Text style={styles.oosText}>OUT OF STOCK</Text>
           </View>

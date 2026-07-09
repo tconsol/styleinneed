@@ -1,14 +1,36 @@
 import { Request, Response, NextFunction } from 'express';
+import jwt from 'jsonwebtoken';
 import Blog from '../models/Blog';
-import { AuthRequest } from '../types';
+import User from '../models/User';
+import { AuthRequest, JwtPayload } from '../types';
 import { sendSuccess, sendError, getPagination } from '../utils/apiResponse';
+
+// Non-throwing admin check for the public blog listing: only trusted when a
+// valid admin Bearer token is present. Absent/invalid/non-admin tokens are
+// silently ignored so the public listing behavior never changes.
+const isAdminRequest = async (req: Request): Promise<boolean> => {
+  const token = req.headers.authorization?.startsWith('Bearer ')
+    ? req.headers.authorization.split(' ')[1]
+    : undefined;
+  if (!token) return false;
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as JwtPayload;
+    const user = await User.findById(decoded.userId).select('role isActive').lean();
+    return !!user && user.isActive && user.role === 'admin';
+  } catch {
+    return false;
+  }
+};
 
 export const getBlogs = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { page, limit, category, tag, search } = req.query as Record<string, string>;
+    const { page, limit, category, tag, search, includeUnpublished } = req.query as Record<string, string>;
     const { page: p, limit: l, skip } = getPagination(page, limit);
 
     const filter: Record<string, unknown> = { isPublished: true };
+    if (includeUnpublished === 'true' && (await isAdminRequest(req))) {
+      delete filter.isPublished;
+    }
     if (category) filter.category = category;
     if (tag) filter.tags = tag;
     if (search) filter.$text = { $search: search };

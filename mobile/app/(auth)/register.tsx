@@ -22,9 +22,9 @@ const GOOGLE_SVG = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My
 
 const schema = z
   .object({
-    name: z.string().min(2, 'Enter your full name'),
+    name: z.string().min(2, 'Enter your full name').max(50, 'Max 50 characters'),
     email: z.string().email('Enter a valid email'),
-    phone: z.string().min(10, 'Enter a valid phone').max(15),
+    phone: z.string().regex(/^[6-9]\d{9}$/, 'Enter a valid 10-digit mobile number'),
     password: z
       .string()
       .min(8, 'Min 8 characters')

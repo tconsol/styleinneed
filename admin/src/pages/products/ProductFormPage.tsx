@@ -200,12 +200,6 @@ export default function ProductFormPage() {
   // ── Variants (individual edits) ──
   const updateVariant = (i: number, key: 'sku' | 'stock', val: string | number) =>
     setForm((prev) => { const vs = [...prev.variants]; vs[i] = { ...vs[i], [key]: val }; return { ...prev, variants: vs }; });
-  const updateVariantAttr = (i: number, slug: string, val: string) =>
-    setForm((prev) => {
-      const vs = [...prev.variants];
-      vs[i] = { ...vs[i], attributes: { ...(vs[i].attributes || {}), [slug]: val } };
-      return { ...prev, variants: vs };
-    });
   const removeVariant = (i: number) =>
     setForm((prev) => ({ ...prev, variants: prev.variants.filter((_, idx) => idx !== i) }));
 

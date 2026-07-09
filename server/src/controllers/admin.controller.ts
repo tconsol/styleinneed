@@ -196,6 +196,34 @@ export const getAllOrders = async (req: Request, res: Response, next: NextFuncti
   }
 };
 
+export const getAdminProducts = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { page, limit, sort = '-createdAt', search, isActive } = req.query as Record<string, string>;
+    const { page: p, limit: l, skip } = getPagination(page, limit);
+
+    const filter: Record<string, unknown> = {};
+    if (isActive !== undefined) filter.isActive = isActive === 'true';
+    if (search) filter.$text = { $search: search };
+
+    const [products, total] = await Promise.all([
+      Product.find(filter)
+        .populate('category', 'name slug')
+        .populate('collections', 'name slug')
+        .sort(sort)
+        .skip(skip)
+        .limit(l)
+        .lean(),
+      Product.countDocuments(filter),
+    ]);
+
+    sendSuccess(res, 'Products fetched', products, 200, {
+      page: p, limit: l, total, pages: Math.ceil(total / l),
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 export const getAdminProductById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const product = await Product.findById(req.params.id)

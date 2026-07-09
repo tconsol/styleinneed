@@ -32,7 +32,7 @@ export default function ProductDetailPage() {
   const [zoom, setZoom] = useState(false);
 
   const { isAuthenticated } = useAuthStore();
-  const { addItem, isLoading: cartLoading } = useCartStore();
+  const { addItem, updateItem, removeItem, openCart, items: cartItems, isLoading: cartLoading } = useCartStore();
   const { toggle, isWishlisted } = useWishlistStore();
 
   useEffect(() => {
@@ -88,6 +88,9 @@ export default function ProductDetailPage() {
   const images = selectedVariant?.images?.length ? selectedVariant.images : product.images;
   const hasStock = selectedVariant ? selectedVariant.stock > 0 : false;
   const wishlisted = isWishlisted(product._id);
+  const cartItem = selectedVariant
+    ? cartItems.find((i) => i.product._id === product._id && i.variantSku === selectedVariant.sku)
+    : undefined;
 
   // Dynamic variant attributes — derived from the product's own variants
   const attrBySlug: Record<string, Attribute> = Object.fromEntries(attributes.map((a) => [a.slug, a]));
@@ -117,8 +120,17 @@ export default function ProductDetailPage() {
     await addItem(product._id, selectedVariant.sku, qty);
   };
 
+  const inCartQty = cartItem?.quantity ?? 0;
+
+  const handleStep = (delta: number) => {
+    if (!selectedVariant || !cartItem) return;
+    const next = inCartQty + delta;
+    if (next <= 0) removeItem(product._id, selectedVariant.sku);
+    else updateItem(product._id, selectedVariant.sku, next);
+  };
+
   return (
-    <div className="min-h-screen bg-brand-bg" style={{ paddingTop: "var(--topbar-height)" }}>
+    <div className="min-h-screen bg-brand-bg pb-[calc(var(--bottomnav-height)+env(safe-area-inset-bottom))] lg:pb-0" style={{ paddingTop: "var(--topbar-height)" }}>
       <div className="container-custom py-8">
         <Breadcrumb crumbs={[
           { label: 'Home', href: '/' },
@@ -283,8 +295,8 @@ export default function ProductDetailPage() {
               </div>
             )}
 
-            {/* Qty + CTA */}
-            <div className="flex gap-3 mb-4">
+            {/* Qty + CTA — desktop only; mobile uses the sticky bottom bar below */}
+            <div className="hidden lg:flex gap-3 mb-4">
               <div className="flex items-center border border-brand-border">
                 <button onClick={() => setQty((q) => Math.max(1, q - 1))} className="w-11 h-11 flex items-center justify-center hover:bg-brand-surface transition-colors" aria-label="Decrease"><Minus size={15} /></button>
                 <span className="w-12 text-center font-body text-sm font-medium">{qty}</span>
@@ -392,6 +404,44 @@ export default function ProductDetailPage() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Mobile sticky cart bar */}
+      <div
+        className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t border-brand-border flex items-center gap-3 px-4"
+        style={{ minHeight: 'var(--bottomnav-height)', paddingBottom: 'env(safe-area-inset-bottom)' }}
+      >
+        <button
+          onClick={() => { if (!isAuthenticated) { navigate('/auth/login'); return; } toggle(product._id); }}
+          className={`w-11 h-11 flex-shrink-0 border-2 flex items-center justify-center transition-all ${
+            wishlisted ? 'border-primary bg-primary/5 text-primary' : 'border-brand-border text-brand-muted'
+          }`}
+          aria-label="Wishlist"
+        >
+          <Heart size={18} fill={wishlisted ? 'currentColor' : 'none'} />
+        </button>
+
+        {cartItem ? (
+          <>
+            <div className="flex items-center border border-brand-border flex-shrink-0">
+              <button onClick={() => handleStep(-1)} className="w-11 h-11 flex items-center justify-center" aria-label="Decrease"><Minus size={15} /></button>
+              <span className="w-10 text-center font-body text-sm font-medium">{inCartQty}</span>
+              <button onClick={() => handleStep(1)} disabled={inCartQty >= (selectedVariant?.stock || 0)} className="w-11 h-11 flex items-center justify-center disabled:opacity-40" aria-label="Increase"><Plus size={15} /></button>
+            </div>
+            <button onClick={openCart} className="flex-1 btn-primary justify-center">
+              <ShoppingBag size={18} /> Go to Bag
+            </button>
+          </>
+        ) : (
+          <button
+            onClick={handleAddToCart}
+            disabled={!hasStock || cartLoading}
+            className="flex-1 btn-primary justify-center disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            <ShoppingBag size={18} />
+            {hasStock ? 'Add to Bag' : 'Out of Stock'}
+          </button>
+        )}
       </div>
 
       {/* Zoom modal */}

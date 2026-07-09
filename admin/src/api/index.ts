@@ -13,7 +13,7 @@ export const dashboardApi = {
 };
 
 export const productApi = {
-  getAll: (params?: object) => client.get('/products', { params }),
+  getAll: (params?: object) => client.get('/admin/products', { params }),
   getById: (id: string) => client.get(`/admin/products/${id}`),
   create: (data: object) => client.post('/products', data),
   update: (id: string, data: object) => client.patch(`/products/${id}`, data),
@@ -104,9 +104,9 @@ export const newsletterApi = {
 
 export const supportApi = {
   getAll: (params?: object) => client.get('/support', { params }),
-  getById: (id: string) => client.get(`/support/my/${id}`),
+  getById: (id: string) => client.get(`/support/${id}`),
   update: (id: string, data: object) => client.patch(`/support/${id}`, data),
-  addMessage: (id: string, content: string) => client.post(`/support/${id}/message`, { content, isInternal: true }),
+  addMessage: (id: string, content: string, isInternal = false) => client.post(`/support/${id}/message`, { content, isInternal }),
 };
 
 export const returnApi = {

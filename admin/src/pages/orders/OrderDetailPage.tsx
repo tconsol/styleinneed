@@ -203,7 +203,7 @@ export default function OrderDetailPage() {
 
       reg(7); setTxt('#64748B');
       doc.text(item.variant?.sku || '—', cx.sku, y);
-      const vt = [item.variant?.size, item.variant?.color].filter(Boolean).join(' / ') || '—';
+      const vt = [item.variant?.attributes?.size, item.variant?.attributes?.color].filter(Boolean).join(' / ') || '—';
       doc.text(vt, cx.var, y);
       doc.text(String(item.quantity), cx.qty, y, { align: 'center' });
 
@@ -385,8 +385,8 @@ export default function OrderDetailPage() {
                     <p className="text-[12px] font-semibold text-brand-text line-clamp-2">{item.product?.name || 'Product'}</p>
                     <div className="flex flex-wrap gap-x-3 mt-1">
                       {item.variant?.sku && <span className="text-[10px] text-brand-muted">SKU: {item.variant.sku}</span>}
-                      {item.variant?.size && <span className="text-[10px] text-brand-muted">Size: {item.variant.size}</span>}
-                      {item.variant?.color && <span className="text-[10px] text-brand-muted">Color: {item.variant.color}</span>}
+                      {item.variant?.attributes?.size && <span className="text-[10px] text-brand-muted">Size: {item.variant.attributes.size}</span>}
+                      {item.variant?.attributes?.color && <span className="text-[10px] text-brand-muted">Color: {item.variant.attributes.color}</span>}
                     </div>
                     <div className="flex items-center gap-2 mt-1.5">
                       <span className="text-[10px] bg-slate-100 px-2 py-0.5 rounded font-medium text-slate-600">Qty: {item.quantity}</span>
@@ -656,7 +656,7 @@ export default function OrderDetailPage() {
                 <td>{i + 1}</td>
                 <td>{item.product?.name || 'Product'}</td>
                 <td style={{ fontFamily: 'monospace', fontSize: 10 }}>{item.variant?.sku || '—'}</td>
-                <td>{[item.variant?.size, item.variant?.color].filter(Boolean).join(' / ') || '—'}</td>
+                <td>{[item.variant?.attributes?.size, item.variant?.attributes?.color].filter(Boolean).join(' / ') || '—'}</td>
                 <td style={{ textAlign: 'center' }}>{item.quantity}</td>
                 <td className="right">{formatPrice(item.price)}</td>
                 <td className="right">{formatPrice(item.price * item.quantity)}</td>

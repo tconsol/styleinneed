@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Search, Edit, Trash2, Eye } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Eye, RotateCcw } from 'lucide-react';
 import DataTable from '../../components/common/DataTable';
 import Badge from '../../components/common/Badge';
 import { useConfirm } from '../../components/common/ConfirmDialog';
@@ -33,6 +33,14 @@ export default function ProductsPage() {
     try {
       await productApi.delete(id);
       toast.success('Product deactivated');
+      fetch();
+    } catch {}
+  };
+
+  const handleReactivate = async (id: string, name: string) => {
+    try {
+      await productApi.update(id, { isActive: true });
+      toast.success(`"${name}" reactivated`);
       fetch();
     } catch {}
   };
@@ -98,9 +106,15 @@ export default function ProductsPage() {
           <Link to={`/products/${p._id}/edit`} className="w-7 h-7 flex items-center justify-center text-brand-muted hover:text-primary transition-colors">
             <Edit size={14} />
           </Link>
-          <button onClick={() => handleDelete(p._id, p.name)} className="w-7 h-7 flex items-center justify-center text-brand-muted hover:text-red-500 transition-colors">
-            <Trash2 size={14} />
-          </button>
+          {p.isActive ? (
+            <button onClick={() => handleDelete(p._id, p.name)} className="w-7 h-7 flex items-center justify-center text-brand-muted hover:text-red-500 transition-colors">
+              <Trash2 size={14} />
+            </button>
+          ) : (
+            <button onClick={() => handleReactivate(p._id, p.name)} title="Reactivate" className="w-7 h-7 flex items-center justify-center text-brand-muted hover:text-emerald-600 transition-colors">
+              <RotateCcw size={14} />
+            </button>
+          )}
         </div>
       ),
     },

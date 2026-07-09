@@ -91,19 +91,9 @@ export default function RegisterPage() {
 
       {/* Right — Form */}
       <div className="flex-1 flex flex-col overflow-y-auto">
-        {/* Mobile hero */}
-        <div className="lg:hidden relative h-40 flex-shrink-0">
-          <img src="https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=900&q=80" alt="" className="absolute inset-0 w-full h-full object-cover object-top" />
-          <div className="absolute inset-0 bg-brand-text/55" />
-          <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className="font-heading text-2xl font-bold tracking-wider text-white">STYLE IN NEED</span>
-            <span className="font-body text-[9px] tracking-[0.4em] uppercase text-primary/90 mt-0.5">FASHIONS</span>
-          </div>
-        </div>
-
         <div className="flex-1 flex flex-col justify-center px-5 py-7 sm:px-10 lg:px-12 xl:px-14 max-w-md mx-auto w-full lg:max-w-lg">
           <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="w-full">
-            <Link to="/" className="hidden lg:inline-block mb-7">
+            <Link to="/" className="inline-block mb-7">
               <span className="font-heading text-xl font-bold tracking-wider text-brand-text">STYLE IN NEED</span>
               <span className="block font-body text-[9px] tracking-[0.4em] uppercase text-primary -mt-0.5">FASHIONS</span>
             </Link>

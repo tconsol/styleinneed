@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Save, Globe, Check, AlertCircle, Building2, Phone, Lock, CornerDownLeft, Truck, Briefcase, Image, Home, LayoutTemplate } from 'lucide-react';
+import { Save, Globe, Check, AlertCircle, Building2, Phone, Lock, CornerDownLeft, Truck, Briefcase, Home, LayoutTemplate } from 'lucide-react';
 import { cmsApi } from '../../api';
 import toast from 'react-hot-toast';
 

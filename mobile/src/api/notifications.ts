@@ -6,7 +6,7 @@ export interface AppNotification {
   _id: string;
   title: string;
   body: string;
-  type: 'order_confirmed' | 'order_cancelled' | 'order_shipped' | 'order_delivered' | 'order_status_changed' | 'general';
+  type: 'order_confirmed' | 'order_cancelled' | 'order_shipped' | 'order_delivered' | 'order_status_changed' | 'promotion' | 'announcement' | 'general';
   orderId?: string;
   orderNumber?: string;
   isRead: boolean;

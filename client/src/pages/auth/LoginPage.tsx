@@ -84,16 +84,6 @@ export default function LoginPage() {
 
       {/* Right — Form */}
       <div className="flex-1 flex flex-col overflow-y-auto">
-        {/* Mobile hero */}
-        <div className="lg:hidden relative h-48 flex-shrink-0">
-          <img src={FASHION_IMAGES[imgIdx]} alt="" className="absolute inset-0 w-full h-full object-cover object-top" />
-          <div className="absolute inset-0 bg-brand-text/50" />
-          <div className="absolute inset-0 flex flex-col items-center justify-center pb-2">
-            <span className="font-heading text-2xl font-bold tracking-wider text-white">STYLE IN NEED</span>
-            <span className="font-body text-[9px] tracking-[0.4em] uppercase text-primary/90 mt-0.5">FASHIONS</span>
-          </div>
-        </div>
-
         {/* Card */}
         <div className="flex-1 flex flex-col justify-center px-5 py-8 sm:px-10 lg:px-12 xl:px-16 max-w-md mx-auto w-full lg:max-w-lg">
           <motion.div
@@ -102,8 +92,8 @@ export default function LoginPage() {
             transition={{ duration: 0.4 }}
             className="w-full"
           >
-            {/* Logo (desktop) */}
-            <Link to="/" className="hidden lg:inline-block mb-8">
+            {/* Logo */}
+            <Link to="/" className="inline-block mb-8">
               <span className="font-heading text-2xl font-bold tracking-wider text-brand-text">STYLE IN NEED</span>
               <span className="block font-body text-[9px] tracking-[0.4em] uppercase text-primary -mt-0.5">FASHIONS</span>
             </Link>

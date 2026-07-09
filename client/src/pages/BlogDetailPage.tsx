@@ -4,10 +4,12 @@ import { Calendar, Eye, ArrowLeft } from 'lucide-react';
 import Spinner from '../components/common/Spinner';
 import NewsletterSection from '../components/home/NewsletterSection';
 import { blogApi } from '../api/misc.api';
+import { useHomepageCms } from '../hooks/useHomepageCms';
 import type { Blog } from '../types';
 import { formatDate } from '../utils/format';
 
 export default function BlogDetailPage() {
+  const cms = useHomepageCms();
   const { slug } = useParams<{ slug: string }>();
   const [blog, setBlog] = useState<Blog | null>(null);
   const [loading, setLoading] = useState(true);
@@ -68,7 +70,7 @@ export default function BlogDetailPage() {
           </div>
         )}
       </article>
-      <NewsletterSection />
+      <NewsletterSection data={cms.newsletter} />
     </div>
   );
 }

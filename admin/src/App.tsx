@@ -28,6 +28,7 @@ const ReviewsPage = lazy(() => import('./pages/content/ReviewsPage'));
 const BlogsPage = lazy(() => import('./pages/content/BlogsPage'));
 const NewsletterPage = lazy(() => import('./pages/content/NewsletterPage'));
 const SupportPage = lazy(() => import('./pages/content/SupportPage'));
+const SupportTicketDetailPage = lazy(() => import('./pages/content/SupportTicketDetailPage'));
 const ReturnsPage = lazy(() => import('./pages/content/ReturnsPage'));
 const CmsPage = lazy(() => import('./pages/content/CmsPage'));
 const ProvidersPage = lazy(() => import('./pages/providers/ProvidersPage'));
@@ -73,6 +74,7 @@ export default function App() {
               <Route path="/blogs" element={<BlogsPage />} />
               <Route path="/newsletter" element={<NewsletterPage />} />
               <Route path="/support" element={<SupportPage />} />
+              <Route path="/support/:id" element={<SupportTicketDetailPage />} />
               <Route path="/returns" element={<ReturnsPage />} />
               <Route path="/cms" element={<CmsPage />} />
               <Route path="/providers" element={<ProvidersPage />} />

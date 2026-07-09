@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { SlidersHorizontal, X, ChevronDown, ChevronUp, Search, Check } from 'lucide-react';
+import { SlidersHorizontal, X, ChevronDown, ChevronUp, Search, Check, ArrowUpDown } from 'lucide-react';
 import ProductCard from '../components/common/ProductCard';
 import Footer from '../components/layout/Footer';
 import { productApi } from '../api/product.api';
@@ -93,6 +93,7 @@ export default function ProductListPage() {
   const [loading, setLoading] = useState(true);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [sortOpen, setSortOpen] = useState(false);
+  const [mobileSortOpen, setMobileSortOpen] = useState(false);
   const sortRef = useRef<HTMLDivElement>(null);
 
   const page        = Number(params.get('page') || 1);
@@ -165,9 +166,9 @@ export default function ProductListPage() {
   }, []);
 
   useEffect(() => {
-    document.body.style.overflow = mobileOpen ? 'hidden' : '';
+    document.body.style.overflow = mobileOpen || mobileSortOpen ? 'hidden' : '';
     return () => { document.body.style.overflow = ''; };
-  }, [mobileOpen]);
+  }, [mobileOpen, mobileSortOpen]);
 
   /* ─── URL helpers ─── */
   const setParam = (key: string, value: string) => {
@@ -331,7 +332,7 @@ export default function ProductListPage() {
   );
 
   return (
-    <div className="bg-brand-bg min-h-screen" style={{ paddingTop: 'var(--topbar-height)' }}>
+    <div className="bg-brand-bg min-h-screen pb-[calc(var(--bottomnav-height)+env(safe-area-inset-bottom))] lg:pb-0" style={{ paddingTop: 'var(--topbar-height)' }}>
       {/* ── Header band ── */}
       <div className="border-b border-brand-border bg-white">
         <div className="container-custom py-5 flex items-end justify-between gap-4 flex-wrap">
@@ -370,12 +371,6 @@ export default function ProductListPage() {
           {/* Toolbar — sticks below the fixed header as the page scrolls */}
           <div className="sticky z-20 bg-brand-bg/95 backdrop-blur-sm border-b border-brand-border" style={{ top: 'var(--topbar-height)' }}>
             <div className="flex items-center gap-3 py-3">
-              <button onClick={() => setMobileOpen(true)}
-                className="lg:hidden flex items-center gap-1.5 border border-brand-border px-3.5 py-2 font-body text-[11px] text-brand-muted hover:border-brand-text hover:text-brand-text transition-colors">
-                <SlidersHorizontal size={12} /> Filters
-                {activeCount > 0 && <span className="w-4 h-4 bg-primary text-white rounded-full text-[8px] font-bold flex items-center justify-center">{activeCount}</span>}
-              </button>
-
               {chips.length > 0 && (
                 <div className="hidden lg:flex flex-1 items-center gap-1.5 overflow-x-auto scrollbar-hide">
                   {chips.slice(0, 6).map((chip, i) => (
@@ -388,7 +383,7 @@ export default function ProductListPage() {
                 </div>
               )}
 
-              <div className="relative ml-auto flex-shrink-0" ref={sortRef}>
+              <div className="hidden lg:block relative ml-auto flex-shrink-0" ref={sortRef}>
                 <button onClick={() => setSortOpen((o) => !o)}
                   className="flex items-center gap-2 border border-brand-border px-3.5 py-2 font-body text-[11px] text-brand-muted hover:border-brand-text transition-colors min-w-[170px] justify-between bg-white">
                   <span>Sort: <span className="text-brand-text font-medium">{sortLabel}</span></span>
@@ -481,16 +476,63 @@ export default function ProductListPage() {
 
       <Footer />
 
-      {/* ── Mobile Drawer ── */}
+      {/* ── Mobile bottom bar: Sort | Filters (replaces the tab bar on this page) ── */}
+      <div
+        className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t border-brand-border flex items-stretch"
+        style={{ height: 'var(--bottomnav-height)', paddingBottom: 'env(safe-area-inset-bottom)' }}
+      >
+        <button onClick={() => setMobileSortOpen(true)} className="flex-1 flex items-center justify-center gap-2 font-body text-[12px] font-medium text-brand-text border-r border-brand-border">
+          <ArrowUpDown size={15} className="text-brand-muted" /> Sort
+        </button>
+        <button onClick={() => setMobileOpen(true)} className="flex-1 flex items-center justify-center gap-2 font-body text-[12px] font-medium text-brand-text">
+          <SlidersHorizontal size={15} className="text-brand-muted" /> Filters
+          {activeCount > 0 && <span className="w-4 h-4 bg-primary text-white rounded-full text-[9px] font-bold flex items-center justify-center">{activeCount}</span>}
+        </button>
+      </div>
+
+      {/* ── Mobile Sort: native-style bottom sheet ── */}
+      <AnimatePresence>
+        {mobileSortOpen && (
+          <>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-brand-text/50 z-[60] lg:hidden" onClick={() => setMobileSortOpen(false)} />
+            <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+              transition={{ type: 'tween', duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
+              className="fixed inset-x-0 bottom-0 bg-white z-[70] flex flex-col rounded-t-3xl shadow-luxury-lg lg:hidden">
+              <div className="flex-shrink-0 flex justify-center pt-2.5 pb-1">
+                <span className="w-10 h-1.5 rounded-full bg-brand-border" />
+              </div>
+              <div className="flex items-center justify-between px-5 py-3 border-b border-brand-border flex-shrink-0">
+                <span className="font-body text-[11px] font-bold uppercase tracking-[0.18em] text-brand-text">Sort By</span>
+                <button onClick={() => setMobileSortOpen(false)} className="text-brand-muted hover:text-brand-text transition-colors"><X size={18} /></button>
+              </div>
+              <div className="px-2 py-2" style={{ paddingBottom: 'calc(0.5rem + env(safe-area-inset-bottom))' }}>
+                {SORT_OPTIONS.map((o) => (
+                  <button key={o.value} onClick={() => { setParam('sort', o.value); setMobileSortOpen(false); }}
+                    className={`w-full text-left px-4 py-3.5 font-body text-[13px] flex items-center justify-between transition-colors ${sort === o.value ? 'text-primary bg-brand-surface font-semibold' : 'text-brand-text'}`}>
+                    {o.label}
+                    {sort === o.value && <Check size={14} className="text-primary" />}
+                  </button>
+                ))}
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* ── Mobile Filters: native-style bottom sheet ── */}
       <AnimatePresence>
         {mobileOpen && (
           <>
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               className="fixed inset-0 bg-brand-text/50 z-[60] lg:hidden" onClick={() => setMobileOpen(false)} />
-            <motion.div initial={{ x: '-100%' }} animate={{ x: 0 }} exit={{ x: '-100%' }}
-              transition={{ type: 'tween', duration: 0.26, ease: [0.25, 0.46, 0.45, 0.94] }}
-              className="fixed inset-y-0 left-0 w-80 max-w-[88vw] bg-white z-[70] flex flex-col shadow-luxury-lg lg:hidden">
-              <div className="flex items-center justify-between px-5 py-4 border-b border-brand-border flex-shrink-0">
+            <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+              transition={{ type: 'tween', duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
+              className="fixed inset-x-0 bottom-0 max-h-[85vh] bg-white z-[70] flex flex-col rounded-t-3xl shadow-luxury-lg lg:hidden">
+              <div className="flex-shrink-0 flex justify-center pt-2.5 pb-1">
+                <span className="w-10 h-1.5 rounded-full bg-brand-border" />
+              </div>
+              <div className="flex items-center justify-between px-5 py-3 border-b border-brand-border flex-shrink-0">
                 <div className="flex items-center gap-2">
                   <SlidersHorizontal size={14} className="text-brand-muted" />
                   <span className="font-body text-[11px] font-bold uppercase tracking-[0.18em] text-brand-text">Filters</span>
@@ -501,7 +543,7 @@ export default function ProductListPage() {
               <div className="flex-1 overflow-y-auto px-5" data-lenis-prevent style={{ overscrollBehavior: 'contain' }}>
                 <Filters />
               </div>
-              <div className="flex-shrink-0 p-4 border-t border-brand-border grid grid-cols-2 gap-3">
+              <div className="flex-shrink-0 p-4 border-t border-brand-border grid grid-cols-2 gap-3" style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))' }}>
                 <button onClick={() => { clearAll(); setMobileOpen(false); }} className="btn-outline text-xs py-3 justify-center">Clear All</button>
                 <button onClick={() => setMobileOpen(false)} className="btn-primary text-xs py-3 justify-center">View {total} Results</button>
               </div>

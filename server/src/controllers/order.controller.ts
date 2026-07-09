@@ -67,22 +67,33 @@ export const createOrder = async (req: AuthRequest, res: Response, next: NextFun
     }
 
     let discount = 0;
+    let freeShipping = false;
     let couponDoc;
     if (couponCode) {
-      couponDoc = await Coupon.findOne({ code: couponCode.toUpperCase(), isActive: true });
-      if (couponDoc && couponDoc.expiryDate > new Date() && subtotal >= couponDoc.minOrderValue) {
-        if (couponDoc.type === 'percentage') {
-          discount = (subtotal * couponDoc.value) / 100;
-          if (couponDoc.maxDiscount) discount = Math.min(discount, couponDoc.maxDiscount);
-        } else if (couponDoc.type === 'flat') {
-          discount = couponDoc.value;
-        } else if (couponDoc.type === 'free_shipping') {
-          discount = 0;
+      const found = await Coupon.findOne({ code: couponCode.toUpperCase(), isActive: true });
+      const now = new Date();
+      const valid =
+        found &&
+        found.expiryDate > now &&
+        found.startDate <= now &&
+        subtotal >= found.minOrderValue &&
+        !(found.usageLimit && found.usedCount >= found.usageLimit) &&
+        !found.restrictedUsers.some((u) => u.toString() === user._id.toString());
+
+      if (valid && found) {
+        couponDoc = found;
+        if (found.type === 'percentage' || found.type === 'festival' || found.type === 'first_order') {
+          discount = (subtotal * found.value) / 100;
+          if (found.maxDiscount) discount = Math.min(discount, found.maxDiscount);
+        } else if (found.type === 'flat') {
+          discount = found.value;
+        } else if (found.type === 'free_shipping') {
+          freeShipping = true;
         }
       }
     }
 
-    const shippingCharge = subtotal >= 999 ? 0 : 99;
+    const shippingCharge = freeShipping ? 0 : subtotal >= 999 ? 0 : 99;
     const total = subtotal - discount + shippingCharge;
 
     const order = await Order.create({

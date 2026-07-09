@@ -1,23 +1,29 @@
 ﻿import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Calendar, Eye } from 'lucide-react';
 import SectionHeader from '../components/common/SectionHeader';
 import Spinner from '../components/common/Spinner';
 import NewsletterSection from '../components/home/NewsletterSection';
 import { blogApi } from '../api/misc.api';
+import { useHomepageCms } from '../hooks/useHomepageCms';
 import type { Blog } from '../types';
 import { formatDate } from '../utils/format';
 
 export default function BlogListPage() {
+  const cms = useHomepageCms();
+  const [params] = useSearchParams();
+  const category = params.get('category') || undefined;
+  const tag = params.get('tag') || undefined;
   const [blogs, setBlogs] = useState<Blog[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    blogApi.getBlogs({ page: 1 }).then(({ data }) => {
+    setLoading(true);
+    blogApi.getBlogs({ page: 1, category, tag }).then(({ data }) => {
       setBlogs(data.data || []);
     }).catch(() => {}).finally(() => setLoading(false));
-  }, []);
+  }, [category, tag]);
 
   return (
     <div className="min-h-screen bg-brand-bg" style={{ paddingTop: "var(--topbar-height)" }}>
@@ -73,7 +79,7 @@ export default function BlogListPage() {
           </div>
         )}
       </div>
-      <NewsletterSection />
+      <NewsletterSection data={cms.newsletter} />
     </div>
   );
 }
