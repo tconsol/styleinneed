@@ -1,0 +1,264 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── CSS VARIABLES ─────────────────────────────────────── */
+:root {
+  --c-bg:       #F1F5F9;
+  --c-surface:  #FFFFFF;
+  --c-border:   #E2E8F0;
+  --c-text:     #1E293B;
+  --c-muted:    #64748B;
+  --c-input:    #FFFFFF;
+  --c-th-bg:    #F8FAFC;
+  --c-tr-hover: #F8FAFF;
+  --c-primary:  #4F46E5;
+  --c-sidebar:  #0F0E2E;
+}
+
+.dark {
+  --c-bg:       #0B0B1E;
+  --c-surface:  #11112A;
+  --c-border:   rgba(255,255,255,0.08);
+  --c-text:     #E2E8F0;
+  --c-muted:    #8B9CB8;
+  --c-input:    #0E0E28;
+  --c-th-bg:    #0C0C24;
+  --c-tr-hover: rgba(129,140,248,0.05);
+  --c-primary:  #818CF8;
+  --c-sidebar:  #080816;
+}
+
+/* ── BASE ──────────────────────────────────────────────── */
+@layer base {
+  * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
+  html { overflow-x: hidden; }
+  body {
+    background-color: var(--c-bg);
+    color: var(--c-text);
+    font-family: 'Poppins', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+    transition: background-color 0.2s, color 0.2s;
+  }
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(79,70,229,0.25); border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--c-primary); }
+  :focus-visible { outline: 2px solid var(--c-primary); outline-offset: 2px; }
+  :focus:not(:focus-visible) { outline: none; }
+}
+
+/* ── COMPONENTS ────────────────────────────────────────── */
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center gap-1.5 font-semibold px-3.5 py-2 text-[12px] transition-all duration-200 active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed whitespace-nowrap rounded-lg text-white;
+    background: linear-gradient(135deg, #4F46E5 0%, #3730A3 100%);
+    min-height: 34px;
+    box-shadow: 0 2px 6px rgba(79,70,229,0.3);
+  }
+  .btn-primary:hover { filter: brightness(1.1); box-shadow: 0 4px 12px rgba(79,70,229,0.35); }
+
+  .btn-outline {
+    @apply inline-flex items-center gap-1.5 border font-medium px-3.5 py-2 text-[12px] transition-all duration-200 whitespace-nowrap rounded-lg;
+    background: var(--c-surface);
+    border-color: var(--c-border);
+    color: var(--c-text);
+    min-height: 34px;
+  }
+  .btn-outline:hover { border-color: var(--c-primary); color: var(--c-primary); }
+
+  .btn-danger {
+    @apply inline-flex items-center gap-1.5 text-white font-semibold px-3.5 py-2 text-[12px] transition-all duration-200 whitespace-nowrap rounded-lg;
+    background: #EF4444;
+    min-height: 34px;
+    box-shadow: 0 2px 6px rgba(239,68,68,0.25);
+  }
+  .btn-danger:hover { background: #DC2626; }
+
+  .btn-ghost {
+    @apply inline-flex items-center gap-1.5 text-[11px] px-2 py-1.5 transition-colors duration-150 rounded-md;
+    color: var(--c-muted);
+  }
+  .btn-ghost:hover { color: var(--c-primary); background: rgba(79,70,229,0.08); }
+
+  .input-field {
+    @apply w-full px-3 py-2 text-[12px] outline-none transition-all duration-200 rounded-lg;
+    background: var(--c-input);
+    border: 1.5px solid var(--c-border);
+    color: var(--c-text);
+    min-height: 36px;
+  }
+  .input-field::placeholder { color: var(--c-muted); opacity: 0.7; }
+  .input-field:focus { border-color: var(--c-primary); box-shadow: 0 0 0 3px rgba(79,70,229,0.12); }
+
+  .input-label {
+    @apply block text-[10px] font-semibold uppercase tracking-wider mb-1;
+    color: var(--c-muted);
+  }
+
+  .card {
+    @apply rounded-2xl p-5;
+    background: var(--c-surface);
+    border: 1px solid var(--c-border);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04), 0 4px 16px rgba(0,0,0,0.03);
+    transition: background 0.2s, border-color 0.2s;
+  }
+
+  .card-sm {
+    @apply rounded-xl p-4;
+    background: var(--c-surface);
+    border: 1px solid var(--c-border);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    transition: background 0.2s;
+  }
+
+  .badge {
+    @apply inline-flex items-center px-2 py-0.5 text-[10px] font-semibold rounded-md;
+  }
+
+  .th {
+    @apply text-[9px] font-bold uppercase tracking-[0.1em] text-left px-3 py-2.5;
+    background: var(--c-th-bg);
+    color: var(--c-muted);
+    border-bottom: 1px solid var(--c-border);
+    transition: background 0.2s;
+  }
+
+  .td {
+    @apply px-3 py-2 text-[11px] align-middle;
+    color: var(--c-text);
+    transition: color 0.2s;
+  }
+
+  .table-header {
+    @apply text-[9px] font-bold uppercase tracking-wider;
+    color: var(--c-muted);
+  }
+
+  /* Modern table wrapper — used across all pages */
+  .table-modern {
+    background: var(--c-surface);
+    border: 1px solid var(--c-border);
+    border-radius: 1rem;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    transition: background 0.2s, border-color 0.2s;
+  }
+}
+
+/* ── DARK MODE: SURFACE OVERRIDES ──────────────────────── */
+/* bg-white used on table wrapper divs */
+.dark .bg-white {
+  background-color: var(--c-surface) !important;
+}
+/* Any element whose inline style sets a light bg */
+.dark [style*="background: white"],
+.dark [style*="background: #FFFFFF"],
+.dark [style*="background-color: white"],
+.dark [style*="background-color: #FFFFFF"] {
+  background: var(--c-surface) !important;
+}
+/* Skeleton pulse dark */
+.dark .animate-pulse {
+  background-color: rgba(255,255,255,0.05) !important;
+}
+
+/* ── DARK MODE: TABLE ROW HOVER FIX ─────────────────────── */
+/*
+ * JS onMouseEnter sets style.background='#F8FAFF' (light) and
+ * onMouseLeave sets style.background='white' — both make dark-mode
+ * text (#E2E8F0) invisible on light background.
+ * CSS !important overrides inline styles in all browsers.
+ */
+.dark table tbody tr {
+  background: var(--c-surface) !important;
+  border-color: var(--c-border) !important;
+}
+.dark table tbody tr:hover {
+  background: rgba(99, 102, 241, 0.07) !important;
+}
+
+/* Table header rows */
+.dark table thead tr {
+  background: var(--c-th-bg) !important;
+  border-bottom: 2px solid var(--c-border) !important;
+}
+
+/* Light mode — table heading highlight */
+table thead tr {
+  position: relative;
+}
+table thead tr::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--c-primary), transparent);
+  opacity: 0.3;
+}
+
+/* Light mode table hover — make text stay visible */
+table tbody tr:hover {
+  background: var(--c-tr-hover) !important;
+}
+table tbody tr:hover .td,
+table tbody tr:hover td {
+  color: var(--c-text) !important;
+}
+
+/* Pagination footer */
+.dark [style*="background: #F8FAFC"],
+.dark [style*="background:#F8FAFC"] {
+  background: var(--c-th-bg) !important;
+}
+
+/* Pagination nav / page buttons */
+.pagn-btn {
+  border: 1px solid var(--c-border);
+  color: var(--c-muted);
+  background: transparent;
+  transition: border-color 0.15s, color 0.15s;
+}
+.pagn-btn:hover:not(:disabled) {
+  border-color: var(--c-primary);
+  color: var(--c-primary);
+}
+
+/* Skeleton loading */
+.dark .bg-slate-100 { background-color: rgba(255,255,255,0.06) !important; }
+
+/* Brand bg utility used in some places */
+.dark .bg-brand-bg { background-color: var(--c-bg) !important; }
+
+/* Text overrides */
+.dark .text-brand-text { color: var(--c-text) !important; }
+.dark .text-brand-muted { color: var(--c-muted) !important; }
+
+/* Border overrides */
+.dark .border-brand-border,
+.dark .border-slate-100,
+.dark .border-slate-200 {
+  border-color: var(--c-border) !important;
+}
+
+/* Order detail info rows */
+.dark .border-slate-100 { border-color: var(--c-border) !important; }
+
+/* Stat / action quick cards on dashboard */
+.dark .group.bg-white,
+.dark .rounded-xl.bg-white,
+.dark .rounded-2xl.bg-white {
+  background-color: var(--c-surface) !important;
+}
+
+/* Badge light backgrounds stay as-is (semantic colors) */
+
+/* Recharts tooltips */
+.dark .recharts-tooltip-wrapper .recharts-default-tooltip {
+  background: var(--c-surface) !important;
+  border-color: var(--c-border) !important;
+  color: var(--c-text) !important;
+}

@@ -1,0 +1,27 @@
+# Secrets — never commit
+.env
+.env.*
+.mcp.json
+**/.env
+**/.env.local
+
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Builds
+dist/
+build/
+**/dist/
+mobile/.expo/
+mobile/android/
+mobile/ios/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
