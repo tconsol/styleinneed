@@ -1,13 +1,14 @@
 import { Server as IOServer } from 'socket.io';
 import type { Server as HttpServer } from 'http';
 import logger from '../utils/logger';
+import { allowedOrigins } from '../middleware/security';
 
 let io: IOServer | null = null;
 
 export const initSocket = (httpServer: HttpServer): void => {
   io = new IOServer(httpServer, {
     cors: {
-      origin: [process.env.CLIENT_URL || '*', process.env.ADMIN_URL || '*'],
+      origin: allowedOrigins(),
       credentials: true,
     },
   });

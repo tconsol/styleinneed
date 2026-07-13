@@ -5,15 +5,30 @@ import mongoSanitize from 'express-mongo-sanitize';
 import compression from 'compression';
 import { Express } from 'express';
 
+const requireEnv = (name: string): string => {
+  const val = process.env[name];
+  if (!val) throw new Error(`Missing required env var: ${name}`);
+  return val;
+};
+
+// CLIENT_URL / ADMIN_URL may each hold one or more comma-separated origins
+// (e.g. apex + www, or prod + a preview domain) — both are required, no fallback.
+export const allowedOrigins = (): string[] => [
+  ...requireEnv('CLIENT_URL').split(','),
+  ...requireEnv('ADMIN_URL').split(','),
+].map((o) => o.trim().replace(/\/$/, '')).filter(Boolean);
+
+// First entry of CLIENT_URL — used wherever a single canonical link is built
+// (password-reset emails, payment-return redirects), never the full CORS list.
+export const primaryClientUrl = (): string =>
+  requireEnv('CLIENT_URL').split(',')[0].trim().replace(/\/$/, '');
+
 export const applySecurityMiddleware = (app: Express): void => {
   app.use(helmet());
 
   app.use(
     cors({
-      origin: [
-        process.env.CLIENT_URL || 'http://localhost:3000',
-        process.env.ADMIN_URL || 'http://localhost:3001',
-      ],
+      origin: allowedOrigins(),
       credentials: true,
       methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
     })

@@ -11,6 +11,7 @@ import { createRazorpayPaymentLink, fetchRazorpayPaymentLink } from '../services
 import { createStripeCheckoutSession, retrieveStripeCheckoutSession } from '../services/stripe.service';
 import { sendOrderConfirmationEmail } from '../services/email.service';
 import { sendPushToUser } from '../services/push.service';
+import { primaryClientUrl } from '../middleware/security';
 import { IOrder } from '../types';
 
 /** Append a status event + broadcast it so clients live-update the tracker. */
@@ -109,7 +110,7 @@ export const createOrder = async (req: AuthRequest, res: Response, next: NextFun
       paymentStatus: paymentMethod === 'cod' ? 'pending' : 'pending',
     });
 
-    const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
+    const clientUrl = primaryClientUrl();
     const successUrl = `${clientUrl}/payment-return?order=${order._id}&status=success`;
     const cancelUrl = `${clientUrl}/payment-return?order=${order._id}&status=cancel`;
 

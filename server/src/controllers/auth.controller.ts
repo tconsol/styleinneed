@@ -7,6 +7,7 @@ import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '.
 import { generateOtp, generateSecureToken, hashToken } from '../utils/otp';
 import { sendOtpEmail, sendPasswordResetEmail } from '../services/email.service';
 import { sendSuccess, sendError } from '../utils/apiResponse';
+import { primaryClientUrl } from '../middleware/security';
 
 export const register = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
@@ -196,7 +197,7 @@ export const forgotPassword = async (req: Request, res: Response, next: NextFunc
     user.passwordResetExpiry = new Date(Date.now() + 15 * 60 * 1000);
     await user.save();
 
-    const resetUrl = `${process.env.CLIENT_URL}/reset-password?token=${token}`;
+    const resetUrl = `${primaryClientUrl()}/reset-password?token=${token}`;
     await sendPasswordResetEmail(email, resetUrl, user.name);
 
     sendSuccess(res, 'If that email exists, a reset link has been sent');
