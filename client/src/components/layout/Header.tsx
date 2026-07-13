@@ -7,6 +7,7 @@ import { useCartStore, selectItemCount } from '../../stores/cartStore';
 import { useWishlistStore } from '../../stores/wishlistStore';
 import { useUiStore } from '../../stores/uiStore';
 import { useCategories, useCollections, useProductTypes } from '../../hooks/useCatalog';
+import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 import AnnouncementBar from '../common/AnnouncementBar';
 
 interface NavSub { label: string; href: string }
@@ -24,6 +25,7 @@ export default function Header({ isCheckout = false }: { isCheckout?: boolean })
   const itemCount = useCartStore(selectItemCount);
   const { products: wishlistProducts } = useWishlistStore();
   const { isMobileMenuOpen, isSearchOpen, openMobileMenu, closeMobileMenu, openSearch, closeSearch } = useUiStore();
+  useBodyScrollLock(isMobileMenuOpen || isSearchOpen);
   const searchRef = useRef<HTMLInputElement>(null);
   // Cached catalog data (shared/deduped via React Query)
   const productTypes = useProductTypes().data || [];

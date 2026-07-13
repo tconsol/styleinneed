@@ -5,7 +5,6 @@ const LOGOS = [
   { name: 'RuPay', src: 'https://upload.wikimedia.org/wikipedia/commons/c/cd/Rupay-Logo.png' },
   { name: 'Razorpay', src: 'https://upload.wikimedia.org/wikipedia/commons/8/89/Razorpay_logo.svg' },
   { name: 'Stripe', src: 'https://upload.wikimedia.org/wikipedia/commons/b/ba/Stripe_Logo%2C_revised_2016.svg' },
-  { name: 'PayPal', src: 'https://upload.wikimedia.org/wikipedia/commons/b/b5/PayPal.svg' },
 ];
 
 export default function PaymentLogos() {

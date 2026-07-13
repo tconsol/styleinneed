@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { io, Socket } from 'socket.io-client';
 import { CheckCircle2, Circle, Package, Truck, MapPin, X, ExternalLink } from 'lucide-react';
 import { orderApi } from '../api/order.api';
@@ -23,7 +23,6 @@ const STATUS_COLORS: Record<string, string> = {
 
 export default function OrderTrackingPage() {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [cancelling, setCancelling] = useState(false);

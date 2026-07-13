@@ -409,7 +409,7 @@ export default function ProductDetailPage() {
       {/* Mobile sticky cart bar */}
       <div
         className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t border-brand-border flex items-center gap-3 px-4"
-        style={{ minHeight: 'var(--bottomnav-height)', paddingBottom: 'env(safe-area-inset-bottom)' }}
+        style={{ minHeight: 'calc(var(--bottomnav-height) + env(safe-area-inset-bottom))', paddingBottom: 'env(safe-area-inset-bottom)' }}
       >
         <button
           onClick={() => { if (!isAuthenticated) { navigate('/auth/login'); return; } toggle(product._id); }}

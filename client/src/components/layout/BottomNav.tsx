@@ -29,7 +29,7 @@ export default function BottomNav() {
   return (
     <nav
       className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t border-brand-border flex items-stretch"
-      style={{ height: 'var(--bottomnav-height)', paddingBottom: 'env(safe-area-inset-bottom)' }}
+      style={{ height: 'calc(var(--bottomnav-height) + env(safe-area-inset-bottom))', paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
       <Link to="/" className={itemClass(isHome)}>
         <Home size={21} strokeWidth={isHome ? 2.5 : 2} fill={isHome ? 'currentColor' : 'none'} fillOpacity={isHome ? 0.15 : 0} />

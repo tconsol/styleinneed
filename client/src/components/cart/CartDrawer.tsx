@@ -2,11 +2,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Minus, Plus, ShoppingBag, Trash2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useCartStore, selectSubtotal } from '../../stores/cartStore';
+import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 import { formatPrice } from '../../utils/format';
 
 export default function CartDrawer() {
   const { isOpen, closeCart, items, updateItem, removeItem, couponDiscount, freeShipping } = useCartStore();
   const subtotal = useCartStore(selectSubtotal);
+  useBodyScrollLock(isOpen);
 
   const shippingCharge = freeShipping || subtotal >= 999 ? 0 : 99;
   const total = subtotal - couponDiscount + shippingCharge;

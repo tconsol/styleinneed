@@ -6,6 +6,7 @@ import ProductCard from '../components/common/ProductCard';
 import Footer from '../components/layout/Footer';
 import { productApi } from '../api/product.api';
 import { useCategories, useCollections, useProductTypes, useAttributes } from '../hooks/useCatalog';
+import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 import { socket, SOCKET_EVENTS } from '../lib/socket';
 import type { Product, Attribute } from '../types';
 
@@ -166,10 +167,7 @@ export default function ProductListPage() {
     return () => document.removeEventListener('mousedown', h);
   }, []);
 
-  useEffect(() => {
-    document.body.style.overflow = mobileOpen || mobileSortOpen ? 'hidden' : '';
-    return () => { document.body.style.overflow = ''; };
-  }, [mobileOpen, mobileSortOpen]);
+  useBodyScrollLock(mobileOpen || mobileSortOpen);
 
   /* ─── URL helpers ─── */
   const setParam = (key: string, value: string) => {
@@ -507,7 +505,7 @@ export default function ProductListPage() {
       {/* ── Mobile bottom bar: Sort | Filters (replaces the tab bar on this page) ── */}
       <div
         className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t border-brand-border flex items-stretch"
-        style={{ height: 'var(--bottomnav-height)', paddingBottom: 'env(safe-area-inset-bottom)' }}
+        style={{ height: 'calc(var(--bottomnav-height) + env(safe-area-inset-bottom))', paddingBottom: 'env(safe-area-inset-bottom)' }}
       >
         <button onClick={() => setMobileSortOpen(true)} className="flex-1 flex items-center justify-center gap-2 font-body text-[12px] font-medium text-brand-text border-r border-brand-border">
           <ArrowUpDown size={15} className="text-brand-muted" /> Sort
