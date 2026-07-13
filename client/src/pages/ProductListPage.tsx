@@ -94,6 +94,7 @@ export default function ProductListPage() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [sortOpen, setSortOpen] = useState(false);
   const [mobileSortOpen, setMobileSortOpen] = useState(false);
+  const [activeFilterGroup, setActiveFilterGroup] = useState('category');
   const sortRef = useRef<HTMLDivElement>(null);
 
   const page        = Number(params.get('page') || 1);
@@ -227,107 +228,134 @@ export default function ProductListPage() {
     ...attrSelections.map((s) => ({ label: s.value, clear: () => toggleMulti(s.slug, s.value) })),
   ].filter(Boolean) as { label: string; clear: () => void }[];
 
-  /* ─── A single dynamic attribute filter section ─── */
-  const AttrSection = ({ attr }: { attr: Attribute }) => {
+  /* ─── A single dynamic attribute filter's raw options (no wrapper) ─── */
+  const attrContent = (attr: Attribute) => {
     const selected = params.getAll(attr.slug);
     if (attr.inputType === 'color') {
       return (
-        <Section title={attr.name} count={selected.length} defaultOpen={false}>
-          <div className="grid grid-cols-5 gap-x-1 gap-y-3">
-            {attr.options.map((o) => {
-              const active = selected.includes(o.value);
-              return (
-                <button key={o.value} onClick={() => toggleMulti(attr.slug, o.value)} className="flex flex-col items-center gap-1 group">
-                  <span className={`w-7 h-7 rounded-full flex items-center justify-center transition-all ${active ? 'ring-2 ring-primary ring-offset-1 scale-110' : 'ring-1 ring-brand-border group-hover:ring-brand-muted'}`}
-                    style={{ background: o.hex || '#ccc' }}>
-                    {active && <Check size={11} strokeWidth={3} className="text-white mix-blend-difference" />}
-                  </span>
-                  <span className={`font-body text-[9px] leading-none ${active ? 'text-primary font-semibold' : 'text-brand-muted'}`}>{o.label}</span>
-                </button>
-              );
-            })}
-          </div>
-        </Section>
-      );
-    }
-    if (attr.inputType === 'select') {
-      return (
-        <Section title={attr.name} count={selected.length} defaultOpen={false}>
-          {attr.options.map((o) => (
-            <CheckRow key={o.value} label={o.label} active={selected.includes(o.value)}
-              onClick={() => toggleMulti(attr.slug, o.value)} />
-          ))}
-        </Section>
-      );
-    }
-    // chips / multiselect
-    return (
-      <Section title={attr.name} count={selected.length} defaultOpen={false}>
-        <div className="flex flex-wrap gap-1.5">
+        <div className="grid grid-cols-5 gap-x-1 gap-y-3">
           {attr.options.map((o) => {
             const active = selected.includes(o.value);
             return (
-              <button key={o.value} onClick={() => toggleMulti(attr.slug, o.value)}
-                className={`font-body text-[11px] font-medium px-3 py-1.5 border rounded-full transition-all ${active ? 'bg-primary text-white border-primary' : 'border-brand-border text-brand-muted hover:border-primary hover:text-primary'}`}>
-                {o.label}
+              <button key={o.value} onClick={() => toggleMulti(attr.slug, o.value)} className="flex flex-col items-center gap-1 group">
+                <span className={`w-7 h-7 rounded-full flex items-center justify-center transition-all ${active ? 'ring-2 ring-primary ring-offset-1 scale-110' : 'ring-1 ring-brand-border group-hover:ring-brand-muted'}`}
+                  style={{ background: o.hex || '#ccc' }}>
+                  {active && <Check size={11} strokeWidth={3} className="text-white mix-blend-difference" />}
+                </span>
+                <span className={`font-body text-[9px] leading-none ${active ? 'text-primary font-semibold' : 'text-brand-muted'}`}>{o.label}</span>
               </button>
             );
           })}
         </div>
-      </Section>
+      );
+    }
+    if (attr.inputType === 'select') {
+      return (
+        <>
+          {attr.options.map((o) => (
+            <CheckRow key={o.value} label={o.label} active={selected.includes(o.value)}
+              onClick={() => toggleMulti(attr.slug, o.value)} />
+          ))}
+        </>
+      );
+    }
+    // chips / multiselect
+    return (
+      <div className="flex flex-wrap gap-1.5">
+        {attr.options.map((o) => {
+          const active = selected.includes(o.value);
+          return (
+            <button key={o.value} onClick={() => toggleMulti(attr.slug, o.value)}
+              className={`font-body text-[11px] font-medium px-3 py-1.5 border rounded-full transition-all ${active ? 'bg-primary text-white border-primary' : 'border-brand-border text-brand-muted hover:border-primary hover:text-primary'}`}>
+              {o.label}
+            </button>
+          );
+        })}
+      </div>
     );
   };
 
-  /* ─── Filter panel (shared) ─── */
-  const Filters = () => (
-    <>
-      {productTypes.length > 0 && (
-        <Section title="Shop For">
+  /* ─── Filter groups — one source of data driving both the desktop accordion
+     and the mobile two-pane (labels left, values right) sheet ─── */
+  type FilterGroup = { key: string; label: string; count: number; defaultOpen: boolean; content: React.ReactNode };
+
+  const filterGroups: FilterGroup[] = [
+    productTypes.length > 0 && {
+      key: 'shopFor', label: 'Shop For', count: productType ? 1 : 0, defaultOpen: true,
+      content: (
+        <>
           {productTypes.map((t) => (
             <RadioRow key={t._id} label={t.name} active={productType === t.slug}
               onClick={() => setParam('productType', productType === t.slug ? '' : t.slug)} />
           ))}
-        </Section>
-      )}
-
-      <Section title="Category">
-        {categories
-          .filter((cat) => !productType || cat.productType === productType)
-          .map((cat) => (
-            <CheckRow key={cat._id} label={cat.name} active={category === cat.slug}
-              onClick={() => setParam('category', category === cat.slug ? '' : cat.slug)} />
-          ))}
-      </Section>
-
-      {collections.length > 0 && (
-        <Section title="Collections" defaultOpen={false}>
+        </>
+      ),
+    },
+    {
+      key: 'category', label: 'Category', count: category ? 1 : 0, defaultOpen: true,
+      content: (
+        <>
+          {categories
+            .filter((cat) => !productType || cat.productType === productType)
+            .map((cat) => (
+              <CheckRow key={cat._id} label={cat.name} active={category === cat.slug}
+                onClick={() => setParam('category', category === cat.slug ? '' : cat.slug)} />
+            ))}
+        </>
+      ),
+    },
+    collections.length > 0 && {
+      key: 'collections', label: 'Collections', count: collection ? 1 : 0, defaultOpen: false,
+      content: (
+        <>
           {collections.map((col) => (
             <CheckRow key={col._id} label={col.name} active={collection === col.slug}
               onClick={() => setParam('collection', collection === col.slug ? '' : col.slug)} />
           ))}
+        </>
+      ),
+    },
+    {
+      key: 'price', label: 'Price', count: minPrice ? 1 : 0, defaultOpen: true,
+      content: (
+        <>
+          {PRICE_RANGES.map((r) => (
+            <RadioRow key={r.label} label={r.label}
+              active={minPrice === String(r.min) && maxPrice === String(r.max)}
+              onClick={() => setPriceRange(r.min, r.max)} />
+          ))}
+        </>
+      ),
+    },
+    // Dynamic, admin-defined attribute filters (Size, Colour, Fabric, ...)
+    ...visibleAttrs.map((attr) => ({
+      key: attr.slug, label: attr.name, count: params.getAll(attr.slug).length, defaultOpen: false,
+      content: attrContent(attr),
+    })),
+    {
+      key: 'discover', label: 'Discover', count: [isNewArrival, isBestSeller, isTrending].filter(Boolean).length, defaultOpen: false,
+      content: (
+        <>
+          {[
+            { label: 'New Arrivals', key: 'isNewArrival', active: isNewArrival },
+            { label: 'Best Sellers', key: 'isBestSeller', active: isBestSeller },
+            { label: 'Trending Now', key: 'isTrending',   active: isTrending },
+          ].map(({ label, key, active }) => (
+            <CheckRow key={key} label={label} active={active} onClick={() => setParam(key, active ? '' : 'true')} />
+          ))}
+        </>
+      ),
+    },
+  ].filter(Boolean) as FilterGroup[];
+
+  /* ─── Desktop accordion sidebar (unchanged UX) ─── */
+  const Filters = () => (
+    <>
+      {filterGroups.map((g) => (
+        <Section key={g.key} title={g.label} count={g.count} defaultOpen={g.defaultOpen}>
+          {g.content}
         </Section>
-      )}
-
-      <Section title="Price Range">
-        {PRICE_RANGES.map((r) => (
-          <RadioRow key={r.label} label={r.label}
-            active={minPrice === String(r.min) && maxPrice === String(r.max)}
-            onClick={() => setPriceRange(r.min, r.max)} />
-        ))}
-      </Section>
-
-      {/* Dynamic, admin-defined attribute filters */}
-      {visibleAttrs.map((attr) => <AttrSection key={attr._id} attr={attr} />)}
-
-      <Section title="Discover" defaultOpen={false}>
-        {[
-          { label: 'New Arrivals', key: 'isNewArrival', active: isNewArrival },
-          { label: 'Best Sellers', key: 'isBestSeller', active: isBestSeller },
-          { label: 'Trending Now', key: 'isTrending',   active: isTrending },
-        ].map(({ label, key, active }) => (
-          <CheckRow key={key} label={label} active={active} onClick={() => setParam(key, active ? '' : 'true')} />
-        ))}
-      </Section>
+      ))}
     </>
   );
 
@@ -540,8 +568,29 @@ export default function ProductListPage() {
                 </div>
                 <button onClick={() => setMobileOpen(false)} className="text-brand-muted hover:text-brand-text transition-colors"><X size={18} /></button>
               </div>
-              <div className="flex-1 overflow-y-auto px-5" data-lenis-prevent style={{ overscrollBehavior: 'contain' }}>
-                <Filters />
+              {/* Two-pane: filter names on the left, that filter's values on the right */}
+              <div className="flex-1 min-h-0 flex">
+                <div className="w-[36%] flex-shrink-0 bg-brand-surface overflow-y-auto" data-lenis-prevent style={{ overscrollBehavior: 'contain' }}>
+                  {filterGroups.map((g) => (
+                    <button
+                      key={g.key}
+                      onClick={() => setActiveFilterGroup(g.key)}
+                      className={`w-full flex items-center justify-between gap-1.5 text-left px-3.5 py-3.5 border-l-[3px] font-body text-[12px] transition-colors ${
+                        activeFilterGroup === g.key
+                          ? 'bg-white border-primary text-brand-text font-semibold'
+                          : 'border-transparent text-brand-muted'
+                      }`}
+                    >
+                      <span className="line-clamp-1">{g.label}</span>
+                      {g.count > 0 && (
+                        <span className="w-4 h-4 bg-primary text-white rounded-full text-[8px] font-bold flex items-center justify-center flex-shrink-0">{g.count}</span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex-1 min-w-0 overflow-y-auto px-4 py-3" data-lenis-prevent style={{ overscrollBehavior: 'contain' }}>
+                  {filterGroups.find((g) => g.key === activeFilterGroup)?.content}
+                </div>
               </div>
               <div className="flex-shrink-0 p-4 border-t border-brand-border grid grid-cols-2 gap-3" style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))' }}>
                 <button onClick={() => { clearAll(); setMobileOpen(false); }} className="btn-outline text-xs py-3 justify-center">Clear All</button>

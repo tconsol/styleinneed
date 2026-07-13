@@ -2,7 +2,6 @@ import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { GoogleOAuthProvider } from '@react-oauth/google';
 import Layout from './components/layout/Layout';
 import CinematicLoader from './components/home/CinematicLoader';
 import { PageLoader } from './components/common/Spinner';
@@ -36,7 +35,6 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   return (
-    <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID || ''}>
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <CinematicLoader />
@@ -90,6 +88,5 @@ export default function App() {
         />
       </BrowserRouter>
     </QueryClientProvider>
-    </GoogleOAuthProvider>
   );
 }

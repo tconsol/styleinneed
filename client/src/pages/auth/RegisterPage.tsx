@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Eye, EyeOff, ArrowRight, Check } from 'lucide-react';
-import { useGoogleLogin } from '@react-oauth/google';
+import { GoogleOAuthProvider, useGoogleLogin } from '@react-oauth/google';
 import { authApi } from '../../api/auth.api';
 import { useAuthStore } from '../../stores/authStore';
 import toast from 'react-hot-toast';
@@ -26,6 +26,15 @@ function GoogleIcon() {
 }
 
 export default function RegisterPage() {
+  // Scoped to this page only — see LoginPage.tsx for why.
+  return (
+    <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID || ''}>
+      <RegisterForm />
+    </GoogleOAuthProvider>
+  );
+}
+
+function RegisterForm() {
   const navigate = useNavigate();
   const { googleLogin } = useAuthStore();
   const [form, setForm] = useState({ name: '', email: '', phone: '', password: '', confirmPassword: '' });

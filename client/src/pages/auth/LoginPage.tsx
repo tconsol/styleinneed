@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Eye, EyeOff, ArrowRight } from 'lucide-react';
-import { useGoogleLogin } from '@react-oauth/google';
+import { GoogleOAuthProvider, useGoogleLogin } from '@react-oauth/google';
 import { useAuthStore } from '../../stores/authStore';
 import { useCartStore } from '../../stores/cartStore';
 import { useWishlistStore } from '../../stores/wishlistStore';
@@ -25,6 +25,17 @@ function GoogleIcon() {
 }
 
 export default function LoginPage() {
+  // Google's identity script is only mounted on pages that actually offer
+  // Google sign-in — loading it app-wide triggers an unwanted Android/Chrome
+  // "wants to access other apps and services" account-access prompt on every page.
+  return (
+    <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID || ''}>
+      <LoginForm />
+    </GoogleOAuthProvider>
+  );
+}
+
+function LoginForm() {
   const navigate = useNavigate();
   const location = useLocation();
   const from = (location.state as { from?: string })?.from || '/';
