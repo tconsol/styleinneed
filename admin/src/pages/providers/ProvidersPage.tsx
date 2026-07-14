@@ -5,6 +5,7 @@ import type { Provider } from '../../types';
 import toast from 'react-hot-toast';
 import { useConfirm } from '../../components/common/ConfirmDialog';
 import Select from '../../components/common/Select';
+import StatusToggle from '../../components/common/StatusToggle';
 
 const CATEGORIES = ['all', 'clothing', 'jewellery', 'accessories', 'other'] as const;
 
@@ -252,6 +253,18 @@ export default function ProvidersPage() {
     } catch { toast.error('Save failed'); } finally { setSaving(false); }
   };
 
+  const handleToggleStatus = async (p: Provider) => {
+    const next = !p.isActive;
+    setProviders((prev) => prev.map((x) => (x._id === p._id ? { ...x, isActive: next } : x)));
+    try {
+      await providerApi.update(p._id, { isActive: next });
+      toast.success(next ? 'Activated' : 'Deactivated');
+    } catch {
+      setProviders((prev) => prev.map((x) => (x._id === p._id ? { ...x, isActive: !next } : x)));
+      toast.error('Failed to update status');
+    }
+  };
+
   const handleDelete = async (p: Provider) => {
     const ok = await confirm({ title: 'Delete Provider', message: `Delete "${p.name}"? This cannot be undone.`, confirmText: 'Delete', danger: true });
     if (!ok) return;
@@ -348,9 +361,7 @@ export default function ProvidersPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3.5">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-semibold ${p.isActive ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}>
-                        {p.isActive ? 'Active' : 'Inactive'}
-                      </span>
+                      <StatusToggle isActive={p.isActive} onToggle={() => void handleToggleStatus(p)} />
                     </td>
                     <td className="px-4 py-3.5">
                       <div className="flex items-center gap-1 justify-end">

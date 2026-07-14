@@ -24,6 +24,8 @@ import promotionRoutes from './routes/promotion.routes';
 import notificationRoutes from './routes/notification.routes';
 import providerRoutes from './routes/provider.routes';
 import sizeChartRoutes from './routes/sizeChart.routes';
+import settingsRoutes from './routes/settings.routes';
+import shippingRoutes from './routes/shipping.routes';
 
 const app = express();
 
@@ -60,6 +62,8 @@ app.use(`${API}/promotions`, promotionRoutes);
 app.use(`${API}/notifications`, notificationRoutes);
 app.use(`${API}/providers`, providerRoutes);
 app.use(`${API}/size-charts`, sizeChartRoutes);
+app.use(`${API}/settings`, settingsRoutes);
+app.use(`${API}/shipping-rates`, shippingRoutes);
 
 app.get('/health', (_req, res) => res.json({ status: 'ok', env: process.env.NODE_ENV }));
 

@@ -71,6 +71,7 @@ export interface IProduct extends Document {
   usdMrp?: number;
   usdSalePrice?: number;
   discountPercentage: number;
+  returnDays: number;
   provider?: Types.ObjectId;
   sizeChartId?: Types.ObjectId;
   variants: IProductVariant[];
@@ -102,6 +103,7 @@ export interface IOrder extends Document {
   user: Types.ObjectId;
   items: IOrderItem[];
   shippingAddress: IAddress;
+  currency: 'INR' | 'USD';
   subtotal: number;
   shippingCharge: number;
   discount: number;

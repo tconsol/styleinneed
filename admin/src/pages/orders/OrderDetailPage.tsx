@@ -4,9 +4,10 @@ import jsPDF from 'jspdf';
 import {
   ArrowLeft, Printer, Download, MapPin, User, CreditCard,
   Package, Truck, CheckCircle2, XCircle, Clock, Circle,
-  ShoppingBag, Phone,
+  ShoppingBag, Phone, Trash2,
 } from 'lucide-react';
 import { PageSpinner } from '../../components/common/Spinner';
+import { useConfirm } from '../../components/common/ConfirmDialog';
 import { orderApi } from '../../api';
 import type { Order } from '../../types';
 import { formatPrice, formatDate, formatDateTime } from '../../utils/format';
@@ -45,6 +46,7 @@ function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
 export default function OrderDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const confirm = useConfirm();
   const invoiceRef = useRef<HTMLDivElement>(null);
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
@@ -71,6 +73,22 @@ export default function OrderDetailPage() {
       toast.success('Order updated');
       setOrder((prev) => prev ? { ...prev, status: newStatus as Order['status'], awbCode, trackingUrl } : null);
     } catch { toast.error('Update failed'); } finally { setSaving(false); }
+  };
+
+  const handleDelete = async () => {
+    if (!order) return;
+    const ok = await confirm({
+      title: 'Delete Order',
+      message: `Permanently delete order #${order.orderId}? Stock is restored for active orders. This cannot be undone.`,
+      confirmText: 'Delete',
+      danger: true,
+    });
+    if (!ok) return;
+    try {
+      await orderApi.delete(order._id);
+      toast.success('Order deleted');
+      navigate('/orders');
+    } catch { toast.error('Delete failed'); }
   };
 
   const handleDownload = () => {
@@ -570,6 +588,10 @@ export default function OrderDetailPage() {
               </div>
               <button onClick={handleUpdateStatus} disabled={saving} className="btn-primary w-full justify-center">
                 {saving ? 'Saving...' : 'Update Order'}
+              </button>
+              <button onClick={() => void handleDelete()}
+                className="w-full justify-center inline-flex items-center gap-1.5 py-2.5 rounded-lg border border-red-200 text-red-500 text-[12px] font-semibold hover:bg-red-50 transition-colors">
+                <Trash2 size={13} /> Delete Order
               </button>
             </div>
           </div>

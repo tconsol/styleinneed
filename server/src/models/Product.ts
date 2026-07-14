@@ -31,6 +31,8 @@ const productSchema = new Schema<IProduct>(
     usdMrp: { type: Number, min: 0 },
     usdSalePrice: { type: Number, min: 0 },
     discountPercentage: { type: Number, default: 0 },
+    // Return window in days shown on the product page. 0 = non-returnable.
+    returnDays: { type: Number, default: 7, min: 0 },
     provider: { type: Schema.Types.ObjectId, ref: 'Provider' },
     sizeChartId: { type: Schema.Types.ObjectId, ref: 'SizeChart' },
     variants: [variantSchema],

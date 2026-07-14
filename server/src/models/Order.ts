@@ -49,6 +49,7 @@ const orderSchema = new Schema<IOrder>(
     user: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     items: { type: [orderItemSchema], required: true },
     shippingAddress: { type: addressSnapshot, required: true },
+    currency: { type: String, enum: ['INR', 'USD'], default: 'INR' },
     subtotal: { type: Number, required: true },
     shippingCharge: { type: Number, default: 0 },
     discount: { type: Number, default: 0 },
@@ -84,7 +85,7 @@ const orderSchema = new Schema<IOrder>(
 
 orderSchema.pre('save', function (next) {
   if (!this.orderId) {
-    this.orderId = `AVY-${Date.now()}-${uuidv4().slice(0, 6).toUpperCase()}`;
+    this.orderId = `SIN-${Date.now()}-${uuidv4().slice(0, 6).toUpperCase()}`;
   }
   if (this.isNew && (!this.statusHistory || this.statusHistory.length === 0)) {
     this.statusHistory = [{ status: this.status || 'pending', note: 'Order placed', at: new Date() }];

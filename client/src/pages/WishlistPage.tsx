@@ -3,10 +3,11 @@ import { Link } from 'react-router-dom';
 import { Heart, ChevronLeft } from 'lucide-react';
 import type { Product } from '../types';
 import { useWishlistStore } from '../stores/wishlistStore';
-import { formatPrice } from '../utils/format';
+import { useMoney } from '../hooks/useMoney';
 
 export default function WishlistPage() {
   const { products, fetchWishlist, toggle } = useWishlistStore();
+  const { format } = useMoney();
   useEffect(() => { fetchWishlist(); }, []);
 
   return (
@@ -32,7 +33,7 @@ export default function WishlistPage() {
                       <img src={p.images[0]} alt={p.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" />
                     </div>
                     <p className="font-body text-sm text-brand-text line-clamp-1">{p.name}</p>
-                    <p className="font-heading text-sm font-semibold text-primary mt-0.5">{formatPrice(p.salePrice)}</p>
+                    <p className="font-heading text-sm font-semibold text-primary mt-0.5">{format(p.salePrice, p.usdSalePrice)}</p>
                   </Link>
                   <button onClick={() => toggle(p._id)} className="absolute top-2 right-2 w-7 h-7 bg-white/90 flex items-center justify-center text-red-500 hover:bg-red-500 hover:text-white transition-all">
                     <Heart size={14} fill="currentColor" />

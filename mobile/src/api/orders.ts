@@ -20,8 +20,10 @@ export const useOrder = (id: string) =>
   });
 
 export interface CreateOrderResult {
-  orderId: string;
-  orderNumber: string;
+  // COD returns orderId/orderNumber directly; online returns a sessionId + url.
+  orderId?: string;
+  orderNumber?: string;
+  sessionId?: string;
   provider?: 'razorpay' | 'stripe';
   url?: string;
   amount?: number;
@@ -50,17 +52,22 @@ export const usePaymentConfig = () =>
       ),
   });
 
-/** Verify a hosted payment after the user returns from the gateway browser. */
+export interface VerifyResult { orderId: string; orderNumber: string }
+
+/**
+ * Verify a hosted payment after the user returns from the gateway browser.
+ * The server creates the Order from the payment session only once paid, and
+ * returns the new orderId.
+ */
 export const useVerifyPayment = () => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (p: { orderId: string; provider: 'razorpay' | 'stripe' }) =>
+    mutationFn: (p: { sessionId: string; provider: 'razorpay' | 'stripe' }) =>
       api
-        .post(p.provider === 'stripe' ? '/orders/verify-stripe-payment' : '/orders/verify-payment', { orderId: p.orderId })
-        .then((r) => r.data),
-    onSuccess: (_d, p) => {
+        .post(p.provider === 'stripe' ? '/orders/verify-stripe-payment' : '/orders/verify-payment', { sessionId: p.sessionId })
+        .then((r) => r.data.data as VerifyResult),
+    onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['orders'] });
-      qc.invalidateQueries({ queryKey: ['order', p.orderId] });
       qc.invalidateQueries({ queryKey: ['cart'] });
     },
   });

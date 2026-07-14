@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Package, Tag, Layers, ShoppingCart, Users,
   Ticket, Megaphone, Zap, FileText, Mail, Headphones,
   RotateCcw, FileEdit, BarChart2, ScrollText,
-  Star, LogOut, Settings, X, Shapes, SlidersHorizontal, Truck, BellRing, Ruler,
+  Star, LogOut, Settings, X, Shapes, SlidersHorizontal, Truck, BellRing, Ruler, Globe,
 } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
 import { useThemeStore } from '../../stores/themeStore';
@@ -29,6 +29,7 @@ export const NAV_ITEMS = [
     { label: 'Coupons', href: '/coupons', icon: Ticket },
     { label: 'Returns', href: '/returns', icon: RotateCcw },
     { label: 'Providers', href: '/providers', icon: Truck },
+    { label: 'Shipping Rates', href: '/shipping-rates', icon: Globe },
   ]},
   { section: 'Marketing', items: [
     { label: 'Announcements', href: '/announcements', icon: Megaphone },
@@ -53,7 +54,7 @@ export default function Sidebar({ isOpen, onClose }: Props) {
   const { user, logout } = useAuthStore();
   const { isDark } = useThemeStore();
   const navigate = useNavigate();
-  const { orders: orderBadge, support: supportBadge, clearOrders, clearSupport } = useBadgeStore();
+  const { orders: orderBadge, support: supportBadge, markViewed } = useBadgeStore();
 
   // Clear badge when user navigates to the relevant page
   const getBadge = (href: string): number => {
@@ -62,8 +63,8 @@ export default function Sidebar({ isOpen, onClose }: Props) {
     return 0;
   };
   const handleNavClick = (href: string) => {
-    if (href === '/orders') clearOrders();
-    if (href === '/support') clearSupport();
+    if (href === '/orders') markViewed('orders');
+    if (href === '/support') markViewed('support');
     onClose();
   };
   const handleLogout = async () => { await logout(); navigate('/login'); };

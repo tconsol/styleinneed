@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Heart, ShoppingBag, Star } from 'lucide-react';
 import type { Product } from '../../types';
-import { formatPrice } from '../../utils/format';
+import { useMoney } from '../../hooks/useMoney';
 import { useAuthStore } from '../../stores/authStore';
 import { useCartStore } from '../../stores/cartStore';
 import { useWishlistStore } from '../../stores/wishlistStore';
@@ -17,6 +17,7 @@ export default function ProductCard({ product }: Props) {
   const { isAuthenticated } = useAuthStore();
   const { addItem } = useCartStore();
   const { toggle, isWishlisted } = useWishlistStore();
+  const { format } = useMoney();
   const wishlisted = isWishlisted(product._id);
 
   const defaultVariant = product.variants?.[0];
@@ -130,11 +131,11 @@ export default function ProductCard({ product }: Props) {
           {/* Price */}
           <div className="flex items-baseline gap-1.5 mt-1.5">
             <span className="font-heading text-sm sm:text-base font-semibold text-brand-text">
-              {formatPrice(product.salePrice)}
+              {format(product.salePrice, product.usdSalePrice)}
             </span>
             {product.mrp > product.salePrice && (
               <span className="font-body text-xs text-brand-muted line-through">
-                {formatPrice(product.mrp)}
+                {format(product.mrp, product.usdMrp)}
               </span>
             )}
           </div>

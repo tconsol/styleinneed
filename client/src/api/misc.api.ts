@@ -41,6 +41,15 @@ export const cmsApi = {
   getPage: (key: string) => client.get(`/cms/${key}`),
 };
 
+export const settingsApi = {
+  get: () => client.get('/settings'),
+};
+
+export const shippingApi = {
+  quote: (country: string, state: string, subtotal: number) =>
+    client.get('/shipping-rates/quote', { params: { country, state, subtotal } }),
+};
+
 export const returnApi = {
   createReturn: (data: {
     orderId: string;

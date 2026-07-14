@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { Plus, Search, Edit, Trash2, Eye, RotateCcw } from 'lucide-react';
 import DataTable from '../../components/common/DataTable';
-import Badge from '../../components/common/Badge';
+import StatusToggle from '../../components/common/StatusToggle';
 import { useConfirm } from '../../components/common/ConfirmDialog';
 import { productApi } from '../../api';
 import type { Product, Pagination } from '../../types';
@@ -45,6 +45,18 @@ export default function ProductsPage() {
     } catch {}
   };
 
+  const handleToggleStatus = async (p: Product) => {
+    const next = !p.isActive;
+    setProducts((prev) => prev.map((x) => (x._id === p._id ? { ...x, isActive: next } : x)));
+    try {
+      await productApi.update(p._id, { isActive: next });
+      toast.success(next ? 'Product activated' : 'Product deactivated');
+    } catch {
+      setProducts((prev) => prev.map((x) => (x._id === p._id ? { ...x, isActive: !next } : x)));
+      toast.error('Failed to update status');
+    }
+  };
+
   const columns = [
     {
       key: 'image',
@@ -81,7 +93,7 @@ export default function ProductsPage() {
     {
       key: 'status',
       header: 'Status',
-      render: (p: Product) => <Badge value={p.isActive ? 'active' : 'inactive'} />,
+      render: (p: Product) => <StatusToggle isActive={p.isActive} onToggle={() => void handleToggleStatus(p)} />,
     },
     {
       key: 'ratings',

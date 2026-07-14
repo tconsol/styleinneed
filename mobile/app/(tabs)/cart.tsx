@@ -12,7 +12,7 @@ import { useAuth } from '../../src/store/auth';
 import { useCart, useCartMutations, cartTotals } from '../../src/api/cart';
 import { useApplyCoupon, type CouponResult } from '../../src/api/coupon';
 import { colors, fonts, radii, spacing, shadow } from '../../src/theme';
-import { formatPrice } from '../../src/utils/format';
+import { useMoney, useCurrency } from '../../src/store/currency';
 import type { CartItem, ProductVariant } from '../../src/types';
 
 const variantLabel = (item: CartItem) => {
@@ -29,15 +29,18 @@ export default function Cart() {
   const { update, remove } = useCartMutations();
   const { count, subtotal } = cartTotals(cart);
   const applyCoupon = useApplyCoupon();
+  const { format, isUSA } = useMoney();
+  const freeShipThreshold = useCurrency((s) => s.freeShipThreshold);
   const [coupon, setCoupon] = useState('');
   const [couponResult, setCouponResult] = useState<CouponResult | null>(null);
   const [couponError, setCouponError] = useState('');
 
+  // Cart amounts are INR; format() converts for USD viewers. Real shipping is
+  // finalised at checkout (per-state for US, threshold for India).
   const mrpTotal = cart?.items?.reduce((s, i) => s + (i.product?.mrp ?? i.price) * i.quantity, 0) ?? 0;
   const discount = Math.max(0, mrpTotal - subtotal);
   const couponDiscount = couponResult?.discountAmount ?? 0;
-  const shippingFee = couponResult?.freeShipping ? 0 : (subtotal > 0 && subtotal < 999 ? 99 : 0);
-  const shipping = shippingFee;
+  const shipping = isUSA ? 0 : couponResult?.freeShipping ? 0 : (subtotal > 0 && subtotal < freeShipThreshold ? 99 : 0);
   const total = subtotal + shipping - couponDiscount;
 
   const handleApplyCoupon = async () => {
@@ -145,7 +148,7 @@ export default function Cart() {
                 <View style={styles.couponSuccess}>
                   <Ionicons name="checkmark-circle" size={14} color={colors.success} />
                   <Text style={styles.couponSuccessText}>
-                    "{couponResult.code}" applied! You save {formatPrice(couponDiscount)}
+                    "{couponResult.code}" applied! You save {format(couponDiscount)}
                     {couponResult.freeShipping ? ' + Free Shipping' : ''}
                   </Text>
                 </View>
@@ -155,7 +158,11 @@ export default function Cart() {
               <View style={styles.deliveryBox}>
                 <Ionicons name="cube-outline" size={16} color={colors.success} />
                 <Text style={styles.deliveryText}>
-                  {shipping === 0 ? 'Free delivery on this order 🎉' : `Add ${formatPrice(999 - subtotal)} more for free delivery`}
+                  {isUSA
+                    ? 'Delivery charged by state at checkout'
+                    : shipping === 0
+                    ? 'Free delivery on this order 🎉'
+                    : `Add ${format(freeShipThreshold - subtotal)} more for free delivery`}
                 </Text>
               </View>
 
@@ -164,34 +171,34 @@ export default function Cart() {
                 <Text style={styles.summaryTitle}>PRICE DETAILS</Text>
                 <View style={styles.sumRow}>
                   <Text style={styles.sumLabel}>MRP Total ({count} items)</Text>
-                  <Text style={styles.sumVal}>{formatPrice(mrpTotal)}</Text>
+                  <Text style={styles.sumVal}>{format(mrpTotal)}</Text>
                 </View>
                 {discount > 0 && (
                   <View style={styles.sumRow}>
                     <Text style={styles.sumLabel}>Discount</Text>
-                    <Text style={[styles.sumVal, { color: colors.success }]}>- {formatPrice(discount)}</Text>
+                    <Text style={[styles.sumVal, { color: colors.success }]}>- {format(discount)}</Text>
                   </View>
                 )}
                 {couponDiscount > 0 && (
                   <View style={styles.sumRow}>
                     <Text style={styles.sumLabel}>Coupon ({couponResult?.code})</Text>
-                    <Text style={[styles.sumVal, { color: colors.success }]}>- {formatPrice(couponDiscount)}</Text>
+                    <Text style={[styles.sumVal, { color: colors.success }]}>- {format(couponDiscount)}</Text>
                   </View>
                 )}
                 <View style={styles.sumRow}>
                   <Text style={styles.sumLabel}>Delivery</Text>
-                  <Text style={[styles.sumVal, shipping === 0 && { color: colors.success }]}>
-                    {shipping === 0 ? 'FREE' : formatPrice(shipping)}
+                  <Text style={[styles.sumVal, shipping === 0 && !isUSA && { color: colors.success }]}>
+                    {isUSA ? 'At checkout' : shipping === 0 ? 'FREE' : format(shipping)}
                   </Text>
                 </View>
                 <View style={styles.sumDivider} />
                 <View style={styles.sumRow}>
                   <Text style={styles.totalLabel}>Total Amount</Text>
-                  <Text style={styles.totalVal}>{formatPrice(Math.max(0, total))}</Text>
+                  <Text style={styles.totalVal}>{format(Math.max(0, total))}</Text>
                 </View>
                 {(discount > 0 || couponDiscount > 0) && (
                   <Text style={styles.savingsNote}>
-                    You save {formatPrice(discount + couponDiscount)} on this order
+                    You save {format(discount + couponDiscount)} on this order
                   </Text>
                 )}
               </View>
@@ -222,9 +229,9 @@ export default function Cart() {
 
                   {/* Price row */}
                   <View style={styles.priceRow}>
-                    <Text style={styles.price}>{formatPrice(item.price)}</Text>
+                    <Text style={styles.price}>{format(item.price)}</Text>
                     {item.product.mrp > item.price && (
-                      <Text style={styles.mrp}>{formatPrice(item.product.mrp)}</Text>
+                      <Text style={styles.mrp}>{format(item.product.mrp)}</Text>
                     )}
                     {hasDiscount && (
                       <Text style={styles.off}>{item.product.discountPercentage}% off</Text>
@@ -270,7 +277,7 @@ export default function Cart() {
         {/* Fixed bottom CTA */}
         <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 10 }]}>
           <View>
-            <Text style={styles.bottomTotal}>{formatPrice(total)}</Text>
+            <Text style={styles.bottomTotal}>{format(total)}</Text>
             <Text style={styles.bottomSub}>incl. all taxes</Text>
           </View>
           <Pressable style={styles.placeOrder} onPress={() => router.push(couponResult ? `/checkout?coupon=${couponResult.code}` : '/checkout')}>

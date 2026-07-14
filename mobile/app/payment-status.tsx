@@ -4,31 +4,22 @@ import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as WebBrowser from 'expo-web-browser';
 import Animated, { FadeIn } from 'react-native-reanimated';
-import { useVerifyPayment, useCancelOrder } from '../src/api/orders';
+import { useVerifyPayment } from '../src/api/orders';
 import { colors, fonts, radii, spacing } from '../src/theme';
 
-type Phase = 'paying' | 'verifying' | 'failed' | 'cancelling';
+type Phase = 'paying' | 'verifying' | 'failed';
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 export default function PaymentStatus() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ orderId: string; provider: string; url: string }>();
-  const orderId = String(params.orderId);
+  const params = useLocalSearchParams<{ sessionId: string; provider: string; url: string }>();
+  const sessionId = String(params.sessionId);
   const provider = (params.provider === 'stripe' ? 'stripe' : 'razorpay') as 'razorpay' | 'stripe';
   const url = decodeURIComponent(String(params.url || ''));
 
   const verify = useVerifyPayment();
-  const cancel = useCancelOrder();
   const [phase, setPhase] = useState<Phase>('paying');
   const started = useRef(false);
-
-  const autoCancelOrder = useCallback(async () => {
-    setPhase('cancelling');
-    try {
-      await cancel.mutateAsync({ id: orderId, reason: 'Payment not completed by customer' });
-    } catch { /* ignore cancel errors */ }
-    setPhase('failed');
-  }, [orderId]);
 
   const run = useCallback(async () => {
     setPhase('paying');
@@ -43,21 +34,21 @@ export default function PaymentStatus() {
       });
     }
 
-    // Verify payment after browser closes
+    // Verify payment after browser closes. Order is created server-side only on
+    // success — nothing to cancel if the payment never completed.
     setPhase('verifying');
     for (let i = 0; i < 4; i++) {
       try {
-        await verify.mutateAsync({ orderId, provider });
-        router.replace(`/order-success?id=${orderId}`);
+        const res = await verify.mutateAsync({ sessionId, provider });
+        router.replace(`/order-success?id=${res.orderId}`);
         return;
       } catch {
         if (i < 3) await sleep(1500);
       }
     }
 
-    // All retries failed — auto-cancel the order
-    await autoCancelOrder();
-  }, [orderId, provider, url, autoCancelOrder]);
+    setPhase('failed');
+  }, [sessionId, provider, url]);
 
   useEffect(() => {
     if (started.current) return;
@@ -71,7 +62,7 @@ export default function PaymentStatus() {
     return () => sub.remove();
   }, [phase]);
 
-  const isBlocking = phase === 'paying' || phase === 'verifying' || phase === 'cancelling';
+  const isBlocking = phase === 'paying' || phase === 'verifying';
 
   return (
     <View style={styles.root}>
@@ -83,17 +74,11 @@ export default function PaymentStatus() {
             <ActivityIndicator size="large" color={colors.primary} />
           </View>
           <Text style={styles.title}>
-            {phase === 'paying'
-              ? 'Complete Payment'
-              : phase === 'cancelling'
-              ? 'Cancelling Order…'
-              : 'Verifying Payment…'}
+            {phase === 'paying' ? 'Complete Payment' : 'Verifying Payment…'}
           </Text>
           <Text style={styles.sub}>
             {phase === 'paying'
               ? 'Finish your payment in the secure window. Return here once done.'
-              : phase === 'cancelling'
-              ? 'Payment was not confirmed. Cancelling your order automatically.'
               : 'Please wait while we confirm your payment. Do not close the app.'}
           </Text>
         </Animated.View>
@@ -102,9 +87,9 @@ export default function PaymentStatus() {
           <View style={styles.failIcon}>
             <Ionicons name="close-circle" size={72} color={colors.danger} />
           </View>
-          <Text style={styles.title}>Payment Failed</Text>
+          <Text style={styles.title}>Payment Not Completed</Text>
           <Text style={styles.sub}>
-            Your order has been cancelled automatically. If any amount was deducted, it will be refunded within 3–5 business days.
+            No order was created. If any amount was deducted it will be refunded within 3–5 business days. You can try again.
           </Text>
 
           <Pressable style={styles.retryBtn} onPress={() => {

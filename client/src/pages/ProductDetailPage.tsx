@@ -8,12 +8,15 @@ import Spinner from '../components/common/Spinner';
 import { productApi } from '../api/product.api';
 import { reviewApi } from '../api/misc.api';
 import type { Product, ProductVariant, Review, Attribute } from '../types';
-import { formatPrice, formatDate } from '../utils/format';
+import { formatDate } from '../utils/format';
+import { useMoney } from '../hooks/useMoney';
+import { useRegion } from '../hooks/useRegion';
 import { colorLabel } from '../utils/colorName';
 import { socket, SOCKET_EVENTS } from '../lib/socket';
 import { useAuthStore } from '../stores/authStore';
 import { useCartStore } from '../stores/cartStore';
 import { useWishlistStore } from '../stores/wishlistStore';
+import { useCurrencyStore } from '../stores/currencyStore';
 import toast from 'react-hot-toast';
 
 export default function ProductDetailPage() {
@@ -34,6 +37,9 @@ export default function ProductDetailPage() {
   const { isAuthenticated } = useAuthStore();
   const { addItem, updateItem, removeItem, openCart, items: cartItems, isLoading: cartLoading } = useCartStore();
   const { toggle, isWishlisted } = useWishlistStore();
+  const { format } = useMoney();
+  const { isUSA } = useRegion();
+  const freeShipThreshold = useCurrencyStore((s) => s.freeShipThreshold);
 
   useEffect(() => {
     if (!slug) return;
@@ -88,6 +94,7 @@ export default function ProductDetailPage() {
   const images = selectedVariant?.images?.length ? selectedVariant.images : product.images;
   const hasStock = selectedVariant ? selectedVariant.stock > 0 : false;
   const wishlisted = isWishlisted(product._id);
+  const returnDays = product.returnDays ?? 7;
   const cartItem = selectedVariant
     ? cartItems.find((i) => i.product._id === product._id && i.variantSku === selectedVariant.sku)
     : undefined;
@@ -217,10 +224,10 @@ export default function ProductDetailPage() {
 
             {/* Price */}
             <div className="flex items-center gap-3 mb-6 pb-6 border-b border-brand-border">
-              <span className="font-heading text-3xl font-bold text-brand-text">{formatPrice(product.salePrice)}</span>
+              <span className="font-heading text-3xl font-bold text-brand-text">{format(product.salePrice, product.usdSalePrice)}</span>
               {product.mrp > product.salePrice && (
                 <>
-                  <span className="font-body text-lg text-brand-muted line-through">{formatPrice(product.mrp)}</span>
+                  <span className="font-body text-lg text-brand-muted line-through">{format(product.mrp, product.usdMrp)}</span>
                   <span className="font-body text-sm bg-green-100 text-green-700 px-2 py-0.5 font-medium">
                     {product.discountPercentage}% off
                   </span>
@@ -324,8 +331,12 @@ export default function ProductDetailPage() {
             {/* Info chips */}
             <div className="grid grid-cols-3 gap-3 mt-6 py-5 border-y border-brand-border">
               {[
-                { icon: Truck, label: 'Free Delivery', sub: 'On orders ₹999+' },
-                { icon: RotateCcw, label: 'Easy Returns', sub: '7-day returns' },
+                isUSA
+                  ? { icon: Truck, label: 'Delivery', sub: 'Calculated at checkout' }
+                  : { icon: Truck, label: 'Free Delivery', sub: `On orders ₹${freeShipThreshold.toLocaleString('en-IN')}+` },
+                returnDays > 0
+                  ? { icon: RotateCcw, label: 'Easy Returns', sub: `${returnDays}-day returns` }
+                  : { icon: RotateCcw, label: 'Returns', sub: 'Non-returnable' },
                 { icon: Shield, label: 'Secure Payment', sub: '100% safe' },
               ].map(({ icon: Icon, label, sub }) => (
                 <div key={label} className="flex flex-col items-center text-center gap-1">
@@ -393,11 +404,22 @@ export default function ProductDetailPage() {
                 )}
                 {tab === 'shipping' && (
                   <div className="font-body text-sm text-brand-muted leading-relaxed space-y-3">
-                    <p>• Free shipping on orders above ₹999</p>
-                    <p>• Standard delivery: 4–7 business days</p>
-                    <p>• Express delivery: 1–3 business days (₹149)</p>
-                    <p>• Cash on Delivery available across India</p>
-                    <p>• Easy returns within 7 days of delivery</p>
+                    {isUSA ? (
+                      <>
+                        <p>• Delivery charges calculated by state at checkout</p>
+                        <p>• Standard delivery: 7–14 business days</p>
+                        <p>• Secure international card payment</p>
+                      </>
+                    ) : (
+                      <>
+                        <p>• Free shipping on orders above ₹{freeShipThreshold.toLocaleString('en-IN')}</p>
+                        <p>• Standard delivery: 4–7 business days</p>
+                        <p>• Cash on Delivery available across India</p>
+                      </>
+                    )}
+                    {returnDays > 0
+                      ? <p>• Easy returns within {returnDays} days of delivery</p>
+                      : <p>• This item is not eligible for returns</p>}
                   </div>
                 )}
               </div>

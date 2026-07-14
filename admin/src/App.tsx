@@ -33,6 +33,8 @@ const ReturnsPage = lazy(() => import('./pages/content/ReturnsPage'));
 const CmsPage = lazy(() => import('./pages/content/CmsPage'));
 const ProvidersPage = lazy(() => import('./pages/providers/ProvidersPage'));
 const PushNotificationsPage = lazy(() => import('./pages/marketing/PushNotificationsPage'));
+const SettingsPage = lazy(() => import('./pages/settings/SettingsPage'));
+const ShippingRatesPage = lazy(() => import('./pages/settings/ShippingRatesPage'));
 
 const queryClient = new QueryClient({ defaultOptions: { queries: { staleTime: 60_000, retry: 1 } } });
 
@@ -79,6 +81,8 @@ export default function App() {
               <Route path="/cms" element={<CmsPage />} />
               <Route path="/providers" element={<ProvidersPage />} />
               <Route path="/push-notifications" element={<PushNotificationsPage />} />
+              <Route path="/settings" element={<SettingsPage />} />
+              <Route path="/shipping-rates" element={<ShippingRatesPage />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Route>
           </Routes>

@@ -12,14 +12,19 @@ import { useLenis } from '../../hooks/useLenis';
 import { useAuthStore } from '../../stores/authStore';
 import { useCartStore } from '../../stores/cartStore';
 import { useWishlistStore } from '../../stores/wishlistStore';
+import { useCurrencyStore } from '../../stores/currencyStore';
 
 export default function Layout() {
   const location = useLocation();
   const { isAuthenticated, fetchMe } = useAuthStore();
   const { fetchCart } = useCartStore();
   const { fetchWishlist } = useWishlistStore();
+  const initCurrency = useCurrencyStore((s) => s.init);
 
   useLenis();
+
+  // Load exchange rate + auto-detect currency once on mount.
+  useEffect(() => { initCurrency(); }, [initCurrency]);
 
   useEffect(() => {
     if (isAuthenticated) {

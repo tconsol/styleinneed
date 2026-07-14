@@ -11,6 +11,7 @@ import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold } from '@expo-goog
 import { PlayfairDisplay_600SemiBold, PlayfairDisplay_700Bold } from '@expo-google-fonts/playfair-display';
 import { queryClient } from '../src/lib/queryClient';
 import { useAuth } from '../src/store/auth';
+import { useCurrency } from '../src/store/currency';
 import { setAuthFailureHandler } from '../src/lib/api';
 import { colors } from '../src/theme';
 import { setupForegroundHandler } from '../src/lib/pushNotifications';
@@ -20,6 +21,7 @@ SplashScreen.preventAutoHideAsync().catch(() => {});
 export default function RootLayout() {
   const hydrate = useAuth((s) => s.hydrate);
   const logout = useAuth((s) => s.logout);
+  const initCurrency = useCurrency((s) => s.init);
 
   const [fontsLoaded] = useFonts({
     Inter_400Regular, Inter_500Medium, Inter_600SemiBold,
@@ -32,6 +34,7 @@ export default function RootLayout() {
   useEffect(() => {
     setAuthFailureHandler(() => { void logout(); });
     void hydrate();
+    void initCurrency();
 
     // Foreground Firebase message → show local notification (handled in setupForegroundHandler)
     const unsubscribeFcm = setupForegroundHandler();
@@ -51,7 +54,7 @@ export default function RootLayout() {
       notifListener.current?.remove();
       responseListener.current?.remove();
     };
-  }, [hydrate, logout]);
+  }, [hydrate, logout, initCurrency]);
 
   useEffect(() => {
     if (fontsLoaded) SplashScreen.hideAsync().catch(() => {});

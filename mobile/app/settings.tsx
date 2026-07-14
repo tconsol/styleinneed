@@ -4,6 +4,7 @@ import Constants from 'expo-constants';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../src/store/auth';
+import { useCurrency, type Currency } from '../src/store/currency';
 import { colors, fonts, radii, spacing, shadow } from '../src/theme';
 
 type SettingRow = {
@@ -20,6 +21,12 @@ export default function Settings() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { isAuthenticated, user, logout } = useAuth();
+  const currency = useCurrency((s) => s.currency);
+  const setCurrency = useCurrency((s) => s.setCurrency);
+  const currencyOpts: { c: Currency; label: string }[] = [
+    { c: 'INR', label: '₹ INR' },
+    { c: 'USD', label: '$ USD' },
+  ];
 
   const onLogout = () => {
     Alert.alert('Sign out?', 'You can sign back in anytime.', [
@@ -127,6 +134,23 @@ export default function Settings() {
           </View>
         )}
 
+        {/* Currency preference */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>CURRENCY</Text>
+          <View style={[styles.sectionCard, shadow.soft, { flexDirection: 'row', padding: 6, gap: 6 }]}>
+            {currencyOpts.map(({ c, label }) => {
+              const active = currency === c;
+              return (
+                <Pressable key={c} onPress={() => setCurrency(c)}
+                  style={[styles.curBtn, active && styles.curBtnActive]}>
+                  <Text style={[styles.curText, active && styles.curTextActive]}>{label}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+          <Text style={styles.curNote}>USA/Canada prices are shown in USD. India in INR.</Text>
+        </View>
+
         {/* Sections */}
         {sections.map((sec) => (
           <View key={sec.title} style={styles.section}>
@@ -224,6 +248,11 @@ const styles = StyleSheet.create({
     color: colors.muted,
     marginTop: 2,
   },
+  curBtn: { flex: 1, paddingVertical: 12, borderRadius: radii.xs, alignItems: 'center', backgroundColor: colors.surface },
+  curBtnActive: { backgroundColor: colors.primary },
+  curText: { fontFamily: fonts.bodySemibold, fontSize: 14, color: colors.textSecondary },
+  curTextActive: { color: colors.white },
+  curNote: { fontFamily: fonts.body, fontSize: 11, color: colors.muted, marginTop: 8, marginLeft: 4 },
   section: { marginBottom: spacing.lg },
   sectionTitle: {
     fontFamily: fonts.bodySemibold,

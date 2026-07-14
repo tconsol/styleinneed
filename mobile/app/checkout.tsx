@@ -13,10 +13,20 @@ import Field from '../src/components/Field';
 import { useCart, cartTotals } from '../src/api/cart';
 import { useAddresses, useManageAddress } from '../src/api/account';
 import { useCreateOrder, usePaymentConfig, useVerifyPayment } from '../src/api/orders';
+import { useShippingQuote } from '../src/api/content';
 import { useDelivery } from '../src/store/delivery';
+import { useCurrency } from '../src/store/currency';
 import { colors, fonts, radii, spacing } from '../src/theme';
 import { formatPrice } from '../src/utils/format';
 import type { Address } from '../src/types';
+
+const COUNTRIES = ['India', 'United States', 'Canada'] as const;
+const regionOf = (country?: string): 'IN' | 'US' | 'CA' => {
+  const c = (country || '').trim().toLowerCase();
+  if (/united states|u\.s\.a|usa|^us$/.test(c)) return 'US';
+  if (/canada|^ca$/.test(c)) return 'CA';
+  return 'IN';
+};
 
 const addrSchema = z.object({
   label: z.string().min(1, 'Required'),
@@ -41,12 +51,7 @@ export default function Checkout() {
   const createOrder = useCreateOrder();
   const verify = useVerifyPayment();
   const { data: payConfig } = usePaymentConfig();
-
-  const paymentOptions = [
-    { key: 'cod', label: 'Cash on Delivery', icon: 'cash-outline' as const, enabled: true },
-    { key: 'razorpay', label: 'UPI / Card / Netbanking (Razorpay)', icon: 'card-outline' as const, enabled: !!payConfig?.razorpayKeyId },
-    { key: 'stripe', label: 'International Cards (Stripe)', icon: 'globe-outline' as const, enabled: !!payConfig?.stripePublishableKey },
-  ];
+  const rate = useCurrency((s) => s.rate);
 
   const [selected, setSelected] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
@@ -54,15 +59,40 @@ export default function Checkout() {
   const [payment, setPayment] = useState('cod');
   const [coords, setCoords] = useState<{ latitude: number; longitude: number } | null>(null);
   const [locating, setLocating] = useState(false);
+  const [country, setCountry] = useState<string>('India');
 
-  const { subtotal } = cartTotals(cart);
-  const shipping = subtotal > 0 && subtotal < 999 ? 99 : 0;
-  const total = subtotal + shipping;
+  const { subtotal } = cartTotals(cart); // INR
 
   const deliverySel = useDelivery((s) => s.selected);
   const draft = useDelivery((s) => s.draft);
   const setDraft = useDelivery((s) => s.setDraft);
   const addressId = selected ?? deliverySel?._id ?? addresses?.find((a: Address) => a.isDefault)?._id ?? addresses?.[0]?._id ?? null;
+
+  // Currency + shipping follow the SELECTED address's country (what the server charges).
+  const selectedAddr = addresses?.find((a: Address) => a._id === addressId);
+  const region = regionOf(selectedAddr?.country);
+  const currency: 'INR' | 'USD' = region === 'IN' ? 'INR' : 'USD';
+  const isUSA = currency === 'USD';
+
+  const { data: quote } = useShippingQuote(
+    selectedAddr?.country || 'India', selectedAddr?.state || '', subtotal, !!selectedAddr
+  );
+  const shipping = quote ? quote.charge : 0;         // already in the address currency
+  const displaySubtotal = isUSA ? Math.round((subtotal / rate) * 100) / 100 : subtotal;
+  const total = displaySubtotal + shipping;
+  const fmt = (v: number) => formatPrice(v, currency);
+
+  const paymentOptions = [
+    { key: 'cod', label: 'Cash on Delivery', icon: 'cash-outline' as const, enabled: !isUSA },
+    { key: 'razorpay', label: 'UPI / Card / Netbanking (Razorpay)', icon: 'card-outline' as const, enabled: !!payConfig?.razorpayKeyId && !isUSA },
+    { key: 'stripe', label: 'International Cards (Stripe)', icon: 'globe-outline' as const, enabled: !!payConfig?.stripePublishableKey && isUSA },
+  ];
+
+  // Keep the chosen payment method valid for the address currency.
+  useEffect(() => {
+    if (isUSA && payment !== 'stripe') setPayment('stripe');
+    if (!isUSA && payment === 'stripe') setPayment('cod');
+  }, [isUSA]);
 
   const { control, handleSubmit, reset, setValue, formState: { errors } } = useForm<AddrForm>({
     resolver: zodResolver(addrSchema),
@@ -107,10 +137,10 @@ export default function Checkout() {
   const saveAddress = async (values: AddrForm) => {
     try {
       await addAddress.mutateAsync({
-        ...values, country: 'India',
+        ...values, country,
         ...(coords ? { lat: coords.latitude, lng: coords.longitude } : {}),
       } as Address);
-      reset(); setCoords(null); setShowForm(false); setDraft(null);
+      reset(); setCoords(null); setShowForm(false); setDraft(null); setCountry('India');
     } catch {
       Alert.alert('Error', 'Could not save address.');
     }
@@ -119,18 +149,19 @@ export default function Checkout() {
   const placeOrder = async () => {
     if (!addressId) { Alert.alert('Address needed', 'Add a delivery address first.'); return; }
     try {
-      const order = await createOrder.mutateAsync({ addressId, paymentMethod: payment, couponCode: coupon.trim() || undefined });
+      const res = await createOrder.mutateAsync({ addressId, paymentMethod: payment, couponCode: coupon.trim() || undefined });
 
       // Online payment → blocking payment-status screen handles gateway + verify.
-      if (order.provider && order.url) {
+      // The Order is created server-side only after the payment is confirmed.
+      if (res.provider && res.url && res.sessionId) {
         router.replace(
-          `/payment-status?orderId=${order.orderId}&provider=${order.provider}&url=${encodeURIComponent(order.url)}`
+          `/payment-status?sessionId=${res.sessionId}&provider=${res.provider}&url=${encodeURIComponent(res.url)}`
         );
         return;
       }
 
-      // COD
-      router.replace(`/order-success?id=${order.orderId}`);
+      // COD → order created immediately.
+      router.replace(`/order-success?id=${res.orderId}`);
     } catch {
       Alert.alert('Order failed', 'Something went wrong placing your order.');
     }
@@ -201,7 +232,19 @@ export default function Checkout() {
               </View>
             )}
 
-            {([['label', 'Label (Home/Work)'], ['fullName', 'Full name'], ['phone', 'Phone'], ['email', 'Email (order updates)'], ['line1', 'Address line 1'], ['line2', 'Address line 2 (optional)'], ['city', 'City'], ['state', 'State'], ['pincode', 'Pincode']] as const).map(([name, label]) => (
+            <Text style={styles.countryLabel}>Country</Text>
+            <View style={styles.countryRow}>
+              {COUNTRIES.map((c) => {
+                const active = country === c;
+                return (
+                  <Pressable key={c} style={[styles.countryChip, active && styles.countryChipActive]} onPress={() => setCountry(c)}>
+                    <Text style={[styles.countryChipText, active && styles.countryChipTextActive]}>{c}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            {([['label', 'Label (Home/Work)'], ['fullName', 'Full name'], ['phone', 'Phone'], ['email', 'Email (order updates)'], ['line1', 'Address line 1'], ['line2', 'Address line 2 (optional)'], ['city', 'City'], ['state', 'State'], ['pincode', country === 'India' ? 'Pincode' : 'ZIP / Postal code']] as const).map(([name, label]) => (
               <Controller key={name} control={control} name={name} render={({ field }) => (
                 <Field label={label} value={field.value} onChangeText={field.onChange}
                   keyboardType={name === 'phone' || name === 'pincode' ? 'number-pad' : name === 'email' ? 'email-address' : 'default'}
@@ -235,17 +278,24 @@ export default function Checkout() {
 
         {/* Summary */}
         <Text style={styles.section}>Order Summary</Text>
-        <View style={styles.sumRow}><Text style={styles.sumLabel}>Subtotal</Text><Text style={styles.sumVal}>{formatPrice(subtotal)}</Text></View>
-        <View style={styles.sumRow}><Text style={styles.sumLabel}>Shipping</Text><Text style={styles.sumVal}>{shipping === 0 ? 'Free' : formatPrice(shipping)}</Text></View>
-        <View style={[styles.sumRow, { marginTop: 6 }]}><Text style={styles.totalLabel}>Total</Text><Text style={styles.totalVal}>{formatPrice(total)}</Text></View>
-        <Text style={styles.note}>Coupon discount (if any) is applied on the next step.</Text>
+        <View style={styles.sumRow}><Text style={styles.sumLabel}>Subtotal</Text><Text style={styles.sumVal}>{fmt(displaySubtotal)}</Text></View>
+        <View style={styles.sumRow}>
+          <Text style={styles.sumLabel}>Shipping{isUSA && selectedAddr?.state ? ` (${selectedAddr.state})` : ''}</Text>
+          <Text style={styles.sumVal}>{!selectedAddr ? '—' : shipping === 0 ? 'Free' : fmt(shipping)}</Text>
+        </View>
+        <View style={[styles.sumRow, { marginTop: 6 }]}><Text style={styles.totalLabel}>Total</Text><Text style={styles.totalVal}>{fmt(total)}</Text></View>
+        <Text style={styles.note}>
+          {isUSA
+            ? 'Prices in USD. Delivery charged per state — no free shipping for USA/Canada. Coupon (if any) applied on the next step.'
+            : 'Coupon discount (if any) is applied on the next step.'}
+        </Text>
       </ScrollView>
 
       <View style={styles.bottom}>
         <Pressable style={[styles.place, (createOrder.isPending || verify.isPending) && { opacity: 0.6 }]} disabled={createOrder.isPending || verify.isPending} onPress={placeOrder}>
           <Text style={styles.placeText}>
             {createOrder.isPending ? 'Placing…' : verify.isPending ? 'Confirming…'
-              : payment === 'cod' ? `Place Order · ${formatPrice(total)}` : `Pay ${formatPrice(total)}`}
+              : payment === 'cod' ? `Place Order · ${fmt(total)}` : `Pay ${fmt(total)}`}
           </Text>
         </Pressable>
       </View>
@@ -283,6 +333,12 @@ const styles = StyleSheet.create({
   },
   locText: { fontFamily: fonts.bodySemibold, fontSize: 13, color: colors.primary },
   mapWrap: { height: 160, borderRadius: radii.xs, overflow: 'hidden', marginBottom: 16, backgroundColor: colors.surface },
+  countryLabel: { fontFamily: fonts.bodySemibold, fontSize: 12, color: colors.muted, marginBottom: 8 },
+  countryRow: { flexDirection: 'row', gap: 8, marginBottom: 14 },
+  countryChip: { flex: 1, borderWidth: 1, borderColor: colors.border, borderRadius: radii.xs, paddingVertical: 10, alignItems: 'center' },
+  countryChipActive: { borderColor: colors.primary, backgroundColor: '#FBF7F1' },
+  countryChipText: { fontFamily: fonts.bodyMedium, fontSize: 12, color: colors.textSecondary },
+  countryChipTextActive: { color: colors.primary, fontFamily: fonts.bodySemibold },
   cancelBtn: {
     flex: 1, borderWidth: 1, borderColor: colors.border,
     borderRadius: radii.xs, paddingVertical: 14, alignItems: 'center', marginTop: 8,

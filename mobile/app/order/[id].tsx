@@ -1,10 +1,9 @@
-import { useEffect, useRef } from 'react';
 import { View, Text, ScrollView, Pressable, StyleSheet, ActivityIndicator, Alert, Linking } from 'react-native';
 import { Image } from 'expo-image';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useOrder, useCancelOrder, useVerifyPayment } from '../../src/api/orders';
+import { useOrder, useCancelOrder } from '../../src/api/orders';
 import type { OrderItem, OrderStatus } from '../../src/types';
 import { colors, fonts, radii, spacing, shadow } from '../../src/theme';
 import { formatPrice } from '../../src/utils/format';
@@ -24,17 +23,6 @@ export default function OrderDetail() {
   const insets = useSafeAreaInsets();
   const { data: order, isLoading } = useOrder(id);
   const cancel = useCancelOrder();
-  const verify = useVerifyPayment();
-  const tried = useRef(false);
-
-  useEffect(() => {
-    if (!order || tried.current) return;
-    const online = order.paymentMethod === 'razorpay' || order.paymentMethod === 'stripe';
-    if (online && order.paymentStatus === 'pending') {
-      tried.current = true;
-      verify.mutate({ orderId: order._id, provider: order.paymentMethod as 'razorpay' | 'stripe' });
-    }
-  }, [order?._id, order?.paymentStatus]);
 
   const Header = (
     <View style={[styles.header, { paddingTop: insets.top + 6 }]}>
@@ -94,13 +82,6 @@ export default function OrderDetail() {
             </Text>
           </View>
         </View>
-
-        {verify.isPending && (
-          <View style={styles.verifying}>
-            <ActivityIndicator size="small" color={colors.primary} />
-            <Text style={styles.verifyingText}>Confirming your payment…</Text>
-          </View>
-        )}
 
         {/* Modern horizontal flow */}
         {!isTerminal && (
@@ -162,7 +143,7 @@ export default function OrderDetail() {
               <View style={{ flex: 1 }}>
                 <Text style={styles.itemName} numberOfLines={2}>{it.product.name}</Text>
                 {!!it.variant?.attributes && <Text style={styles.itemVar}>{Object.values(it.variant.attributes).join(' · ')}</Text>}
-                <Text style={styles.itemMeta}>Qty {it.quantity} · {formatPrice(it.price)}</Text>
+                <Text style={styles.itemMeta}>Qty {it.quantity} · {formatPrice(it.price, order.currency)}</Text>
                 {order.status === 'delivered' && (
                   <Pressable onPress={() => router.push(`/review/${it.product._id}?orderId=${order._id}`)}>
                     <Text style={styles.reviewLink}>Write a review</Text>
@@ -187,11 +168,11 @@ export default function OrderDetail() {
         {/* Payment */}
         <View style={[styles.card, shadow.soft]}>
           <Text style={styles.cardTitle}>Payment Summary</Text>
-          <Row label="Subtotal" value={formatPrice(order.subtotal)} />
-          {order.discount > 0 && <Row label="Discount" value={`- ${formatPrice(order.discount)}`} />}
-          <Row label="Shipping" value={order.shippingCharge === 0 ? 'Free' : formatPrice(order.shippingCharge)} />
+          <Row label="Subtotal" value={formatPrice(order.subtotal, order.currency)} />
+          {order.discount > 0 && <Row label="Discount" value={`- ${formatPrice(order.discount, order.currency)}`} />}
+          <Row label="Shipping" value={order.shippingCharge === 0 ? 'Free' : formatPrice(order.shippingCharge, order.currency)} />
           <View style={styles.totalDivider} />
-          <Row label="Total" value={formatPrice(order.total)} bold />
+          <Row label="Total" value={formatPrice(order.total, order.currency)} bold />
           <View style={styles.payBadge}>
             <Ionicons name="card-outline" size={14} color={colors.muted} />
             <Text style={styles.payMeta}>{order.paymentMethod.toUpperCase()} · {order.paymentStatus}</Text>

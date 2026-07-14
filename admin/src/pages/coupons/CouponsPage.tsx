@@ -2,6 +2,7 @@
 import { Plus, Edit2, Trash2, Ticket } from 'lucide-react';
 import Modal from '../../components/common/Modal';
 import Select from '../../components/common/Select';
+import StatusToggle from '../../components/common/StatusToggle';
 import { couponApi } from '../../api';
 import type { Coupon } from '../../types';
 import { formatDate, formatPrice } from '../../utils/format';
@@ -36,6 +37,18 @@ export default function CouponsPage() {
     setEditing(c);
     setForm({ code: c.code, type: c.type, value: c.value, minOrderValue: c.minOrderValue, maxDiscount: c.maxDiscount ? String(c.maxDiscount) : '', usageLimit: c.usageLimit ? String(c.usageLimit) : '', perUserLimit: c.perUserLimit ?? 1, startDate: c.startDate?.slice(0, 10) || '', expiryDate: c.expiryDate?.slice(0, 10) || '', isActive: c.isActive, description: c.description || '' } as typeof empty);
     setModal(true);
+  };
+
+  const handleToggleStatus = async (c: Coupon) => {
+    const next = !c.isActive;
+    setCoupons((prev) => prev.map((x) => (x._id === c._id ? { ...x, isActive: next } : x)));
+    try {
+      await couponApi.update(c._id, { isActive: next });
+      toast.success(next ? 'Activated' : 'Deactivated');
+    } catch {
+      setCoupons((prev) => prev.map((x) => (x._id === c._id ? { ...x, isActive: !next } : x)));
+      toast.error('Failed to update status');
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -103,11 +116,11 @@ export default function CouponsPage() {
                     <td className="px-3 py-3 text-[11px] text-brand-muted">{formatPrice(c.minOrderValue)}</td>
                     <td className="px-3 py-3 text-[11px] text-brand-muted">{c.usedCount}{c.usageLimit ? `/${c.usageLimit}` : ''}</td>
                     <td className="px-3 py-3 text-[10px] text-brand-muted">{formatDate(c.expiryDate)}</td>
-                    <td className="px-3 py-3 text-center">
-                      <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-semibold ${isValid ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-100 text-gray-500'}`}>
-                        <span className={`w-1.5 h-1.5 rounded-full ${isValid ? 'bg-emerald-500' : 'bg-gray-400'}`} />
-                        {isValid ? 'Active' : 'Expired'}
-                      </span>
+                    <td className="px-3 py-3">
+                      <div className="flex flex-col items-center gap-0.5">
+                        <StatusToggle isActive={c.isActive} onToggle={() => void handleToggleStatus(c)} />
+                        {c.isActive && !isValid && <span className="text-[9px] text-amber-500">expired</span>}
+                      </div>
                     </td>
                     <td className="px-3 py-3 text-center">
                       <div className="flex items-center justify-center gap-1">

@@ -61,7 +61,7 @@ export default function OrdersPage() {
                     )}
                   </div>
                   <div className="flex items-center justify-between">
-                    <p className="font-heading text-sm font-semibold">{formatPrice(order.total)}</p>
+                    <p className="font-heading text-sm font-semibold">{formatPrice(order.total, order.currency)}</p>
                     <Link to={`/orders/${order._id}`} className="font-body text-sm text-primary hover:underline">Track Order &rarr;</Link>
                   </div>
                 </div>

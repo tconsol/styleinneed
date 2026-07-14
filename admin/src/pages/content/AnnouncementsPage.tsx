@@ -3,6 +3,7 @@ import { Plus, Edit, Trash2, BellRing } from 'lucide-react';
 import Modal from '../../components/common/Modal';
 import Select from '../../components/common/Select';
 import Badge from '../../components/common/Badge';
+import StatusToggle from '../../components/common/StatusToggle';
 import { announcementApi, notificationApi } from '../../api';
 import type { Announcement } from '../../types';
 import { formatDate } from '../../utils/format';
@@ -33,6 +34,18 @@ export default function AnnouncementsPage() {
     announcementApi.getAll().then(({ data }) => setItems(data.data || [])).catch(() => {}).finally(() => setLoading(false));
   };
   useEffect(() => { fetch(); }, []);
+
+  const handleToggleStatus = async (a: Announcement) => {
+    const next = !a.isActive;
+    setItems((prev) => prev.map((x) => (x._id === a._id ? { ...x, isActive: next } : x)));
+    try {
+      await announcementApi.update(a._id, { isActive: next });
+      toast.success(next ? 'Activated' : 'Deactivated');
+    } catch {
+      setItems((prev) => prev.map((x) => (x._id === a._id ? { ...x, isActive: !next } : x)));
+      toast.error('Failed to update status');
+    }
+  };
 
   const openEdit = (a: Announcement) => {
     setEditing(a);
@@ -71,7 +84,12 @@ export default function AnnouncementsPage() {
                   <td className="px-3 py-2.5 font-body text-[11px] text-brand-muted">{a.views} / {a.clicks}</td>
                   <td className="px-3 py-2.5 font-body text-[10px] text-brand-muted">{formatDate(a.startDate)}</td>
                   <td className="px-3 py-2.5 font-body text-[10px] text-brand-muted">{formatDate(a.expiryDate)}</td>
-                  <td className="px-4 py-3"><Badge value={a.isActive && new Date(a.expiryDate) > new Date() ? 'active' : 'inactive'} /></td>
+                  <td className="px-4 py-3">
+                    <StatusToggle isActive={a.isActive} onToggle={() => void handleToggleStatus(a)} />
+                    {a.isActive && new Date(a.expiryDate) <= new Date() && (
+                      <span className="block text-[9px] text-amber-500 mt-0.5">expired</span>
+                    )}
+                  </td>
                   <td className="px-4 py-3"><div className="flex gap-1">
                     <button onClick={() => sendPush(a)} disabled={pushing === a._id} title="Send push to all devices"
                       className="w-7 h-7 flex items-center justify-center text-brand-muted hover:text-primary disabled:opacity-40">

@@ -3,15 +3,22 @@ import { X, Minus, Plus, ShoppingBag, Trash2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useCartStore, selectSubtotal } from '../../stores/cartStore';
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
-import { formatPrice } from '../../utils/format';
+import { useMoney } from '../../hooks/useMoney';
+import { useRegion } from '../../hooks/useRegion';
+import { useCurrencyStore } from '../../stores/currencyStore';
 
 export default function CartDrawer() {
   const { isOpen, closeCart, items, updateItem, removeItem, couponDiscount, freeShipping } = useCartStore();
   const subtotal = useCartStore(selectSubtotal);
   useBodyScrollLock(isOpen);
+  const { format } = useMoney();
+  const { isUSA } = useRegion();
+  const freeShipThreshold = useCurrencyStore((s) => s.freeShipThreshold);
 
-  const shippingCharge = freeShipping || subtotal >= 999 ? 0 : 99;
-  const total = subtotal - couponDiscount + shippingCharge;
+  // Cart amounts are stored in INR; format() converts for USD viewers. Real
+  // shipping (per-state for US, threshold for India) is finalised at checkout.
+  const indiaShip = freeShipping || subtotal >= freeShipThreshold ? 0 : 99;
+  const total = subtotal - couponDiscount + (isUSA ? 0 : indiaShip);
 
   return (
     <AnimatePresence>
@@ -74,7 +81,7 @@ export default function CartDrawer() {
                         </Link>
                         <p className="font-body text-xs text-brand-muted mt-1">SKU: {item.variantSku}</p>
                         <p className="font-heading text-base font-semibold text-primary mt-1.5">
-                          {formatPrice(item.price)}
+                          {format(item.price)}
                         </p>
                         <div className="flex items-center justify-between mt-3">
                           <div className="flex items-center border border-brand-border">
@@ -116,26 +123,26 @@ export default function CartDrawer() {
                 <div className="space-y-1.5">
                   <div className="flex justify-between font-body text-sm text-brand-muted">
                     <span>Subtotal</span>
-                    <span>{formatPrice(subtotal)}</span>
+                    <span>{format(subtotal)}</span>
                   </div>
                   {couponDiscount > 0 && (
                     <div className="flex justify-between font-body text-sm text-green-600">
                       <span>Coupon Discount</span>
-                      <span>-{formatPrice(couponDiscount)}</span>
+                      <span>-{format(couponDiscount)}</span>
                     </div>
                   )}
                   <div className="flex justify-between font-body text-sm text-brand-muted">
                     <span>Shipping</span>
-                    <span>{shippingCharge === 0 ? 'FREE' : formatPrice(shippingCharge)}</span>
+                    <span>{isUSA ? 'At checkout' : indiaShip === 0 ? 'FREE' : format(indiaShip)}</span>
                   </div>
                   <div className="flex justify-between font-heading text-lg font-semibold text-brand-text border-t border-brand-border pt-2 mt-1">
-                    <span>Total</span>
-                    <span>{formatPrice(total)}</span>
+                    <span>{isUSA ? 'Subtotal' : 'Total'}</span>
+                    <span>{format(total)}</span>
                   </div>
                 </div>
-                {subtotal < 999 && (
+                {!isUSA && subtotal < freeShipThreshold && (
                   <p className="font-body text-xs text-brand-muted text-center">
-                    Add {formatPrice(999 - subtotal)} more for free shipping
+                    Add {format(freeShipThreshold - subtotal)} more for free shipping
                   </p>
                 )}
                 <Link to="/checkout" onClick={closeCart} className="btn-primary w-full justify-center">

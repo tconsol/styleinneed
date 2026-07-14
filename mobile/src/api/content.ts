@@ -43,6 +43,22 @@ export interface Ticket {
   createdAt: string;
 }
 
+/* ── Shipping quote (checkout) ── */
+export interface ShippingQuote {
+  region: 'IN' | 'US' | 'CA';
+  currency: 'INR' | 'USD';
+  charge: number;
+  freeShippingEligible: boolean;
+  freeShippingThreshold: number | null;
+}
+export const useShippingQuote = (country: string, state: string, subtotal: number, enabled: boolean) =>
+  useQuery({
+    queryKey: ['ship-quote', country, state, subtotal],
+    enabled,
+    queryFn: () =>
+      api.get('/shipping-rates/quote', { params: { country, state, subtotal } }).then((r) => r.data.data as ShippingQuote),
+  });
+
 /* ── Blog ── */
 export const useBlogs = () =>
   useQuery({ queryKey: ['blogs'], queryFn: () => api.get('/blogs').then((r) => (r.data.data ?? []) as Blog[]) });

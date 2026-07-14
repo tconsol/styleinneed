@@ -92,7 +92,7 @@ export default function OrdersTab() {
                 <View style={styles.cardBottom}>
                   <View>
                     <Text style={styles.totalLabel}>Total Amount</Text>
-                    <Text style={styles.total}>{formatPrice(item.total)}</Text>
+                    <Text style={styles.total}>{formatPrice(item.total, item.currency)}</Text>
                   </View>
                   <View style={styles.detailsBtn}>
                     <Text style={styles.detailsBtnText}>Details</Text>

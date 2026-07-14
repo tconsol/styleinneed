@@ -33,6 +33,9 @@ export interface Product {
   weightGrams?: number;
   mrp: number;
   salePrice: number;
+  usdMrp?: number;
+  usdSalePrice?: number;
+  returnDays?: number;
   discountPercentage: number;
   variants: ProductVariant[];
   images: string[];
@@ -140,6 +143,7 @@ export interface Order {
   orderId: string;
   items: OrderItem[];
   shippingAddress: Address;
+  currency?: 'INR' | 'USD';
   subtotal: number;
   shippingCharge: number;
   discount: number;

@@ -2,7 +2,7 @@ import { Router } from 'express';
 import {
   getDashboardStats, getRevenueAnalytics, getTopProducts,
   getUsers, updateUserRole, getAuditLogs,
-  getAllOrders, getAdminOrderById, updateOrderStatus,
+  getAllOrders, getAdminOrderById, updateOrderStatus, deleteOrder,
   getAdminProducts, getAdminProductById,
 } from '../controllers/admin.controller';
 import { protect, isAdminOrManager, isSuperAdmin } from '../middleware/auth';
@@ -24,6 +24,7 @@ router.get('/products/:id', isAdminOrManager, getAdminProductById);
 router.get('/orders', isAdminOrManager, getAllOrders);
 router.get('/orders/:id', isAdminOrManager, getAdminOrderById);
 router.patch('/orders/:id/status', isAdminOrManager, updateOrderStatus);
+router.delete('/orders/:id', isAdminOrManager, deleteOrder);
 
 router.get('/audit-logs', isAdminOrManager, getAuditLogs);
 

@@ -19,7 +19,7 @@ import { useCart, cartTotals } from '../../src/api/cart';
 import { useWishlist } from '../../src/api/wishlist';
 import { recentlyViewed, type MiniProduct } from '../../src/lib/recentlyViewed';
 import { categoryImage } from '../../src/lib/categoryImage';
-import { formatPrice } from '../../src/utils/format';
+import { useMoney } from '../../src/store/currency';
 import { colors, fonts, radii, spacing, shadow } from '../../src/theme';
 import type { Product, Category, ProductType } from '../../src/types';
 
@@ -176,6 +176,7 @@ export default function Home() {
   const { data: cart } = useCart();
   const { count: cartCount } = cartTotals(cart);
   const { data: wishlist } = useWishlist();
+  const { format } = useMoney();
   const wishCount = wishlist?.length ?? 0;
   const [recent, setRecent] = useState<MiniProduct[]>([]);
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -312,7 +313,7 @@ export default function Home() {
                 <Pressable style={{ width: cardW * 0.75 }} onPress={() => router.push(`/product/${item.slug}` as never)}>
                   <Image source={{ uri: item.images?.[0] }} style={[s.recentImg, { width: cardW * 0.75, height: (cardW * 0.75) * 4 / 3 }]} contentFit="cover" />
                   <Text style={s.recentName} numberOfLines={1}>{item.name}</Text>
-                  <Text style={s.recentPrice}>{formatPrice(item.salePrice)}</Text>
+                  <Text style={s.recentPrice}>{format(item.salePrice)}</Text>
                 </Pressable>
               )}
             />

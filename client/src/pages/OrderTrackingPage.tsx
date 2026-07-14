@@ -26,8 +26,6 @@ export default function OrderTrackingPage() {
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [cancelling, setCancelling] = useState(false);
-  const [verifying, setVerifying] = useState(false);
-  const tried = useRef(false);
   const socketRef = useRef<Socket | null>(null);
 
   const load = () => {
@@ -50,19 +48,6 @@ export default function OrderTrackingPage() {
 
     return () => { socket.disconnect(); };
   }, [id]);
-
-  // Self-heal: re-verify an online order still marked pending (covers the user
-  // navigating back before the gateway finished capturing the payment).
-  useEffect(() => {
-    if (!order || tried.current) return;
-    const online = order.paymentMethod === 'razorpay' || order.paymentMethod === 'stripe';
-    if (online && order.paymentStatus === 'pending') {
-      tried.current = true;
-      setVerifying(true);
-      const call = order.paymentMethod === 'stripe' ? orderApi.verifyStripePayment : orderApi.verifyPayment;
-      call({ orderId: order._id }).then(() => load()).catch(() => {}).finally(() => setVerifying(false));
-    }
-  }, [order?._id, order?.paymentStatus]);
 
   const cancel = async () => {
     if (!order || !window.confirm('Cancel this order? This cannot be undone.')) return;
@@ -112,13 +97,6 @@ export default function OrderTrackingPage() {
             {order.status}
           </span>
         </div>
-
-        {verifying && (
-          <div className="flex items-center gap-2 bg-brand-surface border border-brand-border p-3 mb-6">
-            <span className="w-4 h-4 border-2 border-brand-border border-t-primary rounded-full animate-spin" />
-            <span className="font-body text-sm text-brand-text">Confirming your payment…</span>
-          </div>
-        )}
 
         {/* Horizontal progress (active flow) */}
         {!isTerminal && (
@@ -181,7 +159,7 @@ export default function OrderTrackingPage() {
                 <div className="flex-1">
                   <Link to={`/products/${it.product.slug}`} className="font-body text-sm font-medium hover:text-primary line-clamp-2">{it.product.name}</Link>
                   {it.variant?.attributes && <p className="font-body text-xs text-brand-muted mt-0.5">{Object.values(it.variant.attributes).join(' · ')}</p>}
-                  <p className="font-body text-xs text-brand-muted mt-0.5">Qty {it.quantity} · {formatPrice(it.price)}</p>
+                  <p className="font-body text-xs text-brand-muted mt-0.5">Qty {it.quantity} · {formatPrice(it.price, order.currency)}</p>
                 </div>
               </li>
             ))}
@@ -204,10 +182,10 @@ export default function OrderTrackingPage() {
           <div className="bg-white border border-brand-border p-6">
             <h2 className="font-heading text-lg font-semibold mb-3">Payment</h2>
             <div className="space-y-1.5 font-body text-sm">
-              <div className="flex justify-between text-brand-muted"><span>Subtotal</span><span>{formatPrice(order.subtotal)}</span></div>
-              {order.discount > 0 && <div className="flex justify-between text-green-600"><span>Discount</span><span>-{formatPrice(order.discount)}</span></div>}
-              <div className="flex justify-between text-brand-muted"><span>Shipping</span><span>{order.shippingCharge === 0 ? 'FREE' : formatPrice(order.shippingCharge)}</span></div>
-              <div className="flex justify-between font-semibold text-brand-text border-t border-brand-border pt-2 mt-1"><span>Total</span><span>{formatPrice(order.total)}</span></div>
+              <div className="flex justify-between text-brand-muted"><span>Subtotal</span><span>{formatPrice(order.subtotal, order.currency)}</span></div>
+              {order.discount > 0 && <div className="flex justify-between text-green-600"><span>Discount</span><span>-{formatPrice(order.discount, order.currency)}</span></div>}
+              <div className="flex justify-between text-brand-muted"><span>Shipping</span><span>{order.shippingCharge === 0 ? 'FREE' : formatPrice(order.shippingCharge, order.currency)}</span></div>
+              <div className="flex justify-between font-semibold text-brand-text border-t border-brand-border pt-2 mt-1"><span>Total</span><span>{formatPrice(order.total, order.currency)}</span></div>
               <p className="text-xs text-brand-muted pt-2 uppercase">{order.paymentMethod} · {order.paymentStatus}</p>
             </div>
           </div>

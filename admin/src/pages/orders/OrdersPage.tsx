@@ -1,9 +1,11 @@
 ﻿import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, ShoppingBag, Eye, Circle } from 'lucide-react';
+import { Search, ShoppingBag, Eye, Circle, Trash2 } from 'lucide-react';
 import { orderApi } from '../../api';
+import { useConfirm } from '../../components/common/ConfirmDialog';
 import type { Order, Pagination } from '../../types';
 import { formatPrice, formatDateTime } from '../../utils/format';
+import toast from 'react-hot-toast';
 
 const STATUSES = ['all', 'pending', 'confirmed', 'packed', 'shipped', 'delivered', 'returned', 'cancelled'];
 
@@ -38,6 +40,7 @@ function Avatar({ name }: { name: string }) {
 
 export default function OrdersPage() {
   const navigate = useNavigate();
+  const confirm = useConfirm();
   const [orders, setOrders] = useState<Order[]>([]);
   const [pagination, setPagination] = useState<Pagination>({ page: 1, limit: 20, total: 0, pages: 1 });
   const [loading, setLoading] = useState(true);
@@ -55,6 +58,22 @@ export default function OrdersPage() {
   }, [page, activeStatus]);
 
   useEffect(() => { load(); }, [load]);
+
+  const handleDelete = async (order: Order) => {
+    const ok = await confirm({
+      title: 'Delete Order',
+      message: `Permanently delete order #${order.orderId}? Stock is restored for active orders. This cannot be undone.`,
+      confirmText: 'Delete',
+      danger: true,
+    });
+    if (!ok) return;
+    try {
+      await orderApi.delete(order._id);
+      setOrders((prev) => prev.filter((o) => o._id !== order._id));
+      setPagination((p) => ({ ...p, total: Math.max(0, p.total - 1) }));
+      toast.success('Order deleted');
+    } catch { toast.error('Delete failed'); }
+  };
 
   const filtered = search.trim()
     ? orders.filter((o) =>
@@ -220,10 +239,16 @@ export default function OrdersPage() {
                   </td>
 
                   {/* Action */}
-                  <td className="px-3 py-3.5 text-center">
-                    <div className="w-7 h-7 rounded-lg mx-auto flex items-center justify-center transition-all group-hover:bg-indigo-50"
-                      style={{ color: '#94A3B8' }}>
-                      <Eye size={13} style={{ color: '#4F46E5' }} />
+                  <td className="px-3 py-3.5">
+                    <div className="flex items-center justify-center gap-1">
+                      <button onClick={(e) => { e.stopPropagation(); navigate(`/orders/${order._id}`); }} title="View"
+                        className="w-7 h-7 rounded-lg flex items-center justify-center transition-all hover:bg-indigo-50">
+                        <Eye size={13} style={{ color: '#4F46E5' }} />
+                      </button>
+                      <button onClick={(e) => { e.stopPropagation(); void handleDelete(order); }} title="Delete order"
+                        className="w-7 h-7 rounded-lg flex items-center justify-center transition-all text-slate-400 hover:bg-red-50 hover:text-red-500">
+                        <Trash2 size={13} />
+                      </button>
                     </div>
                   </td>
                 </tr>

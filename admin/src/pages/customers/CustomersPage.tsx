@@ -2,6 +2,7 @@
 import { Search, Edit2, Users } from 'lucide-react';
 import Modal from '../../components/common/Modal';
 import Select from '../../components/common/Select';
+import StatusToggle from '../../components/common/StatusToggle';
 import { customerApi } from '../../api';
 import type { Customer, Pagination } from '../../types';
 import { formatDate } from '../../utils/format';
@@ -46,6 +47,18 @@ export default function CustomersPage() {
   useEffect(() => { load(); }, [load]);
 
   const openEdit = (c: Customer) => { setSelected(c); setRoleForm({ role: c.role, isActive: c.isActive }); };
+
+  const handleToggleStatus = async (c: Customer) => {
+    const next = !c.isActive;
+    setCustomers((prev) => prev.map((x) => (x._id === c._id ? { ...x, isActive: next } : x)));
+    try {
+      await customerApi.updateRole(c._id, { isActive: next });
+      toast.success(next ? 'Account activated' : 'Account deactivated');
+    } catch {
+      setCustomers((prev) => prev.map((x) => (x._id === c._id ? { ...x, isActive: !next } : x)));
+      toast.error('Failed to update status');
+    }
+  };
 
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -121,11 +134,10 @@ export default function CustomersPage() {
                         {c.isEmailVerified ? '✓ Yes' : '✗ No'}
                       </span>
                     </td>
-                    <td className="px-3 py-3 text-center">
-                      <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-semibold ${c.isActive ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-100 text-gray-500'}`}>
-                        <span className={`w-1.5 h-1.5 rounded-full ${c.isActive ? 'bg-emerald-500' : 'bg-gray-400'}`} />
-                        {c.isActive ? 'Active' : 'Inactive'}
-                      </span>
+                    <td className="px-3 py-3">
+                      <div className="flex justify-center">
+                        <StatusToggle isActive={c.isActive} onToggle={() => void handleToggleStatus(c)} />
+                      </div>
                     </td>
                     <td className="px-3 py-3 text-[10px] text-brand-muted">{formatDate(c.createdAt)}</td>
                     <td className="px-3 py-3 text-center">

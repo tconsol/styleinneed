@@ -23,6 +23,7 @@ interface FormState {
   salePrice: string;
   usdMrp: string;
   usdSalePrice: string;
+  returnDays: string;
   provider: string;
   images: string[];
   tags: string;
@@ -41,7 +42,7 @@ interface FormState {
 
 const emptyForm: FormState = {
   name: '', shortDescription: '', description: '', productType: 'clothing', category: '', collections: [],
-  mrp: '', salePrice: '', usdMrp: '', usdSalePrice: '', provider: '', images: [], tags: '',
+  mrp: '', salePrice: '', usdMrp: '', usdSalePrice: '', returnDays: '7', provider: '', images: [], tags: '',
   attributes: {}, weightGrams: '',
   isFeatured: false, isNewArrival: true, isBestSeller: false, isTrending: false, isActive: true,
   variants: [{ sku: '', stock: 0, attributes: {} }],
@@ -87,6 +88,7 @@ export default function ProductFormPage() {
         mrp: String(p.mrp), salePrice: String(p.salePrice),
         usdMrp: p.usdMrp != null ? String(p.usdMrp) : '',
         usdSalePrice: p.usdSalePrice != null ? String(p.usdSalePrice) : '',
+        returnDays: p.returnDays != null ? String(p.returnDays) : '7',
         provider: typeof p.provider === 'object' ? p.provider?._id || '' : p.provider || '',
         sizeChartId: typeof p.sizeChartId === 'object' ? p.sizeChartId?._id || '' : p.sizeChartId || '',
         images: p.images || [], tags: p.tags?.join(', ') || '',
@@ -217,6 +219,7 @@ export default function ProductFormPage() {
       salePrice: Number(form.salePrice),
       usdMrp: form.usdMrp ? Number(form.usdMrp) : undefined,
       usdSalePrice: form.usdSalePrice ? Number(form.usdSalePrice) : undefined,
+      returnDays: form.returnDays !== '' ? Number(form.returnDays) : 7,
       provider: form.provider || undefined,
       sizeChartId: form.sizeChartId || undefined,
       weightGrams: form.weightGrams ? Number(form.weightGrams) : undefined,
@@ -284,6 +287,11 @@ export default function ProductFormPage() {
             <div>
               <label className="input-label">Tags (comma separated)</label>
               <input value={form.tags} onChange={(e) => setForm({ ...form, tags: e.target.value })} className="input-field" placeholder="silk, festive, bridal" />
+            </div>
+            <div>
+              <label className="input-label">Return Window (days)</label>
+              <input type="number" min="0" value={form.returnDays} onChange={(e) => setForm({ ...form, returnDays: e.target.value })} className="input-field" placeholder="7" />
+              <p className="text-[11px] text-brand-muted mt-1">Shown on the product page. Set <b>0</b> for non-returnable items.</p>
             </div>
           </div>
 

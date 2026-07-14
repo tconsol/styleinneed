@@ -10,6 +10,7 @@ import Return from '../models/Return';
 import { AuthRequest } from '../types';
 import { sendSuccess, sendError, getPagination } from '../utils/apiResponse';
 import { emitEvent, SOCKET_EVENTS } from '../config/socket';
+import { invalidateCache } from '../middleware/cache';
 import { sendPushToUser, getStatusPushContent } from '../services/push.service';
 
 export const getDashboardStats = async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -170,12 +171,14 @@ export const getAuditLogs = async (req: Request, res: Response, next: NextFuncti
 
 export const getAllOrders = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { page, limit, status, paymentStatus } = req.query as Record<string, string>;
+    const { page, limit, status, paymentStatus, since } = req.query as Record<string, string>;
     const { page: p, limit: l, skip } = getPagination(page, limit);
 
     const filter: Record<string, unknown> = {};
     if (status) filter.status = status;
     if (paymentStatus) filter.paymentStatus = paymentStatus;
+    // `since` (ms epoch) powers the sidebar "new since last viewed" badge count.
+    if (since && !isNaN(Number(since))) filter.createdAt = { $gt: new Date(Number(since)) };
 
     const [orders, total] = await Promise.all([
       Order.find(filter)
@@ -291,6 +294,40 @@ export const updateOrderStatus = async (req: AuthRequest, res: Response, next: N
     });
 
     sendSuccess(res, 'Order status updated', order);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Permanently delete an order (admin cleanup of test/erroneous orders).
+// Restores stock only for orders still holding it (active statuses).
+export const deleteOrder = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const order = await Order.findById(req.params.id);
+    if (!order) { sendError(res, 'Order not found', 404); return; }
+
+    const holdsStock = ['pending', 'confirmed', 'packed', 'shipped'].includes(order.status);
+    if (holdsStock) {
+      for (const item of order.items) {
+        await Product.updateOne(
+          { _id: item.product, 'variants.sku': item.variant.sku },
+          { $inc: { 'variants.$.stock': item.quantity } }
+        );
+      }
+      void invalidateCache('/api/v1/products');
+    }
+
+    await order.deleteOne();
+
+    await AuditLog.create({
+      user: req.user!._id,
+      action: 'DELETE_ORDER',
+      resource: 'order',
+      resourceId: order._id.toString(),
+      changes: { orderId: order.orderId, status: order.status, restoredStock: holdsStock },
+    });
+
+    sendSuccess(res, 'Order deleted');
   } catch (err) {
     next(err);
   }

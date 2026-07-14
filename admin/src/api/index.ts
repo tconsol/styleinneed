@@ -54,6 +54,7 @@ export const orderApi = {
   getAll: (params?: object) => client.get('/admin/orders', { params }),
   getById: (id: string) => client.get(`/admin/orders/${id}`),
   updateStatus: (id: string, data: object) => client.patch(`/admin/orders/${id}/status`, data),
+  delete: (id: string) => client.delete(`/admin/orders/${id}`),
 };
 
 export const customerApi = {
@@ -145,4 +146,15 @@ export const sizeChartApi = {
   create: (data: object) => client.post('/size-charts', data),
   update: (id: string, data: object) => client.patch(`/size-charts/${id}`, data),
   delete: (id: string) => client.delete(`/size-charts/${id}`),
+};
+
+export const settingsApi = {
+  get: () => client.get('/settings/admin'),
+  update: (data: object) => client.patch('/settings', data),
+};
+
+export const shippingApi = {
+  getAll: () => client.get('/shipping-rates'),
+  update: (id: string, data: object) => client.patch(`/shipping-rates/${id}`, data),
+  bulkSet: (country: 'US' | 'CA', charge: number) => client.patch('/shipping-rates/bulk', { country, charge }),
 };

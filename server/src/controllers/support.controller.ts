@@ -105,12 +105,14 @@ export const addMessage = async (req: AuthRequest, res: Response, next: NextFunc
 
 export const getAllTickets = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { page, limit, status, priority } = req.query as Record<string, string>;
+    const { page, limit, status, priority, since } = req.query as Record<string, string>;
     const { page: p, limit: l, skip } = getPagination(page, limit);
 
     const filter: Record<string, unknown> = {};
     if (status) filter.status = status;
     if (priority) filter.priority = priority;
+    // `since` (ms epoch) powers the sidebar "new since last viewed" badge count.
+    if (since && !isNaN(Number(since))) filter.createdAt = { $gt: new Date(Number(since)) };
 
     const [tickets, total] = await Promise.all([
       SupportTicket.find(filter)

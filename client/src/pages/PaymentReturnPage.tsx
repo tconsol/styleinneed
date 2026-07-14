@@ -12,7 +12,9 @@ export default function PaymentReturnPage() {
   const [state, setState] = useState<'verifying' | 'success' | 'failed'>('verifying');
   const ran = useRef(false);
 
-  const orderId = params.get('order');
+  // New flow: the gateway returns with a payment-session id. (Legacy `order`
+  // param is still read as a fallback for any in-flight old links.)
+  const sessionId = params.get('session') || undefined;
   const status = params.get('status');
 
   useEffect(() => {
@@ -20,34 +22,39 @@ export default function PaymentReturnPage() {
     ran.current = true;
 
     const run = async () => {
-      if (!orderId) { setState('failed'); return; }
       if (status === 'cancel') {
         toast('Payment cancelled');
         setState('failed');
         return;
       }
 
-      // Provider stashed before the redirect.
+      // Provider + session stashed before the redirect.
       let provider: 'razorpay' | 'stripe' = 'razorpay';
+      let sid = sessionId;
       try {
         const pending = JSON.parse(localStorage.getItem('pendingPayment') || '{}');
         if (pending.provider) provider = pending.provider;
+        if (!sid && pending.sessionId) sid = pending.sessionId;
       } catch { /* ignore */ }
 
+      if (!sid) { setState('failed'); return; }
+
       try {
-        if (provider === 'stripe') await orderApi.verifyStripePayment({ orderId });
-        else await orderApi.verifyPayment({ orderId });
+        const { data } = provider === 'stripe'
+          ? await orderApi.verifyStripePayment({ sessionId: sid })
+          : await orderApi.verifyPayment({ sessionId: sid });
         localStorage.removeItem('pendingPayment');
         await clearCart();
         setState('success');
         toast.success('Payment confirmed!');
-        setTimeout(() => navigate(`/orders/${orderId}`), 1200);
+        const orderId = data?.data?.orderId;
+        setTimeout(() => navigate(orderId ? `/orders/${orderId}` : '/orders'), 1200);
       } catch {
         setState('failed');
       }
     };
     void run();
-  }, [orderId, status, clearCart, navigate]);
+  }, [sessionId, status, clearCart, navigate]);
 
   return (
     <div className="min-h-screen bg-brand-bg flex flex-col items-center justify-center px-6 text-center" style={{ paddingTop: 'var(--topbar-height)' }}>
@@ -72,7 +79,7 @@ export default function PaymentReturnPage() {
             If you completed the payment it will reflect shortly. You can check your order status anytime.
           </p>
           <div className="flex gap-3 mt-6">
-            {orderId && <button onClick={() => navigate(`/orders/${orderId}`)} className="btn-primary text-sm">View Order</button>}
+            <button onClick={() => navigate('/orders')} className="btn-primary text-sm">My Orders</button>
             <button onClick={() => navigate('/checkout')} className="btn-outline text-sm">Back to Checkout</button>
           </div>
         </>

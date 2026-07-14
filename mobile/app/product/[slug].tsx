@@ -15,7 +15,7 @@ import { useAddresses } from '../../src/api/account';
 import ProductCard from '../../src/components/ProductCard';
 import LocationSheet from '../../src/components/LocationSheet';
 import { colors, fonts, radii, spacing, shadow } from '../../src/theme';
-import { formatPrice } from '../../src/utils/format';
+import { useMoney, useCurrency } from '../../src/store/currency';
 import type { Product, ProductVariant, SizeChart } from '../../src/types';
 
 const isColorKey = (k: string) => /colou?r/i.test(k);
@@ -28,6 +28,8 @@ export default function ProductDetail() {
   const { width } = useWindowDimensions();
   const { data: product, isLoading } = useProduct(slug);
   const { data: attrConfigs } = useAttributes();
+  const { format, isUSA } = useMoney();
+  const freeShipThreshold = useCurrency((s) => s.freeShipThreshold);
   const isAuth = useAuth((s) => s.isAuthenticated);
   const delivery = useDelivery((s) => s.selected);
   const setDelivery = useDelivery((s) => s.setSelected);
@@ -100,6 +102,7 @@ export default function ProductDetail() {
 
   const images = (selectedVariant?.images?.length ? selectedVariant.images : product.images) ?? [];
   const stock = selectedVariant?.stock ?? 0;
+  const returnDays = product.returnDays ?? 7;
   const cartItem = cart?.items?.find((i) => i.product._id === product._id && i.variantSku === selectedVariant?.sku);
 
   const colorKey = attrKeys.find(isColorKey);
@@ -221,8 +224,8 @@ export default function ProductDetail() {
           )}
 
           <View style={styles.priceRow}>
-            <Text style={styles.price}>{formatPrice(product.salePrice)}</Text>
-            {product.mrp > product.salePrice && <Text style={styles.mrp}>{formatPrice(product.mrp)}</Text>}
+            <Text style={styles.price}>{format(product.salePrice, product.usdSalePrice)}</Text>
+            {product.mrp > product.salePrice && <Text style={styles.mrp}>{format(product.mrp, product.usdMrp)}</Text>}
             {product.discountPercentage > 0 && <Text style={styles.off}>{product.discountPercentage}% off</Text>}
           </View>
           <Text style={styles.taxNote}>Inclusive of all taxes</Text>
@@ -307,9 +310,13 @@ export default function ProductDetail() {
             </View>
             <Text style={styles.change}>Change</Text>
           </Pressable>
-          <View style={styles.serviceRow}><Ionicons name="cube-outline" size={16} color={colors.success} /><Text style={styles.serviceText}>Free delivery on orders above ₹999</Text></View>
-          <View style={styles.serviceRow}><Ionicons name="sync-outline" size={16} color={colors.success} /><Text style={styles.serviceText}>14 days easy return & exchange</Text></View>
-          <View style={styles.serviceRow}><Ionicons name="cash-outline" size={16} color={colors.success} /><Text style={styles.serviceText}>Pay on delivery available</Text></View>
+          {isUSA
+            ? <View style={styles.serviceRow}><Ionicons name="cube-outline" size={16} color={colors.success} /><Text style={styles.serviceText}>Delivery charges calculated by state at checkout</Text></View>
+            : <View style={styles.serviceRow}><Ionicons name="cube-outline" size={16} color={colors.success} /><Text style={styles.serviceText}>Free delivery on orders above ₹{freeShipThreshold.toLocaleString('en-IN')}</Text></View>}
+          {returnDays > 0
+            ? <View style={styles.serviceRow}><Ionicons name="sync-outline" size={16} color={colors.success} /><Text style={styles.serviceText}>{returnDays} days easy return & exchange</Text></View>
+            : <View style={styles.serviceRow}><Ionicons name="close-circle-outline" size={16} color={colors.muted} /><Text style={styles.serviceText}>This item is not eligible for returns</Text></View>}
+          {!isUSA && <View style={styles.serviceRow}><Ionicons name="cash-outline" size={16} color={colors.success} /><Text style={styles.serviceText}>Pay on delivery available</Text></View>}
 
           {/* Specs */}
           {specs.length > 0 && (

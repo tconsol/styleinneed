@@ -29,7 +29,7 @@ export default function AdminLayout() {
   const title = getTitle(location.pathname);
   const { isDark } = useThemeStore();
   const { fetchMe } = useAuthStore();
-  const { fetch: fetchBadges, incrementOrders, incrementSupport } = useBadgeStore();
+  const { fetch: fetchBadges, incrementOrders, incrementSupport, markViewed } = useBadgeStore();
   const [orderAlert, setOrderAlert] = useState<OrderAlert | null>(null);
   const alertIdRef = useRef(0);
 
@@ -42,6 +42,13 @@ export default function AdminLayout() {
     void fetchMe();
     void fetchBadges();
   }, []);
+
+  // Viewing a page (via nav OR refresh/direct-load on it) marks it seen, so its
+  // badge stays cleared until genuinely new items arrive.
+  useEffect(() => {
+    if (location.pathname.startsWith('/orders')) markViewed('orders');
+    else if (location.pathname.startsWith('/support')) markViewed('support');
+  }, [location.pathname, markViewed]);
 
   // Real-time: listen for new orders + tickets via socket
   useEffect(() => {

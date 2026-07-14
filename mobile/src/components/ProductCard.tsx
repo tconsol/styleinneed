@@ -3,7 +3,7 @@ import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fonts, radii } from '../theme';
-import { formatPrice } from '../utils/format';
+import { useMoney } from '../store/currency';
 import { useWishlist, useToggleWishlist } from '../api/wishlist';
 import { useAuth } from '../store/auth';
 import type { Product } from '../types';
@@ -13,6 +13,7 @@ export default function ProductCard({ product, width }: { product: Product; widt
   const isAuth = useAuth((s) => s.isAuthenticated);
   const { data: wishlist } = useWishlist();
   const toggle = useToggleWishlist();
+  const { format } = useMoney();
   const wishlisted = !!wishlist?.some((p: Product) => p._id === product._id);
 
   const onHeart = () => {
@@ -74,9 +75,9 @@ export default function ProductCard({ product, width }: { product: Product; widt
 
         {/* Price row */}
         <View style={styles.priceRow}>
-          <Text style={styles.price}>{formatPrice(product.salePrice)}</Text>
+          <Text style={styles.price}>{format(product.salePrice, product.usdSalePrice)}</Text>
           {product.mrp > product.salePrice && (
-            <Text style={styles.mrp}>{formatPrice(product.mrp)}</Text>
+            <Text style={styles.mrp}>{format(product.mrp, product.usdMrp)}</Text>
           )}
           {hasDiscount && (
             <Text style={styles.off}>({product.discountPercentage}% off)</Text>
