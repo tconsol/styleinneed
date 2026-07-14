@@ -186,7 +186,7 @@ export default function Sidebar({ isOpen, onClose }: Props) {
   return (
     <>
       <aside className="hidden lg:flex flex-col fixed inset-y-0 left-0 z-30" style={{ width: '220px' }}>
-        <SidebarContent />
+        {SidebarContent()}
       </aside>
       <AnimatePresence>
         {isOpen && (
@@ -196,7 +196,7 @@ export default function Sidebar({ isOpen, onClose }: Props) {
             <motion.aside initial={{ x: '-100%' }} animate={{ x: 0 }} exit={{ x: '-100%' }}
               transition={{ type: 'tween', duration: 0.22 }}
               className="fixed inset-y-0 left-0 z-50 lg:hidden" style={{ width: '220px' }}>
-              <SidebarContent />
+              {SidebarContent()}
             </motion.aside>
           </>
         )}

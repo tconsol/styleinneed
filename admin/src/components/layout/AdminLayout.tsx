@@ -32,10 +32,17 @@ export default function AdminLayout() {
   const { fetch: fetchBadges, incrementOrders, incrementSupport, markViewed } = useBadgeStore();
   const [orderAlert, setOrderAlert] = useState<OrderAlert | null>(null);
   const alertIdRef = useRef(0);
+  const mainRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', isDark);
   }, [isDark]);
+
+  // Reset the content scroll to the top whenever the route changes, so a new
+  // page always opens at its top instead of inheriting the previous scroll.
+  useEffect(() => {
+    mainRef.current?.scrollTo({ top: 0, left: 0 });
+  }, [location.pathname]);
 
   // Hydrate user + badge counts once on mount; socket events handle real-time increments
   useEffect(() => {
@@ -74,7 +81,7 @@ export default function AdminLayout() {
         <div className="flex-shrink-0">
           <Topbar onMenuClick={() => setSidebarOpen(true)} title={title} />
         </div>
-        <main className="flex-1 overflow-y-auto overflow-x-hidden p-5 md:p-6">
+        <main ref={mainRef} className="flex-1 overflow-y-auto overflow-x-hidden p-5 md:p-6">
           <Outlet />
         </main>
       </div>
