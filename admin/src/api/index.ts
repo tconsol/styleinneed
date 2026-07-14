@@ -151,6 +151,7 @@ export const sizeChartApi = {
 export const settingsApi = {
   get: () => client.get('/settings/admin'),
   update: (data: object) => client.patch('/settings', data),
+  refreshRate: () => client.post('/settings/refresh-rate'),
 };
 
 export const shippingApi = {

@@ -4,8 +4,12 @@ import { settingsApi } from '../api/misc.api';
 
 export type Currency = 'INR' | 'USD';
 
-/** Best-effort synchronous region guess from the browser. */
-function detectFromBrowser(): Currency | null {
+/**
+ * Auto-detect the display currency from the visitor's local timezone (with a
+ * language + IP fallback). USA/Canada → USD, India → INR. There is no manual
+ * toggle — currency always follows the device locale.
+ */
+function detectFromLocale(): Currency | null {
   const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
   if (tz === 'Asia/Calcutta' || tz === 'Asia/Kolkata') return 'INR';
   if (tz.startsWith('America/')) return 'USD';
@@ -19,22 +23,17 @@ interface CurrencyState {
   currency: Currency;
   rate: number;              // INR per 1 USD
   freeShipThreshold: number; // INR free-shipping threshold (India)
-  userChose: boolean;        // did the user pick via the header toggle?
   ready: boolean;
-  setCurrency: (c: Currency) => void;
   init: () => Promise<void>;
 }
 
 export const useCurrencyStore = create<CurrencyState>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       currency: 'INR',
       rate: 83,
       freeShipThreshold: 999,
-      userChose: false,
       ready: false,
-
-      setCurrency: (c) => set({ currency: c, userChose: true }),
 
       init: async () => {
         // 1) Load the live exchange rate + India shipping config from the server.
@@ -44,12 +43,11 @@ export const useCurrencyStore = create<CurrencyState>()(
           if (data?.data?.indiaFreeShipThreshold != null) set({ freeShipThreshold: data.data.indiaFreeShipThreshold });
         } catch { /* keep defaults */ }
 
-        // 2) Auto-pick currency only if the user hasn't chosen one.
-        if (get().userChose) { set({ ready: true }); return; }
+        // 2) Auto-pick the currency from the device timezone/locale.
+        const local = detectFromLocale();
+        if (local) { set({ currency: local, ready: true }); return; }
 
-        const browser = detectFromBrowser();
-        if (browser) { set({ currency: browser, ready: true }); return; }
-
+        // 3) Unknown locale — fall back to IP geolocation.
         try {
           const res = await fetch('https://ipapi.co/json/', { signal: AbortSignal.timeout(3000) });
           const json = await res.json();
@@ -60,6 +58,6 @@ export const useCurrencyStore = create<CurrencyState>()(
         }
       },
     }),
-    { name: 'sin-currency', partialize: (s) => ({ currency: s.currency, userChose: s.userChose }) }
+    { name: 'sin-currency', partialize: (s) => ({ currency: s.currency }) }
   )
 );

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Truck } from 'lucide-react';
+import { Truck, RefreshCw } from 'lucide-react';
 import { settingsApi } from '../../api';
 import { PageSpinner } from '../../components/common/Spinner';
 import toast from 'react-hot-toast';
@@ -13,19 +13,32 @@ interface Form {
 
 export default function SettingsPage() {
   const [form, setForm] = useState<Form>({ usdExchangeRate: '', indiaFreeShipThreshold: '', indiaFlatShipping: '' });
+  const [rateUpdatedAt, setRateUpdatedAt] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const apply = (s: { usdExchangeRate?: number; indiaFreeShipThreshold?: number; indiaFlatShipping?: number; rateUpdatedAt?: string }) => {
+    setForm({
+      usdExchangeRate: String(s.usdExchangeRate ?? 83),
+      indiaFreeShipThreshold: String(s.indiaFreeShipThreshold ?? 999),
+      indiaFlatShipping: String(s.indiaFlatShipping ?? 99),
+    });
+    setRateUpdatedAt(s.rateUpdatedAt ?? null);
+  };
 
   useEffect(() => {
-    settingsApi.get().then(({ data }) => {
-      const s = data.data;
-      setForm({
-        usdExchangeRate: String(s.usdExchangeRate ?? 83),
-        indiaFreeShipThreshold: String(s.indiaFreeShipThreshold ?? 999),
-        indiaFlatShipping: String(s.indiaFlatShipping ?? 99),
-      });
-    }).catch(() => {}).finally(() => setLoading(false));
+    settingsApi.get().then(({ data }) => apply(data.data)).catch(() => {}).finally(() => setLoading(false));
   }, []);
+
+  const refreshRate = async () => {
+    setRefreshing(true);
+    try {
+      const { data } = await settingsApi.refreshRate();
+      apply(data.data);
+      toast.success(`Live rate: $1 = ₹${data.data.usdExchangeRate}`);
+    } catch { toast.error('Could not fetch live rate'); } finally { setRefreshing(false); }
+  };
 
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -71,11 +84,18 @@ export default function SettingsPage() {
         <div>
           <h2 className="font-heading text-base font-semibold border-b border-brand-border pb-3 mb-4">Currency</h2>
           <label className="input-label">USD Exchange Rate (₹ per $1)</label>
-          <input type="number" min="1" step="0.01" value={form.usdExchangeRate}
-            onChange={(e) => setForm({ ...form, usdExchangeRate: e.target.value })}
-            className="input-field max-w-xs" required />
-          <p className="text-[11px] text-brand-muted mt-1">
-            USA prices are auto-converted: a ₹{(830).toLocaleString('en-IN')} item shows as <b>${(830 / usd).toFixed(2)}</b>. Products with an explicit USD price override this.
+          <div className="flex items-center gap-2 max-w-md">
+            <input type="number" min="1" step="0.01" value={form.usdExchangeRate}
+              onChange={(e) => setForm({ ...form, usdExchangeRate: e.target.value })}
+              className="input-field flex-1" required />
+            <button type="button" onClick={refreshRate} disabled={refreshing}
+              className="btn-outline text-[12px] gap-1.5 whitespace-nowrap disabled:opacity-60">
+              <RefreshCw size={13} className={refreshing ? 'animate-spin' : ''} /> {refreshing ? 'Fetching…' : 'Refresh live rate'}
+            </button>
+          </div>
+          <p className="text-[11px] text-brand-muted mt-1.5">
+            Auto-synced from a live FX feed every 6 hours{rateUpdatedAt ? ` · last updated ${new Date(rateUpdatedAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}` : ''}.
+            USA prices auto-convert: a ₹{(1000).toLocaleString('en-IN')} item shows as <b>${(1000 / usd).toFixed(2)}</b>. Explicit per-product USD prices override this.
           </p>
         </div>
 

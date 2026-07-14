@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import Settings, { getSettings } from '../models/Settings';
+import { syncExchangeRate } from '../services/exchangeRate.service';
 import { sendSuccess } from '../utils/apiResponse';
 
 // Public: values the storefront/mobile need to render prices & India shipping.
@@ -36,6 +37,16 @@ export const updateSettings = async (req: Request, res: Response, next: NextFunc
 
     const doc = await Settings.findOneAndUpdate({ key: 'global' }, update, { new: true, upsert: true });
     sendSuccess(res, 'Settings updated', doc);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Admin: force-fetch the live USD→INR rate right now.
+export const refreshExchangeRate = async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    await syncExchangeRate();
+    sendSuccess(res, 'Exchange rate refreshed', await getSettings());
   } catch (err) {
     next(err);
   }

@@ -4,6 +4,7 @@ import app from './app';
 import connectDB from './config/db';
 import { initSocket } from './config/socket';
 import { verifyEmailConnection } from './services/email.service';
+import { startExchangeRateSync, stopExchangeRateSync } from './services/exchangeRate.service';
 import logger from './utils/logger';
 
 const PORT = Number(process.env.PORT) || 5000;
@@ -20,10 +21,15 @@ server.listen(PORT, () => {
 
 // DB connect runs after listen. If it fails the process exits so the
 // platform restarts the revision (loud failure beats silent broken DB).
-connectDB().catch((err) => {
-  logger.error('MongoDB connection failed:', err);
-  process.exit(1);
-});
+connectDB()
+  .then(() => {
+    // Start syncing the live USD→INR rate once the DB is available.
+    startExchangeRateSync();
+  })
+  .catch((err) => {
+    logger.error('MongoDB connection failed:', err);
+    process.exit(1);
+  });
 
 // Email verification is non-fatal — never block or kill the server.
 verifyEmailConnection().catch((err) => {
@@ -32,6 +38,7 @@ verifyEmailConnection().catch((err) => {
 
 const shutdown = (signal: string) => {
   logger.info(`${signal} received. Shutting down gracefully...`);
+  stopExchangeRateSync();
   server.close(() => {
     logger.info('HTTP server closed');
     process.exit(0);

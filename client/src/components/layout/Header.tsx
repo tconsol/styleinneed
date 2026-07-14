@@ -6,40 +6,12 @@ import { useAuthStore } from '../../stores/authStore';
 import { useCartStore, selectItemCount } from '../../stores/cartStore';
 import { useWishlistStore } from '../../stores/wishlistStore';
 import { useUiStore } from '../../stores/uiStore';
-import { useCurrencyStore, type Currency } from '../../stores/currencyStore';
 import { useCategories, useCollections, useProductTypes } from '../../hooks/useCatalog';
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 import AnnouncementBar from '../common/AnnouncementBar';
 
 interface NavSub { label: string; href: string }
 interface NavItem { label: string; href: string; sub?: NavSub[]; badge?: string }
-
-// ₹/$ segmented toggle. `light` = for use on the transparent (dark) hero header.
-function CurrencyToggle({ light = false }: { light?: boolean }) {
-  const currency = useCurrencyStore((s) => s.currency);
-  const setCurrency = useCurrencyStore((s) => s.setCurrency);
-  const opts: { c: Currency; label: string }[] = [{ c: 'INR', label: '₹' }, { c: 'USD', label: '$' }];
-  return (
-    <div className={`flex items-center rounded-full p-0.5 ${light ? 'bg-white/15' : 'bg-brand-surface border border-brand-border'}`}>
-      {opts.map(({ c, label }) => {
-        const active = currency === c;
-        return (
-          <button
-            key={c}
-            onClick={() => setCurrency(c)}
-            className={`w-6 h-6 rounded-full text-[12px] font-semibold leading-none transition-colors ${
-              active ? 'bg-primary text-white' : light ? 'text-white/80' : 'text-brand-muted hover:text-brand-text'
-            }`}
-            aria-label={`Show prices in ${c}`}
-            aria-pressed={active}
-          >
-            {label}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
 
 export default function Header({ isCheckout = false }: { isCheckout?: boolean }) {
   const [scrolled, setScrolled] = useState(false);
@@ -208,8 +180,7 @@ export default function Header({ isCheckout = false }: { isCheckout?: boolean })
             </nav>
 
             {/* Actions */}
-            <div className="flex items-center gap-3 md:gap-4">
-              <CurrencyToggle light={transparent} />
+            <div className="flex items-center gap-4 md:gap-5">
               <button
                 onClick={openSearch}
                 className={`transition-colors duration-200 ${
