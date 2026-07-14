@@ -133,7 +133,7 @@ export default function CheckoutPage() {
                 <div className="text-center py-6">
                   <p className="font-body text-sm text-brand-muted mb-3">No saved addresses</p>
                   <button
-                    onClick={() => navigate('/account?tab=addresses')}
+                    onClick={() => navigate('/addresses')}
                     className="btn-outline text-sm"
                   >
                     <Plus size={16} /> Add Address

@@ -13,10 +13,10 @@ const LINKS = {
   ],
   Account: [
     { label: 'My Account', href: '/account' },
-    { label: 'My Orders', href: '/account?tab=orders' },
-    { label: 'Wishlist', href: '/account?tab=wishlist' },
-    { label: 'Returns', href: '/account/returns' },
-    { label: 'Support', href: '/account/support' },
+    { label: 'My Orders', href: '/orders' },
+    { label: 'Wishlist', href: '/wishlist' },
+    { label: 'Returns', href: '/returns' },
+    { label: 'Support', href: '/support' },
   ],
   Company: [
     { label: 'About Us', href: '/cms/about' },

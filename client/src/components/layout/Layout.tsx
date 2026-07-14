@@ -35,14 +35,15 @@ export default function Layout() {
   // inside the scrollable products pane, so skip the global footer.
   const isListing = location.pathname === '/products' || location.pathname === '/collections';
   // Bottom tab bar mirrors the native app: only on root-level tab-equivalent
-  // pages, hidden on drill-down/detail screens (product detail, search, checkout, auth...).
-  // Listing (Sort/Filters) and product detail (cart actions) pages render their
-  // own contextual bottom bar instead of the generic tab bar.
+  // pages, hidden on drill-down/detail screens (order tracking, product detail,
+  // search, checkout, auth...). Listing (Sort/Filters) and product detail
+  // (cart actions) pages render their own contextual bottom bar instead.
   const showBottomNav =
     !isAuthPage &&
     !isCheckout &&
     !isListing &&
-    (location.pathname === '/' || location.pathname.startsWith('/account'));
+    ['/', '/account', '/profile', '/orders', '/wishlist', '/addresses', '/returns', '/support']
+      .includes(location.pathname);
 
   return (
     <>

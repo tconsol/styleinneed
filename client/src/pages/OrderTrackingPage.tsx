@@ -90,7 +90,7 @@ export default function OrderTrackingPage() {
     return (
       <div className="min-h-screen bg-brand-bg flex flex-col items-center justify-center gap-4" style={{ paddingTop: 'var(--topbar-height)' }}>
         <p className="font-body text-brand-muted">Order not found.</p>
-        <Link to="/account?tab=orders" className="btn-outline text-sm">Back to orders</Link>
+        <Link to="/orders" className="btn-outline text-sm">Back to orders</Link>
       </div>
     );
   }

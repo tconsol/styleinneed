@@ -192,7 +192,7 @@ export default function Header({ isCheckout = false }: { isCheckout?: boolean })
               </button>
 
               <Link
-                to={isAuthenticated ? '/account?tab=wishlist' : '/auth/login'}
+                to={isAuthenticated ? '/wishlist' : '/auth/login'}
                 className={`relative transition-colors duration-200 ${
                   transparent ? 'text-white/90 hover:text-white' : 'text-brand-text hover:text-primary'
                 }`}

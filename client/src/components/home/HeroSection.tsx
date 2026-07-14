@@ -56,7 +56,7 @@ export default function HeroSection({ slides }: Props) {
       </AnimatePresence>
 
       {/* Content */}
-      <div className="relative h-full flex flex-col justify-end sm:justify-center container-custom pb-20 sm:pb-0 pt-24 sm:pt-28 md:pt-32">
+      <div className="relative h-full flex flex-col justify-end sm:justify-center container-custom pb-[calc(var(--bottomnav-height)+env(safe-area-inset-bottom)+2rem)] lg:pb-0 pt-24 sm:pt-28 md:pt-32">
         <AnimatePresence mode="wait">
           <motion.div
             key={`content-${current}`}
@@ -118,7 +118,7 @@ export default function HeroSection({ slides }: Props) {
         </AnimatePresence>
 
         {/* Slide dots */}
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-2">
+        <div className="absolute bottom-[calc(var(--bottomnav-height)+env(safe-area-inset-bottom)+1rem)] lg:bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-2">
           {slides.map((_, i) => (
             <button
               key={i}

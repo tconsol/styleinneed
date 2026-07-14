@@ -37,7 +37,12 @@
     scroll-behavior: auto;
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
-    overflow-x: hidden; /* prevent any element from causing body-wide horizontal scroll */
+    /* `clip`, not `hidden`: overflow-x hidden on <html> silently turns the
+       element into its own scroll container (computed overflow-y becomes auto),
+       which on real Android/iOS browsers breaks viewport scrolling, momentum
+       and position:fixed — the classic "page stuck on phone but fine in
+       DevTools emulation" bug. clip clips paint without creating a scroller. */
+    overflow-x: clip;
   }
 
   /* ── Lenis smooth-scroll required styles ── */
@@ -58,9 +63,7 @@
     font-family: 'Inter', system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    overflow-x: hidden;
-    /* Prevent rubber-band over-scroll on iOS */
-    overscroll-behavior-y: none;
+    overflow-x: clip;
   }
 
   /* iOS safe areas */

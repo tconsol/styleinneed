@@ -11,12 +11,11 @@ export default function BottomNav() {
   const itemCount = useCartStore(selectItemCount);
 
   const path = location.pathname;
-  const tab = new URLSearchParams(location.search).get('tab') || 'profile';
 
   const isHome = path === '/';
   const isShop = path.startsWith('/products') || path.startsWith('/collections');
-  const isOrders = path.startsWith('/account') && tab === 'orders';
-  const isProfile = path.startsWith('/account') && tab !== 'orders';
+  const isOrders = path.startsWith('/orders');
+  const isProfile = ['/account', '/profile', '/wishlist', '/addresses', '/returns', '/support'].some((p) => path.startsWith(p));
 
   const itemClass = (active: boolean) =>
     `flex flex-col items-center justify-center gap-1 flex-1 h-full ${
@@ -43,7 +42,7 @@ export default function BottomNav() {
         <Dot active={isShop} />
       </Link>
 
-      <Link to={isAuthenticated ? '/account?tab=orders' : '/auth/login'} className={itemClass(isOrders)}>
+      <Link to={isAuthenticated ? '/orders' : '/auth/login'} className={itemClass(isOrders)}>
         <Package size={21} strokeWidth={isOrders ? 2.5 : 2} />
         <span className="font-body text-[10px] leading-none">Orders</span>
         <Dot active={isOrders} />

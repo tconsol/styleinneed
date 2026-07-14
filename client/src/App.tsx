@@ -3,7 +3,6 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import Layout from './components/layout/Layout';
-import CinematicLoader from './components/home/CinematicLoader';
 import { PageLoader } from './components/common/Spinner';
 import { useAuthStore } from './stores/authStore';
 
@@ -16,6 +15,12 @@ const BlogDetailPage = lazy(() => import('./pages/BlogDetailPage'));
 const SearchPage = lazy(() => import('./pages/SearchPage'));
 const CmsPage = lazy(() => import('./pages/CmsPage'));
 const AccountPage = lazy(() => import('./pages/account/AccountPage'));
+const ProfilePage = lazy(() => import('./pages/ProfilePage'));
+const OrdersPage = lazy(() => import('./pages/OrdersPage'));
+const WishlistPage = lazy(() => import('./pages/WishlistPage'));
+const AddressesPage = lazy(() => import('./pages/AddressesPage'));
+const ReturnsPage = lazy(() => import('./pages/ReturnsPage'));
+const SupportPage = lazy(() => import('./pages/SupportPage'));
 const LoginPage = lazy(() => import('./pages/auth/LoginPage'));
 const RegisterPage = lazy(() => import('./pages/auth/RegisterPage'));
 const VerifyEmailPage = lazy(() => import('./pages/auth/VerifyEmailPage'));
@@ -37,7 +42,6 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <CinematicLoader />
         <Suspense fallback={<PageLoader />}>
           <Routes>
             <Route element={<Layout />}>
@@ -54,6 +58,10 @@ export default function App() {
                 element={<ProtectedRoute><CheckoutPage /></ProtectedRoute>}
               />
               <Route
+                path="/orders"
+                element={<ProtectedRoute><OrdersPage /></ProtectedRoute>}
+              />
+              <Route
                 path="/orders/:id"
                 element={<ProtectedRoute><OrderTrackingPage /></ProtectedRoute>}
               />
@@ -62,9 +70,36 @@ export default function App() {
                 element={<ProtectedRoute><PaymentReturnPage /></ProtectedRoute>}
               />
               <Route
-                path="/account/*"
+                path="/account"
                 element={<ProtectedRoute><AccountPage /></ProtectedRoute>}
               />
+              <Route
+                path="/profile"
+                element={<ProtectedRoute><ProfilePage /></ProtectedRoute>}
+              />
+              <Route
+                path="/wishlist"
+                element={<ProtectedRoute><WishlistPage /></ProtectedRoute>}
+              />
+              <Route
+                path="/addresses"
+                element={<ProtectedRoute><AddressesPage /></ProtectedRoute>}
+              />
+              <Route
+                path="/returns"
+                element={<ProtectedRoute><ReturnsPage /></ProtectedRoute>}
+              />
+              <Route
+                path="/support"
+                element={<ProtectedRoute><SupportPage /></ProtectedRoute>}
+              />
+              {/* Old nested account URLs -> new top-level pages */}
+              <Route path="/account/profile" element={<Navigate to="/profile" replace />} />
+              <Route path="/account/orders" element={<Navigate to="/orders" replace />} />
+              <Route path="/account/wishlist" element={<Navigate to="/wishlist" replace />} />
+              <Route path="/account/addresses" element={<Navigate to="/addresses" replace />} />
+              <Route path="/account/returns" element={<Navigate to="/returns" replace />} />
+              <Route path="/account/support" element={<Navigate to="/support" replace />} />
               <Route path="/auth/login" element={<LoginPage />} />
               <Route path="/auth/register" element={<RegisterPage />} />
               <Route path="/auth/verify-email" element={<VerifyEmailPage />} />
