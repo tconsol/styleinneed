@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Search, ShoppingBag, Eye, Circle, Trash2 } from 'lucide-react';
 import { orderApi } from '../../api';
 import { useConfirm } from '../../components/common/ConfirmDialog';
+import StatusTabs from '../../components/common/StatusTabs';
 import type { Order, Pagination } from '../../types';
 import { formatPrice, formatDateTime } from '../../utils/format';
 import toast from 'react-hot-toast';
@@ -93,27 +94,15 @@ export default function OrdersPage() {
         </div>
       </div>
 
-      {/* Status Filter Pills */}
-      <div className="flex items-center gap-2 flex-wrap">
-        {STATUSES.map((s) => {
+      {/* Status Filter Tabs */}
+      <StatusTabs
+        value={activeStatus}
+        onChange={(s) => { setActiveStatus(s); setPage(1); }}
+        tabs={STATUSES.map((s) => {
           const st = STATUS_STYLE[s];
-          const isActive = activeStatus === s;
-          return (
-            <button
-              key={s}
-              onClick={() => { setActiveStatus(s); setPage(1); }}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all capitalize"
-              style={isActive
-                ? { background: st.bg, color: st.text, boxShadow: `0 0 0 2px ${st.pill}` }
-                : { background: 'var(--c-bg)', color: 'var(--c-muted)' }
-              }
-            >
-              <Circle size={6} fill={isActive ? st.dot : '#94A3B8'} style={{ color: isActive ? st.dot : '#94A3B8' }} />
-              {s === 'all' ? 'All Orders' : s}
-            </button>
-          );
+          return { value: s, label: s === 'all' ? 'All Orders' : s, text: st.text, dot: st.dot };
         })}
-      </div>
+      />
 
       {/* Search */}
       <div className="relative w-72">

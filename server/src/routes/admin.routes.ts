@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import {
   getDashboardStats, getRevenueAnalytics, getTopProducts,
-  getUsers, updateUserRole, getAuditLogs,
+  getUsers, getUserById, updateUserRole, getAuditLogs,
   getAllOrders, getAdminOrderById, updateOrderStatus, deleteOrder,
   getAdminProducts, getAdminProductById,
 } from '../controllers/admin.controller';
@@ -16,6 +16,7 @@ router.get('/analytics/revenue', isAdminOrManager, getRevenueAnalytics);
 router.get('/analytics/top-products', isAdminOrManager, getTopProducts);
 
 router.get('/users', isAdminOrManager, getUsers);
+router.get('/users/:id', isAdminOrManager, getUserById);
 router.patch('/users/:id', isSuperAdmin, updateUserRole);
 
 router.get('/products', isAdminOrManager, getAdminProducts);

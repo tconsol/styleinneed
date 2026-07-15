@@ -21,6 +21,7 @@ const ProductTypesPage = lazy(() => import('./pages/catalog/ProductTypesPage'));
 const AttributesPage = lazy(() => import('./pages/catalog/AttributesPage'));
 const SizeChartsPage = lazy(() => import('./pages/catalog/SizeChartsPage'));
 const CustomersPage = lazy(() => import('./pages/customers/CustomersPage'));
+const CustomerDetailPage = lazy(() => import('./pages/customers/CustomerDetailPage'));
 const CouponsPage = lazy(() => import('./pages/coupons/CouponsPage'));
 const AnnouncementsPage = lazy(() => import('./pages/content/AnnouncementsPage'));
 const PromotionsPage = lazy(() => import('./pages/content/PromotionsPage'));
@@ -69,6 +70,7 @@ export default function App() {
               <Route path="/attributes" element={<AttributesPage />} />
               <Route path="/size-charts" element={<SizeChartsPage />} />
               <Route path="/customers" element={<CustomersPage />} />
+              <Route path="/customers/:id" element={<CustomerDetailPage />} />
               <Route path="/coupons" element={<CouponsPage />} />
               <Route path="/announcements" element={<AnnouncementsPage />} />
               <Route path="/promotions" element={<PromotionsPage />} />

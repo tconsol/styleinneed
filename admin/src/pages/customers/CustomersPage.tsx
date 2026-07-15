@@ -1,5 +1,6 @@
 ﻿import { useEffect, useState, useCallback } from 'react';
-import { Search, Edit2, Users } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Search, Edit2, Users, Eye } from 'lucide-react';
 import Modal from '../../components/common/Modal';
 import Select from '../../components/common/Select';
 import StatusToggle from '../../components/common/StatusToggle';
@@ -26,6 +27,7 @@ function Avatar({ name, email }: { name: string; email: string }) {
 }
 
 export default function CustomersPage() {
+  const navigate = useNavigate();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [pagination, setPagination] = useState<Pagination>({ page: 1, limit: 20, total: 0, pages: 1 });
   const [loading, setLoading] = useState(true);
@@ -117,14 +119,14 @@ export default function CustomersPage() {
                     onMouseLeave={(e) => (e.currentTarget.style.background = 'var(--c-surface)')}>
                     <td className="pl-5 py-3 text-[10px] font-bold text-brand-muted/60">{(page - 1) * 20 + idx + 1}</td>
                     <td className="px-3 py-3">
-                      <div className="flex items-center gap-2.5">
+                      <button onClick={() => navigate(`/customers/${c._id}`)} className="flex items-center gap-2.5 text-left group/cust">
                         <Avatar name={c.name} email={c.email} />
                         <div className="min-w-0">
-                          <p className="text-[11px] font-semibold text-brand-text truncate max-w-[160px]">{c.name}</p>
+                          <p className="text-[11px] font-semibold text-brand-text truncate max-w-[160px] group-hover/cust:text-indigo-600 transition-colors">{c.name}</p>
                           <p className="text-[10px] text-brand-muted truncate max-w-[160px]">{c.email}</p>
                           {c.phone && <p className="text-[10px] text-brand-muted">{c.phone}</p>}
                         </div>
-                      </div>
+                      </button>
                     </td>
                     <td className="px-3 py-3">
                       <span className="px-2 py-0.5 rounded-md text-[9px] font-semibold capitalize" style={{ background: rc.bg, color: rc.text }}>{c.role.replace(/_/g, ' ')}</span>
@@ -140,12 +142,17 @@ export default function CustomersPage() {
                       </div>
                     </td>
                     <td className="px-3 py-3 text-[10px] text-brand-muted">{formatDate(c.createdAt)}</td>
-                    <td className="px-3 py-3 text-center">
-                      <button onClick={() => openEdit(c)} className="w-8 h-8 rounded-lg flex items-center justify-center mx-auto transition-all" style={{ color: '#64748B' }}
-                        onMouseEnter={(e) => { e.currentTarget.style.background = '#EEF2FF'; e.currentTarget.style.color = '#4F46E5'; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#64748B'; }}>
-                        <Edit2 size={13} />
-                      </button>
+                    <td className="px-3 py-3">
+                      <div className="flex items-center justify-center gap-1">
+                        <button onClick={() => navigate(`/customers/${c._id}`)} title="View details"
+                          className="w-8 h-8 rounded-lg flex items-center justify-center transition-all text-slate-500 hover:bg-indigo-50 hover:text-indigo-600">
+                          <Eye size={13} />
+                        </button>
+                        <button onClick={() => openEdit(c)} title="Edit role / status"
+                          className="w-8 h-8 rounded-lg flex items-center justify-center transition-all text-slate-500 hover:bg-slate-100 hover:text-slate-700">
+                          <Edit2 size={13} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );

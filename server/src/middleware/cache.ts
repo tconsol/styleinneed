@@ -11,6 +11,15 @@ const keyFor = (req: Request) => `cache:${req.originalUrl}`;
 export const cache = (ttl: number) =>
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     if (req.method !== 'GET') return next();
+
+    // Admin views ask for inactive rows (`includeInactive=true`). These MUST stay
+    // live — a browser/Redis cache here makes deleted/edited items linger in the
+    // admin after a mutation. Serve them uncached.
+    if (req.query.includeInactive === 'true') {
+      res.setHeader('Cache-Control', 'no-store');
+      return next();
+    }
+
     const key = keyFor(req);
 
     const cached = await cacheGet(key);

@@ -132,6 +132,7 @@ export interface Order {
   user: { _id: string; name: string; email: string; phone?: string };
   items: OrderItem[];
   shippingAddress: Address;
+  currency?: 'INR' | 'USD';
   subtotal: number;
   shippingCharge: number;
   discount: number;
@@ -180,6 +181,21 @@ export interface SizeChart {
   createdAt: string;
 }
 
+export interface CustomerAddress {
+  _id?: string;
+  label?: string;
+  fullName: string;
+  phone: string;
+  email?: string;
+  line1: string;
+  line2?: string;
+  city: string;
+  state: string;
+  pincode: string;
+  country?: string;
+  isDefault?: boolean;
+}
+
 export interface Customer {
   _id: string;
   name: string;
@@ -188,6 +204,8 @@ export interface Customer {
   role: string;
   isActive: boolean;
   isEmailVerified: boolean;
+  avatar?: string;
+  addresses?: CustomerAddress[];
   createdAt: string;
 }
 

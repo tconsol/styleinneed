@@ -59,6 +59,7 @@ export const orderApi = {
 
 export const customerApi = {
   getAll: (params?: object) => client.get('/admin/users', { params }),
+  getById: (id: string) => client.get(`/admin/users/${id}`),
   updateRole: (id: string, data: object) => client.patch(`/admin/users/${id}`, data),
 };
 

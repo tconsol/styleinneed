@@ -127,6 +127,49 @@ export const getUsers = async (req: Request, res: Response, next: NextFunction):
   }
 };
 
+// Full customer profile + their entire order history + aggregate stats.
+export const getUserById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const user = await User.findById(req.params.id).select(
+      '-password -refreshTokens -otp -otpExpiry -passwordResetToken -passwordResetExpiry -googleId'
+    );
+    if (!user) { sendError(res, 'Customer not found', 404); return; }
+
+    const orders = await Order.find({ user: user._id })
+      .populate('items.product', 'name slug images')
+      .sort('-createdAt')
+      .lean();
+
+    const byStatus: Record<string, number> = {};
+    let paidOrders = 0;
+    let totalSpentINR = 0;
+    let totalSpentUSD = 0;
+    for (const o of orders) {
+      byStatus[o.status] = (byStatus[o.status] || 0) + 1;
+      const settled = o.paymentStatus === 'paid' || o.paymentMethod === 'cod';
+      if (settled && o.status !== 'cancelled') {
+        paidOrders += 1;
+        if (o.currency === 'USD') totalSpentUSD += o.total || 0;
+        else totalSpentINR += o.total || 0;
+      }
+    }
+
+    sendSuccess(res, 'Customer detail', {
+      user,
+      orders,
+      stats: {
+        totalOrders: orders.length,
+        paidOrders,
+        totalSpentINR: Math.round(totalSpentINR),
+        totalSpentUSD: Math.round(totalSpentUSD * 100) / 100,
+        byStatus,
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 export const updateUserRole = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { role, isActive } = req.body;

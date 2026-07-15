@@ -1,6 +1,7 @@
 ﻿import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Headphones, Eye, Circle } from 'lucide-react';
+import StatusTabs from '../../components/common/StatusTabs';
 import { supportApi } from '../../api';
 import type { SupportTicket, Pagination } from '../../types';
 import { formatDateTime } from '../../utils/format';
@@ -47,21 +48,15 @@ export default function SupportPage() {
         </div>
       </div>
 
-      {/* Status Pills */}
-      <div className="flex items-center gap-2 flex-wrap">
-        {STATUSES.map((s) => {
+      {/* Status Tabs */}
+      <StatusTabs
+        value={activeStatus}
+        onChange={(v) => { setActiveStatus(v); setPage(1); }}
+        tabs={STATUSES.map((s) => {
           const st = STATUS_STYLE[s] || { bg: '#EEF2FF', text: '#4F46E5', dot: '#4F46E5' };
-          const isActive = activeStatus === s;
-          return (
-            <button key={s} onClick={() => { setActiveStatus(s); setPage(1); }}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all capitalize"
-              style={isActive ? { background: st.bg, color: st.text, boxShadow: `0 0 0 2px ${st.dot}` } : { background: 'var(--c-bg)', color: 'var(--c-muted)' }}>
-              <Circle size={6} fill={isActive ? st.dot : '#94A3B8'} style={{ color: isActive ? st.dot : '#94A3B8' }} />
-              {s === 'all' ? 'All Tickets' : s}
-            </button>
-          );
+          return { value: s, label: s === 'all' ? 'All Tickets' : s, text: st.text, dot: st.dot };
         })}
-      </div>
+      />
 
       <div className="bg-white rounded-2xl overflow-hidden" style={{ border: '1px solid var(--c-border)', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
         <table className="w-full">
