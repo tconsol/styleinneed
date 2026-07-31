@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Plus, Trash2, Upload } from 'lucide-react';
 import { productApi, providerApi, sizeChartApi } from '../../api';
+import { useAuthStore } from '../../stores/authStore';
 import { useCategories, useCollections, useProductTypes, useAttributes } from '../../hooks/useCatalog';
 import Select from '../../components/common/Select';
 import type { ProductVariant, Attribute, SizeChart } from '../../types';
@@ -57,6 +58,7 @@ export default function ProductFormPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const isEdit = id && id !== 'new';
+  const isProvider = useAuthStore((s) => s.user?.role) === 'provider';
 
   const [form, setForm] = useState<FormState>(emptyForm);
   const [loading, setLoading] = useState(isEdit ? true : false);
@@ -272,18 +274,20 @@ export default function ProductFormPage() {
                 <input type="number" value={form.usdSalePrice} onChange={(e) => setForm({ ...form, usdSalePrice: e.target.value })} className="input-field" min="0" step="0.01" placeholder="Optional" />
               </div>
             </div>
-            <div>
-              <label className="input-label">Provider / Supplier</label>
-              <Select
-                value={form.provider}
-                onChange={(v) => setForm({ ...form, provider: v })}
-                placeholder="— No provider selected —"
-                options={[
-                  { value: '', label: '— No provider —' },
-                  ...providers.map((p) => ({ value: p._id, label: `${p.name} (${p.category})` })),
-                ]}
-              />
-            </div>
+            {!isProvider && (
+              <div>
+                <label className="input-label">Provider / Supplier</label>
+                <Select
+                  value={form.provider}
+                  onChange={(v) => setForm({ ...form, provider: v })}
+                  placeholder="— No provider selected —"
+                  options={[
+                    { value: '', label: '— No provider —' },
+                    ...providers.map((p) => ({ value: p._id, label: `${p.name} (${p.category})` })),
+                  ]}
+                />
+              </div>
+            )}
             <div>
               <label className="input-label">Tags (comma separated)</label>
               <input value={form.tags} onChange={(e) => setForm({ ...form, tags: e.target.value })} className="input-field" placeholder="silk, festive, bridal" />

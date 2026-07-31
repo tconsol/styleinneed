@@ -27,9 +27,13 @@ const userSchema = new Schema<IUser>(
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
     phone: { type: String, trim: true },
     password: { type: String, required: true, minlength: 8, select: false },
+    // Provider (supplier) login accounts are admin-managed, so the admin can
+    // read back the password they set. Only populated for role 'provider'.
+    plainPassword: { type: String, select: false },
+    providerRef: { type: Schema.Types.ObjectId, ref: 'Provider' },
     role: {
       type: String,
-      enum: ['customer', 'admin'],
+      enum: ['customer', 'admin', 'provider'],
       default: 'customer',
     },
     isEmailVerified: { type: Boolean, default: false },
@@ -40,6 +44,9 @@ const userSchema = new Schema<IUser>(
     refreshTokens: { type: [String], select: false },
     otp: { type: String, select: false },
     otpExpiry: { type: Date, select: false },
+    pendingEmail: { type: String, lowercase: true, trim: true, select: false },
+    emailChangeOtp: { type: String, select: false },
+    emailChangeOtpExpiry: { type: Date, select: false },
     passwordResetToken: { type: String, select: false },
     passwordResetExpiry: { type: Date, select: false },
     pushToken: { type: String },

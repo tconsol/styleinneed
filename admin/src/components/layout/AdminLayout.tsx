@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { Outlet, useLocation } from 'react-router-dom';
+import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import Sidebar, { NAV_ITEMS } from './Sidebar';
 import Topbar from './Topbar';
 import NewOrderIsland from './NewOrderIsland';
@@ -26,9 +26,10 @@ interface OrderAlert {
 export default function AdminLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
   const title = getTitle(location.pathname);
   const { isDark } = useThemeStore();
-  const { fetchMe } = useAuthStore();
+  const { fetchMe, user } = useAuthStore();
   const { fetch: fetchBadges, incrementOrders, incrementSupport, markViewed } = useBadgeStore();
   const [orderAlert, setOrderAlert] = useState<OrderAlert | null>(null);
   const alertIdRef = useRef(0);
@@ -44,11 +45,23 @@ export default function AdminLayout() {
     mainRef.current?.scrollTo({ top: 0, left: 0 });
   }, [location.pathname]);
 
-  // Hydrate user + badge counts once on mount; socket events handle real-time increments
+  // Providers may only use the Products area + their own change-password page.
+  // Any other route is bounced back to Products.
   useEffect(() => {
-    void fetchMe();
-    void fetchBadges();
-  }, []);
+    if (user?.role !== 'provider') return;
+    const allowed = location.pathname.startsWith('/products') || location.pathname === '/change-password' || location.pathname === '/profile';
+    if (!allowed) navigate('/products', { replace: true });
+  }, [location.pathname, user?.role, navigate]);
+
+  // Hydrate user once on mount.
+  useEffect(() => { void fetchMe(); }, []);
+
+  // Order/support badges are admin-only — providers have no access to those APIs.
+  useEffect(() => {
+    if (user && user.role !== 'provider') void fetchBadges();
+  }, [user?.role]);
+
+  const isStaffAdmin = user && user.role !== 'provider';
 
   // Viewing a page (via nav OR refresh/direct-load on it) marks it seen, so its
   // badge stays cleared until genuinely new items arrive.
@@ -57,8 +70,9 @@ export default function AdminLayout() {
     else if (location.pathname.startsWith('/support')) markViewed('support');
   }, [location.pathname, markViewed]);
 
-  // Real-time: listen for new orders + tickets via socket
+  // Real-time: listen for new orders + tickets via socket (admins only).
   useEffect(() => {
+    if (!isStaffAdmin) return;
     const socket = getSocket();
     const orderHandler = (payload: { orderId: string; orderNumber: string; total?: number; customerName?: string }) => {
       alertIdRef.current += 1;
@@ -72,7 +86,7 @@ export default function AdminLayout() {
       socket.off(ADMIN_SOCKET_EVENTS.orderNew, orderHandler);
       socket.off(ADMIN_SOCKET_EVENTS.ticketNew, ticketHandler);
     };
-  }, []);
+  }, [isStaffAdmin]);
 
   return (
     <div className="flex h-screen overflow-hidden" style={{ background: 'var(--c-bg)', transition: 'background 0.2s' }}>

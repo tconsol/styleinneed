@@ -22,8 +22,10 @@ export default function LoginPage() {
     e.preventDefault();
     setError('');
     const ok = await login(form.email, form.password);
-    if (ok) navigate('/');
-    else setError('Invalid email or password');
+    if (ok) {
+      const role = useAuthStore.getState().user?.role;
+      navigate(role === 'provider' ? '/products' : '/');
+    } else setError('Invalid email or password');
   };
 
   return (

@@ -242,7 +242,7 @@ export const getAllOrders = async (req: Request, res: Response, next: NextFuncti
   }
 };
 
-export const getAdminProducts = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+export const getAdminProducts = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { page, limit, sort = '-createdAt', search, isActive } = req.query as Record<string, string>;
     const { page: p, limit: l, skip } = getPagination(page, limit);
@@ -250,6 +250,8 @@ export const getAdminProducts = async (req: Request, res: Response, next: NextFu
     const filter: Record<string, unknown> = {};
     if (isActive !== undefined) filter.isActive = isActive === 'true';
     if (search) filter.$text = { $search: search };
+    // Providers only ever see the products they own.
+    if (req.user?.role === 'provider') filter.provider = req.user.providerRef;
 
     const [products, total] = await Promise.all([
       Product.find(filter)
@@ -270,7 +272,7 @@ export const getAdminProducts = async (req: Request, res: Response, next: NextFu
   }
 };
 
-export const getAdminProductById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+export const getAdminProductById = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const product = await Product.findById(req.params.id)
       .populate('category', 'name slug')
@@ -278,6 +280,10 @@ export const getAdminProductById = async (req: Request, res: Response, next: Nex
       .populate('sizeChartId', '_id name');
 
     if (!product) { sendError(res, 'Product not found', 404); return; }
+    // A provider may only open their own products.
+    if (req.user?.role === 'provider' && String(product.provider) !== String(req.user.providerRef)) {
+      sendError(res, 'Forbidden', 403); return;
+    }
     sendSuccess(res, 'Product fetched', product);
   } catch (err) {
     next(err);

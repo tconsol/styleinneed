@@ -2,11 +2,11 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Star, ChevronLeft, ChevronRight } from 'lucide-react';
 import SectionHeader from '../common/SectionHeader';
-import type { TestimonialCms } from '../../hooks/useHomepageCms';
+import type { TestimonialCms, SectionHeaderCms } from '../../hooks/useHomepageCms';
 
-interface Props { data: TestimonialCms[]; }
+interface Props { data: TestimonialCms[]; header?: SectionHeaderCms; }
 
-export default function Testimonials({ data }: Props) {
+export default function Testimonials({ data, header }: Props) {
   const [current, setCurrent] = useState(0);
 
   const prev = () => setCurrent((c) => (c - 1 + data.length) % data.length);
@@ -18,9 +18,9 @@ export default function Testimonials({ data }: Props) {
     <section className="page-section bg-brand-surface overflow-hidden">
       <div className="container-custom max-w-4xl">
         <SectionHeader
-          label="Love from our Customers"
-          title="What Our Customers Say"
-          subtitle="Real stories from real women who chose elegance"
+          label={header?.label || 'Love from our Customers'}
+          title={header?.title || 'What Our Customers Say'}
+          subtitle={header?.subtitle || 'Real stories from real women who chose elegance'}
         />
 
         <div className="relative">

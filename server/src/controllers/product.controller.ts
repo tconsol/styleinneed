@@ -5,6 +5,7 @@ import Category from '../models/Category';
 import Collection from '../models/Collection';
 import Attribute from '../models/Attribute';
 import { nextSeq } from '../models/Counter';
+import { AuthRequest } from '../types';
 import { uploadToGCS, deleteFromGCS } from '../config/gcs';
 import { emitEvent, SOCKET_EVENTS } from '../config/socket';
 import { sendSuccess, sendError, getPagination } from '../utils/apiResponse';
@@ -216,8 +217,12 @@ export const getRelatedProducts = async (req: Request, res: Response, next: Next
   }
 };
 
-export const createProduct = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+export const createProduct = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
+    // A provider adding a product is always tied to their own provider record.
+    if (req.user?.role === 'provider' && req.user.providerRef) {
+      req.body.provider = req.user.providerRef;
+    }
     await prepareSkus(req.body);
     const product = await Product.create(req.body);
     if (product.isActive) emitEvent(SOCKET_EVENTS.productCreated, { slug: product.slug });
@@ -227,8 +232,16 @@ export const createProduct = async (req: Request, res: Response, next: NextFunct
   }
 };
 
-export const updateProduct = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+export const updateProduct = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
+    // A provider may only edit their own products, and can't reassign ownership.
+    if (req.user?.role === 'provider') {
+      const existing = await Product.findById(req.params.id).select('provider');
+      if (!existing || String(existing.provider) !== String(req.user.providerRef)) {
+        sendError(res, 'Forbidden', 403); return;
+      }
+      req.body.provider = req.user.providerRef;
+    }
     await prepareSkus(req.body, req.params.id);
     const product = await Product.findByIdAndUpdate(req.params.id, req.body, {
       new: true, runValidators: true,
@@ -241,10 +254,15 @@ export const updateProduct = async (req: Request, res: Response, next: NextFunct
   }
 };
 
-export const deleteProduct = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+export const deleteProduct = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const product = await Product.findById(req.params.id);
     if (!product) { sendError(res, 'Product not found', 404); return; }
+
+    // Providers may only delete their own products.
+    if (req.user?.role === 'provider' && String(product.provider) !== String(req.user.providerRef)) {
+      sendError(res, 'Forbidden', 403); return;
+    }
 
     // Purge all of this product's images from the bucket (product + variant level)
     const urls = new Set<string>([
@@ -253,10 +271,10 @@ export const deleteProduct = async (req: Request, res: Response, next: NextFunct
     ]);
     await Promise.all([...urls].map((u) => deleteFromGCS(u)));
 
-    product.isActive = false;
-    await product.save();
+    // Hard-delete the product from the database.
+    await product.deleteOne();
     emitEvent(SOCKET_EVENTS.productDeleted, { slug: product.slug });
-    sendSuccess(res, 'Product deactivated and images removed');
+    sendSuccess(res, 'Product deleted');
   } catch (err) {
     next(err);
   }

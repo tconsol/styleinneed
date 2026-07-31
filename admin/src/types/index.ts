@@ -2,9 +2,11 @@ export interface AdminUser {
   _id: string;
   name: string;
   email: string;
-  role: 'customer' | 'admin';
+  role: 'customer' | 'admin' | 'provider';
   avatar?: string;
+  phone?: string;
   isActive: boolean;
+  providerRef?: string;
 }
 
 export interface DashboardStats {
@@ -34,6 +36,7 @@ export interface Provider {
   notes?: string;
   isActive: boolean;
   createdAt: string;
+  login?: { email?: string; password?: string; active?: boolean; hasLogin?: boolean };
 }
 
 export interface Product {

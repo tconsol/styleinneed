@@ -11,9 +11,11 @@ interface AuthState {
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => Promise<void>;
   fetchMe: () => Promise<void>;
+  updateProfile: (data: { name?: string; phone?: string }) => Promise<boolean>;
 }
 
-const ADMIN_ROLES = ['admin', 'super_admin', 'manager'];
+// Providers are staff too — they get in but are restricted to the Products area.
+const STAFF_ROLES = ['admin', 'super_admin', 'manager', 'provider'];
 
 export const useAuthStore = create<AuthState>()(
   persist(
@@ -28,8 +30,8 @@ export const useAuthStore = create<AuthState>()(
           const { data } = await authApi.login(email, password);
           const { accessToken, refreshToken, user } = data.data;
 
-          if (!ADMIN_ROLES.includes(user.role)) {
-            toast.error('Access denied. Admin account required.');
+          if (!STAFF_ROLES.includes(user.role)) {
+            toast.error('Access denied. Staff account required.');
             set({ isLoading: false });
             return false;
           }
@@ -63,6 +65,17 @@ export const useAuthStore = create<AuthState>()(
           localStorage.removeItem('adminAccessToken');
           localStorage.removeItem('adminRefreshToken');
           set({ user: null, isAuthenticated: false });
+        }
+      },
+
+      updateProfile: async (payload) => {
+        try {
+          const { data } = await authApi.updateProfile(payload);
+          set({ user: data.data });
+          toast.success('Profile updated');
+          return true;
+        } catch {
+          return false;
         }
       },
     }),

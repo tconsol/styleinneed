@@ -56,6 +56,12 @@ export interface NewsletterCms {
   note: string;
 }
 
+export interface SectionHeaderCms {
+  label: string;
+  title: string;
+  subtitle: string;
+}
+
 export interface HomepageCms {
   hero: HeroCmsSlide[];
   banners: BannerCms[];
@@ -63,6 +69,11 @@ export interface HomepageCms {
   testimonials: TestimonialCms[];
   newsletter: NewsletterCms;
   marquee: string[];
+  rowNew: SectionHeaderCms;
+  rowBest: SectionHeaderCms;
+  rowTrending: SectionHeaderCms;
+  categoryHeader: SectionHeaderCms;
+  reviewsHeader: SectionHeaderCms;
 }
 
 const DEFAULT: HomepageCms = {
@@ -100,7 +111,21 @@ const DEFAULT: HomepageCms = {
     placeholder: 'Enter your email address', thankYou: "Thank you! You're now on the list.", note: 'No spam, ever. Unsubscribe anytime.',
   },
   marquee: ['Silk Sarees', 'Designer Kurtis', 'Bridal Lehengas', 'Co-Ord Sets', 'Festive Collection', 'Premium Fabrics', 'Free Shipping ₹999+'],
+  rowNew: { label: 'Fresh Drops', title: 'New Arrivals', subtitle: 'First looks at the latest additions to our collection' },
+  rowBest: { label: 'Top Picks', title: 'Best Sellers', subtitle: "The pieces our customers can't stop talking about" },
+  rowTrending: { label: "What's Hot", title: 'Trending Now', subtitle: '' },
+  categoryHeader: { label: 'Browse', title: 'Shop By Category', subtitle: 'Explore our curated collections across every style and occasion' },
+  reviewsHeader: { label: 'Love from our Customers', title: 'What Our Customers Say', subtitle: 'Real stories from real women who chose elegance' },
 };
+
+// Build a section header from CMS keys, falling back to defaults per-field.
+function header(c: Record<string, string>, prefix: string, def: SectionHeaderCms): SectionHeaderCms {
+  return {
+    label: c[`${prefix}_label`] || def.label,
+    title: c[`${prefix}_title`] || def.title,
+    subtitle: c[`${prefix}_subtitle`] ?? def.subtitle,
+  };
+}
 
 function parseCms(c: Record<string, string>): Partial<HomepageCms> {
   const out: Partial<HomepageCms> = {};
@@ -191,6 +216,13 @@ function parseCms(c: Record<string, string>): Partial<HomepageCms> {
   if (c.marquee) {
     out.marquee = c.marquee.split(',').map((s) => s.trim()).filter(Boolean);
   }
+
+  // Section headers (product rows, category, reviews) — each field falls back individually.
+  out.rowNew = header(c, 'row_new', DEFAULT.rowNew);
+  out.rowBest = header(c, 'row_best', DEFAULT.rowBest);
+  out.rowTrending = header(c, 'row_trending', DEFAULT.rowTrending);
+  out.categoryHeader = header(c, 'cat', DEFAULT.categoryHeader);
+  out.reviewsHeader = header(c, 'reviews', DEFAULT.reviewsHeader);
 
   return out;
 }

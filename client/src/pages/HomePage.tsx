@@ -44,15 +44,15 @@ export default function HomePage() {
       <InfiniteMarquee items={cms.marquee} />
 
       <ProductRow
-        label="Fresh Drops"
-        title="New Arrivals"
-        subtitle="First looks at the latest additions to our collection"
+        label={cms.rowNew.label}
+        title={cms.rowNew.title}
+        subtitle={cms.rowNew.subtitle}
         products={newArrivals}
         isLoading={loading}
         viewAllHref="/products?isNewArrival=true"
       />
 
-      <ShopByCategory />
+      <ShopByCategory header={cms.categoryHeader} />
 
       {b[0] && (
         <CollectionBanner
@@ -68,9 +68,9 @@ export default function HomePage() {
       )}
 
       <ProductRow
-        label="Top Picks"
-        title="Best Sellers"
-        subtitle="The pieces our customers can't stop talking about"
+        label={cms.rowBest.label}
+        title={cms.rowBest.title}
+        subtitle={cms.rowBest.subtitle}
         products={bestSellers}
         isLoading={loading}
         viewAllHref="/products?isBestSeller=true"
@@ -90,8 +90,9 @@ export default function HomePage() {
       )}
 
       <ProductRow
-        label="What's Hot"
-        title="Trending Now"
+        label={cms.rowTrending.label}
+        title={cms.rowTrending.title}
+        subtitle={cms.rowTrending.subtitle}
         products={trending}
         isLoading={loading}
         viewAllHref="/products?isTrending=true"
@@ -99,7 +100,7 @@ export default function HomePage() {
 
       <FashionStory data={cms.fashionStory} />
 
-      <Testimonials data={cms.testimonials} />
+      <Testimonials data={cms.testimonials} header={cms.reviewsHeader} />
 
       <InfiniteMarquee items={cms.marquee} reverse />
 

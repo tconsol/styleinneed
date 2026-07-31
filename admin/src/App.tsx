@@ -36,6 +36,8 @@ const ProvidersPage = lazy(() => import('./pages/providers/ProvidersPage'));
 const PushNotificationsPage = lazy(() => import('./pages/marketing/PushNotificationsPage'));
 const SettingsPage = lazy(() => import('./pages/settings/SettingsPage'));
 const ShippingRatesPage = lazy(() => import('./pages/settings/ShippingRatesPage'));
+const ChangePasswordPage = lazy(() => import('./pages/ChangePasswordPage'));
+const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 
 const queryClient = new QueryClient({ defaultOptions: { queries: { staleTime: 60_000, retry: 1 } } });
 
@@ -85,6 +87,8 @@ export default function App() {
               <Route path="/push-notifications" element={<PushNotificationsPage />} />
               <Route path="/settings" element={<SettingsPage />} />
               <Route path="/shipping-rates" element={<ShippingRatesPage />} />
+              <Route path="/change-password" element={<ChangePasswordPage />} />
+              <Route path="/profile" element={<ProfilePage />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Route>
           </Routes>

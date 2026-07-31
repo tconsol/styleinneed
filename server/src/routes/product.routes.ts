@@ -4,7 +4,7 @@ import {
   createProduct, updateProduct, deleteProduct,
   uploadProductImages, deleteProductImage, searchProducts,
 } from '../controllers/product.controller';
-import { protect, isAdminOrManager } from '../middleware/auth';
+import { protect, isProviderOrAdmin } from '../middleware/auth';
 import { productUpload } from '../middleware/upload';
 import { cache, flushCache } from '../middleware/cache';
 
@@ -17,10 +17,10 @@ router.get('/search', searchProducts);
 router.get('/:slug', cache(120), getProductBySlug);
 router.get('/:slug/related', cache(120), getRelatedProducts);
 
-router.post('/', protect, isAdminOrManager, flushProducts, createProduct);
-router.patch('/:id', protect, isAdminOrManager, flushProducts, updateProduct);
-router.delete('/:id', protect, isAdminOrManager, flushProducts, deleteProduct);
-router.post('/upload/images', protect, isAdminOrManager, productUpload.array('images', 10), uploadProductImages);
-router.delete('/upload/image', protect, isAdminOrManager, deleteProductImage);
+router.post('/', protect, isProviderOrAdmin, flushProducts, createProduct);
+router.patch('/:id', protect, isProviderOrAdmin, flushProducts, updateProduct);
+router.delete('/:id', protect, isProviderOrAdmin, flushProducts, deleteProduct);
+router.post('/upload/images', protect, isProviderOrAdmin, productUpload.array('images', 10), uploadProductImages);
+router.delete('/upload/image', protect, isProviderOrAdmin, deleteProductImage);
 
 export default router;

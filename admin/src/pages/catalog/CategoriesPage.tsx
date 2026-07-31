@@ -12,9 +12,29 @@ import toast from 'react-hot-toast';
 
 const empty = { name: '', productType: '', description: '', isActive: true, sortOrder: 0 };
 
+// Distinct chip colour per product type (deterministic by slug).
+const TYPE_COLORS: { bg: string; text: string }[] = [
+  { bg: '#EEF2FF', text: '#4338CA' }, // indigo
+  { bg: '#FEF3C7', text: '#92400E' }, // amber
+  { bg: '#DCFCE7', text: '#166534' }, // green
+  { bg: '#FCE7F3', text: '#9D174D' }, // pink
+  { bg: '#E0F2FE', text: '#075985' }, // sky
+  { bg: '#F3E8FF', text: '#6B21A8' }, // purple
+  { bg: '#FFEDD5', text: '#9A3412' }, // orange
+  { bg: '#CCFBF1', text: '#115E59' }, // teal
+];
+const typeColor = (slug?: string) => {
+  if (!slug) return { bg: '#F1F5F9', text: '#64748B' };
+  let h = 0;
+  for (let i = 0; i < slug.length; i++) h = (h * 31 + slug.charCodeAt(i)) >>> 0;
+  return TYPE_COLORS[h % TYPE_COLORS.length];
+};
+
 export default function CategoriesPage() {
   const { data: categories = [], isLoading: loading } = useCategories();
-  const productTypes = (useProductTypes().data || []).filter((t) => t.isActive);
+  const allTypes = useProductTypes().data || [];
+  const productTypes = allTypes.filter((t) => t.isActive);
+  const typeLabel = (slug?: string) => allTypes.find((t) => t.slug === slug)?.name || slug || '—';
   const qc = useQueryClient();
   const refresh = () => qc.invalidateQueries({ queryKey: CATALOG_KEYS.categories });
   const [modal, setModal] = useState(false);
@@ -74,6 +94,7 @@ export default function CategoriesPage() {
             <tr style={{ background: 'var(--c-th-bg)', borderBottom: '2px solid var(--c-border)' }}>
               <th className="th text-left pl-5" style={{ width: '48px' }}>#</th>
               <th className="th text-left" style={{ width: '200px' }}>Name</th>
+              <th className="th text-left" style={{ width: '150px' }}>Product Type</th>
               <th className="th text-left">Description</th>
               <th className="th text-center" style={{ width: '80px' }}>Sort</th>
               <th className="th text-center" style={{ width: '100px' }}>Status</th>
@@ -83,13 +104,13 @@ export default function CategoriesPage() {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={6} className="text-center py-12">
+                <td colSpan={7} className="text-center py-12">
                   <span className="w-6 h-6 border-2 border-brand-border border-t-primary rounded-full animate-spin inline-block" />
                 </td>
               </tr>
             ) : categories.length === 0 ? (
               <tr>
-                <td colSpan={6} className="text-center py-16">
+                <td colSpan={7} className="text-center py-16">
                   <FolderOpen size={32} className="mx-auto mb-2 text-brand-border" />
                   <p className="text-[11px] text-brand-muted">No categories yet</p>
                 </td>
@@ -113,6 +134,13 @@ export default function CategoriesPage() {
                     </div>
                     <span className="text-[12px] font-semibold text-brand-text">{c.name}</span>
                   </div>
+                </td>
+
+                {/* Product Type */}
+                <td className="px-3 py-3">
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold" style={{ background: typeColor(c.productType).bg, color: typeColor(c.productType).text }}>
+                    {typeLabel(c.productType)}
+                  </span>
                 </td>
 
                 {/* Description */}

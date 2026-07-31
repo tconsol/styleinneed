@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Package, Tag, Layers, ShoppingCart, Users,
   Ticket, Megaphone, Zap, FileText, Mail, Headphones,
   RotateCcw, FileEdit, BarChart2, ScrollText,
-  Star, LogOut, Settings, X, Shapes, SlidersHorizontal, Truck, BellRing, Ruler, Globe,
+  Star, LogOut, Settings, X, Shapes, SlidersHorizontal, Truck, BellRing, Ruler, Globe, UserCircle, KeyRound,
 } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
 import { useThemeStore } from '../../stores/themeStore';
@@ -45,6 +45,17 @@ export const NAV_ITEMS = [
   { section: 'System', items: [
     { label: 'Support', href: '/support', icon: Headphones },
     { label: 'Audit Logs', href: '/audit-logs', icon: ScrollText },
+  ]},
+];
+
+// Providers (suppliers) only manage products + their own password.
+export const PROVIDER_NAV = [
+  { section: 'Catalog', items: [
+    { label: 'Products', href: '/products', icon: Package },
+  ]},
+  { section: 'Account', items: [
+    { label: 'My Profile', href: '/profile', icon: UserCircle },
+    { label: 'Change Password', href: '/change-password', icon: KeyRound },
   ]},
 ];
 
@@ -112,7 +123,7 @@ export default function Sidebar({ isOpen, onClose }: Props) {
 
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto py-3 px-2.5">
-        {NAV_ITEMS.map(({ section, items }) => (
+        {(user?.role === 'provider' ? PROVIDER_NAV : NAV_ITEMS).map(({ section, items }) => (
           <div key={section} className="mb-4">
             <p className="px-2.5 mb-1.5 text-[9px] font-bold uppercase tracking-[0.18em]"
               style={{ color: labelClr }}>{section}</p>
@@ -155,13 +166,15 @@ export default function Sidebar({ isOpen, onClose }: Props) {
 
       {/* Footer */}
       <div className="flex-shrink-0 p-2.5" style={{ borderTop: `1px solid ${border}` }}>
-        <NavLink to="/settings"
-          className="flex items-center gap-2.5 px-3 py-2 text-[11px] rounded-lg transition-colors mb-0.5"
-          style={{ color: footerClr }}
-          onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = footerHoverBg; (e.currentTarget as HTMLElement).style.color = isDark ? 'rgba(255,255,255,0.6)' : '#475569'; }}
-          onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.color = footerClr; }}>
-          <Settings size={12} /> Settings
-        </NavLink>
+        {user?.role !== 'provider' && (
+          <NavLink to="/settings"
+            className="flex items-center gap-2.5 px-3 py-2 text-[11px] rounded-lg transition-colors mb-0.5"
+            style={{ color: footerClr }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = footerHoverBg; (e.currentTarget as HTMLElement).style.color = isDark ? 'rgba(255,255,255,0.6)' : '#475569'; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.color = footerClr; }}>
+            <Settings size={12} /> Settings
+          </NavLink>
+        )}
         <button onClick={handleLogout}
           className="w-full flex items-center gap-2.5 px-3 py-2 text-[11px] rounded-lg transition-colors mb-2"
           style={{ color: footerClr }}
@@ -169,7 +182,10 @@ export default function Sidebar({ isOpen, onClose }: Props) {
           onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.color = footerClr; }}>
           <LogOut size={12} /> Sign Out
         </button>
-        <div className="flex items-center gap-2.5 px-2 pt-2" style={{ borderTop: `1px solid ${border}` }}>
+        <NavLink to="/profile" onClick={onClose}
+          className="flex items-center gap-2.5 px-2 pt-2 rounded-lg transition-colors" style={{ borderTop: `1px solid ${border}` }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = footerHoverBg; }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}>
           <div className="w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold flex-shrink-0"
             style={{ background: 'linear-gradient(135deg, #4F46E5, #818CF8)', color: '#fff' }}>
             {user?.name?.[0]}
@@ -178,7 +194,7 @@ export default function Sidebar({ isOpen, onClose }: Props) {
             <p className="text-[11px] font-semibold truncate" style={{ color: userNameClr }}>{user?.name}</p>
             <p className="text-[9px] capitalize" style={{ color: userRoleClr }}>{user?.role?.replace(/_/g, ' ')}</p>
           </div>
-        </div>
+        </NavLink>
       </div>
     </div>
   );

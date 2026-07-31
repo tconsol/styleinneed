@@ -2,6 +2,7 @@ import { Router } from 'express';
 import {
   register, verifyEmail, resendOtp, login, refreshToken, logout,
   forgotPassword, resetPassword, getMe, updateProfile, changePassword, manageAddresses, googleAuth,
+  requestEmailChange, verifyEmailChange,
 } from '../controllers/auth.controller';
 import { protect } from '../middleware/auth';
 import { authLimiter, otpLimiter } from '../middleware/security';
@@ -39,6 +40,8 @@ router.post('/reset-password', authLimiter, resetPassword);
 
 router.get('/me', protect, getMe);
 router.patch('/me', protect, updateProfile);
+router.post('/change-email/request', protect, authLimiter, requestEmailChange);
+router.post('/change-email/verify', protect, verifyEmailChange);
 router.patch('/change-password', protect, changePassword);
 router.post('/addresses', protect, manageAddresses);
 

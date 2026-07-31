@@ -129,7 +129,7 @@ export const login = async (req: Request, res: Response, next: NextFunction): Pr
     sendSuccess(res, 'Login successful', {
       accessToken,
       refreshToken,
-      user: { _id: user._id, name: user.name, email: user.email, role: user.role, avatar: user.avatar },
+      user: { _id: user._id, name: user.name, email: user.email, role: user.role, avatar: user.avatar, providerRef: user.providerRef },
     });
   } catch (err) {
     next(err);
@@ -251,6 +251,65 @@ export const updateProfile = async (req: AuthRequest, res: Response, next: NextF
   }
 };
 
+// Step 1 — admin requests an email change: OTP is sent to the NEW address to prove ownership.
+export const requestEmailChange = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    if (req.user!.role !== 'admin') { sendError(res, 'Only admins can change their email', 403); return; }
+
+    const newEmail = String(req.body.newEmail || '').toLowerCase().trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)) { sendError(res, 'Enter a valid email address', 400); return; }
+    if (newEmail === req.user!.email.toLowerCase()) { sendError(res, 'This is already your email', 400); return; }
+
+    const taken = await User.findOne({ email: newEmail });
+    if (taken) { sendError(res, 'Email already in use', 409); return; }
+
+    const otp = generateOtp();
+    const otpExpiry = new Date(Date.now() + Number(process.env.OTP_EXPIRES_IN || 10) * 60 * 1000);
+
+    const user = await User.findById(req.user!._id).select('+emailChangeOtp +emailChangeOtpExpiry +pendingEmail');
+    if (!user) { sendError(res, 'User not found', 404); return; }
+    user.pendingEmail = newEmail;
+    user.emailChangeOtp = otp;
+    user.emailChangeOtpExpiry = otpExpiry;
+    await user.save();
+
+    await sendOtpEmail(newEmail, otp, user.name);
+    sendSuccess(res, `Verification code sent to ${newEmail}`);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Step 2 — admin confirms the OTP; the pending email becomes the account email.
+export const verifyEmailChange = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    if (req.user!.role !== 'admin') { sendError(res, 'Only admins can change their email', 403); return; }
+
+    const { otp } = req.body;
+    const user = await User.findById(req.user!._id).select('+emailChangeOtp +emailChangeOtpExpiry +pendingEmail');
+    if (!user || !user.pendingEmail) { sendError(res, 'No pending email change', 400); return; }
+    if (!user.emailChangeOtp || user.emailChangeOtp !== otp || !user.emailChangeOtpExpiry || user.emailChangeOtpExpiry < new Date()) {
+      sendError(res, 'Invalid or expired OTP', 400);
+      return;
+    }
+
+    // Guard against the address being claimed in the window between request and verify.
+    const taken = await User.findOne({ email: user.pendingEmail, _id: { $ne: user._id } });
+    if (taken) { sendError(res, 'Email already in use', 409); return; }
+
+    user.email = user.pendingEmail;
+    user.isEmailVerified = true;
+    user.pendingEmail = undefined;
+    user.emailChangeOtp = undefined;
+    user.emailChangeOtpExpiry = undefined;
+    await user.save();
+
+    sendSuccess(res, 'Email updated successfully', user);
+  } catch (err) {
+    next(err);
+  }
+};
+
 export const changePassword = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { currentPassword, newPassword } = req.body;
@@ -260,6 +319,8 @@ export const changePassword = async (req: AuthRequest, res: Response, next: Next
       return;
     }
     user.password = newPassword;
+    // Provider accounts are admin-managed, so keep the admin-viewable copy in sync.
+    if (user.role === 'provider') user.plainPassword = newPassword;
     user.refreshTokens = [];
     await user.save();
     sendSuccess(res, 'Password changed successfully. Please login again.');

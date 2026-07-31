@@ -9,11 +9,13 @@ import StatusToggle from '../../components/common/StatusToggle';
 
 const CATEGORIES = ['all', 'clothing', 'jewellery', 'accessories', 'other'] as const;
 
-const EMPTY: Omit<Provider, '_id' | 'isActive' | 'createdAt'> & { isActive: boolean } = {
+const EMPTY = {
   name: '', contactPerson: '', phone: '', email: '',
   category: 'all', address: '', city: '', state: '',
   gstin: '', bankAccountName: '', bankAccountNumber: '', bankIfsc: '', bankName: '',
   notes: '', isActive: true,
+  // Admin-panel login for this provider (restricted to the Products area).
+  canLogin: false, loginEmail: '', loginPassword: '',
 };
 
 const CAT_COLORS: Record<string, string> = {
@@ -44,7 +46,10 @@ function EditModal({ title, onClose, onSave, saving, children }: {
   );
 }
 
-function ViewModal({ provider, onClose, onEdit }: { provider: Provider; onClose: () => void; onEdit: () => void }) {
+function ViewModal({ provider, onClose, onEdit, onPrev, onNext, position }: {
+  provider: Provider; onClose: () => void; onEdit: () => void;
+  onPrev?: () => void; onNext?: () => void; position?: string;
+}) {
   const hasBank = provider.bankAccountName || provider.bankAccountNumber || provider.bankIfsc || provider.bankName;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.5)' }}>
@@ -69,6 +74,18 @@ function ViewModal({ provider, onClose, onEdit }: { provider: Provider; onClose:
             <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-semibold ${provider.isActive ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}>
               {provider.isActive ? 'Active' : 'Inactive'}
             </span>
+            {/* Prev / next provider navigation */}
+            <div className="flex items-center gap-0.5 ml-1 border-l border-slate-100 pl-2">
+              <button onClick={onPrev} disabled={!onPrev} title="Previous provider"
+                className="p-1.5 rounded-lg hover:bg-slate-100 text-brand-muted transition-colors disabled:opacity-30 disabled:hover:bg-transparent">
+                <ChevronLeft size={16} />
+              </button>
+              {position && <span className="text-[10px] text-brand-muted tabular-nums min-w-[34px] text-center">{position}</span>}
+              <button onClick={onNext} disabled={!onNext} title="Next provider"
+                className="p-1.5 rounded-lg hover:bg-slate-100 text-brand-muted transition-colors disabled:opacity-30 disabled:hover:bg-transparent">
+                <ChevronRight size={16} />
+              </button>
+            </div>
             <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-100 text-brand-muted transition-colors ml-1">
               <X size={16} />
             </button>
@@ -95,6 +112,27 @@ function ViewModal({ provider, onClose, onEdit }: { provider: Provider; onClose:
               )}
             </div>
           </div>
+
+          {/* Login credentials */}
+          {provider.login?.hasLogin && (
+            <div>
+              <p className="text-[9px] font-bold uppercase tracking-widest text-brand-muted mb-2">Login Access</p>
+              <div className="rounded-xl bg-indigo-50 px-4 py-3 space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[9px] font-bold uppercase text-brand-muted">Email</span>
+                  <span className="text-[12px] font-medium text-brand-text">{provider.login.email}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-[9px] font-bold uppercase text-brand-muted">Password</span>
+                  <span className="text-[12px] font-mono font-semibold text-indigo-700">{provider.login.password || '—'}</span>
+                </div>
+                <div className="flex items-center justify-between pt-1 border-t border-indigo-100">
+                  <span className="text-[9px] font-bold uppercase text-brand-muted">Status</span>
+                  <span className={`text-[10px] font-semibold ${provider.login.active ? 'text-emerald-600' : 'text-slate-400'}`}>{provider.login.active ? 'Can sign in' : 'Disabled'}</span>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Address */}
           {(provider.address || provider.city || provider.state || provider.gstin) && (
@@ -232,12 +270,17 @@ export default function ProvidersPage() {
       bankAccountName: p.bankAccountName || '', bankAccountNumber: p.bankAccountNumber || '',
       bankIfsc: p.bankIfsc || '', bankName: p.bankName || '',
       notes: p.notes || '', isActive: p.isActive,
+      canLogin: !!p.login?.hasLogin, loginEmail: p.login?.email || '', loginPassword: '',
     });
     setShowModal(true);
   };
 
   const handleSave = async () => {
     if (!form.name.trim()) { toast.error('Provider name required'); return; }
+    if (form.canLogin) {
+      if (!form.loginEmail.trim()) { toast.error('Login email required to enable access'); return; }
+      if (!editing?.login?.hasLogin && !form.loginPassword) { toast.error('Set a password for the provider login'); return; }
+    }
     setSaving(true);
     try {
       if (editing) {
@@ -279,6 +322,7 @@ export default function ProvidersPage() {
   const set = (k: keyof typeof form, v: unknown) => setForm((f) => ({ ...f, [k]: v }));
 
   return (
+    <>
     <div className="space-y-5">
       {/* Header */}
       <div className="flex items-center justify-between">
@@ -399,15 +443,22 @@ export default function ProvidersPage() {
           </div>
         </div>
       )}
+    </div>
 
       {/* View Modal */}
-      {viewing && (
-        <ViewModal
-          provider={viewing}
-          onClose={() => setViewing(null)}
-          onEdit={() => openEdit(viewing)}
-        />
-      )}
+      {viewing && (() => {
+        const idx = providers.findIndex((x) => x._id === viewing._id);
+        return (
+          <ViewModal
+            provider={viewing}
+            position={idx >= 0 ? `${idx + 1} / ${providers.length}` : undefined}
+            onPrev={idx > 0 ? () => setViewing(providers[idx - 1]) : undefined}
+            onNext={idx >= 0 && idx < providers.length - 1 ? () => setViewing(providers[idx + 1]) : undefined}
+            onClose={() => setViewing(null)}
+            onEdit={() => openEdit(viewing)}
+          />
+        );
+      })()}
 
       {/* Edit / Create Modal */}
       {showModal && (
@@ -476,6 +527,30 @@ export default function ProvidersPage() {
             </div>
 
             <div>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-brand-muted mb-3 pt-1 border-t border-slate-100">Login Access</p>
+              <div className="space-y-3">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" checked={form.canLogin} onChange={(e) => set('canLogin', e.target.checked)} className="accent-primary w-4 h-4" />
+                  <span className="text-[12px] text-brand-text">Allow this provider to sign in and add products</span>
+                </label>
+                {form.canLogin && (
+                  <div className="grid grid-cols-2 gap-3 rounded-xl bg-slate-50 p-3">
+                    <Field label="Login Email">
+                      <input type="email" value={form.loginEmail} onChange={(e) => set('loginEmail', e.target.value)} className="input-field" placeholder="provider@example.com" />
+                    </Field>
+                    <Field label={editing?.login?.hasLogin ? 'New Password (leave blank to keep)' : 'Password'}>
+                      <input type="text" value={form.loginPassword} onChange={(e) => set('loginPassword', e.target.value)} className="input-field font-mono" placeholder="Min 8 characters" />
+                    </Field>
+                    {editing?.login?.hasLogin && editing.login.password && (
+                      <p className="col-span-2 text-[11px] text-brand-muted">Current password: <span className="font-mono font-semibold text-brand-text">{editing.login.password}</span></p>
+                    )}
+                    <p className="col-span-2 text-[10px] text-amber-600">The provider can change this password later; you'll still see the updated one here.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div>
               <p className="text-[10px] font-bold uppercase tracking-wider text-brand-muted mb-3 pt-1 border-t border-slate-100">Other</p>
               <div className="space-y-3">
                 <Field label="Notes">
@@ -490,6 +565,6 @@ export default function ProvidersPage() {
           </div>
         </EditModal>
       )}
-    </div>
+    </>
   );
 }

@@ -5,6 +5,7 @@ import SectionHeader from '../common/SectionHeader';
 import { ArrowRight } from 'lucide-react';
 import { productApi } from '../../api/product.api';
 import { cmsApi } from '../../api/misc.api';
+import type { SectionHeaderCms } from '../../hooks/useHomepageCms';
 
 interface Category {
   _id: string;
@@ -30,7 +31,7 @@ const DEFAULT_FEATURED: FeaturedBanner[] = [
 
 const SPANS = ['col-span-2 row-span-2', 'col-span-1 row-span-1', 'col-span-1 row-span-1'];
 
-export default function ShopByCategory() {
+export default function ShopByCategory({ header }: { header?: SectionHeaderCms }) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [featured, setFeatured] = useState<FeaturedBanner[]>(DEFAULT_FEATURED);
 
@@ -61,7 +62,11 @@ export default function ShopByCategory() {
   return (
     <section className="page-section bg-brand-surface overflow-hidden">
       <div className="container-custom">
-        <SectionHeader label="Browse" title="Shop By Category" subtitle="Explore our curated collections across every style and occasion" />
+        <SectionHeader
+          label={header?.label || 'Browse'}
+          title={header?.title || 'Shop By Category'}
+          subtitle={header?.subtitle || 'Explore our curated collections across every style and occasion'}
+        />
 
         <div className="overflow-hidden sm:overflow-visible -mx-4 sm:mx-0">
           <div className="flex gap-4 sm:gap-5 overflow-x-auto pb-4 scrollbar-hide snap-x snap-mandatory sm:grid sm:grid-cols-3 md:grid-cols-6 sm:overflow-visible sm:pb-0 px-4 sm:px-0">

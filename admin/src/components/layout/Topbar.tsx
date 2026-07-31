@@ -1,4 +1,5 @@
 import { Menu, Sun, Moon } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
 import { useThemeStore } from '../../stores/themeStore';
 
@@ -45,7 +46,8 @@ export default function Topbar({ onMenuClick, title }: Props) {
         </button>
 
         {/* User badge */}
-        <div className="flex items-center gap-2.5 pl-3"
+        <Link to="/profile" title="My Profile"
+          className="flex items-center gap-2.5 pl-3 rounded-lg transition-opacity hover:opacity-80"
           style={{ borderLeft: '1px solid var(--c-border)' }}>
           <div className="w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-bold"
             style={{ background: 'linear-gradient(135deg,#4F46E5,#818CF8)', color: '#fff' }}>
@@ -55,7 +57,7 @@ export default function Topbar({ onMenuClick, title }: Props) {
             <p className="text-[12px] font-semibold leading-none" style={{ color: 'var(--c-text)' }}>{user?.name}</p>
             <p className="text-[10px] mt-0.5 capitalize" style={{ color: 'var(--c-muted)' }}>{user?.role?.replace(/_/g, ' ')}</p>
           </div>
-        </div>
+        </Link>
       </div>
     </header>
   );

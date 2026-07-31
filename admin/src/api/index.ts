@@ -4,6 +4,11 @@ export const authApi = {
   login: (email: string, password: string) => client.post('/auth/login', { email, password }),
   logout: (refreshToken: string) => client.post('/auth/logout', { refreshToken }),
   getMe: () => client.get('/auth/me'),
+  updateProfile: (data: { name?: string; phone?: string }) => client.patch('/auth/me', data),
+  requestEmailChange: (newEmail: string) => client.post('/auth/change-email/request', { newEmail }),
+  verifyEmailChange: (otp: string) => client.post('/auth/change-email/verify', { otp }),
+  changePassword: (currentPassword: string, newPassword: string) =>
+    client.patch('/auth/change-password', { currentPassword, newPassword }),
 };
 
 export const dashboardApi = {
@@ -129,6 +134,8 @@ export const auditApi = {
 export const providerApi = {
   getAll: (params?: object) => client.get('/providers', { params }),
   getAllSimple: () => client.get('/providers/all'),
+  getMine: () => client.get('/providers/me'),
+  updateMine: (data: object) => client.patch('/providers/me', data),
   getById: (id: string) => client.get(`/providers/${id}`),
   create: (data: object) => client.post('/providers', data),
   update: (id: string, data: object) => client.patch(`/providers/${id}`, data),

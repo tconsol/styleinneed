@@ -5,7 +5,7 @@ import {
   getAllOrders, getAdminOrderById, updateOrderStatus, deleteOrder,
   getAdminProducts, getAdminProductById,
 } from '../controllers/admin.controller';
-import { protect, isAdminOrManager, isSuperAdmin } from '../middleware/auth';
+import { protect, isAdminOrManager, isSuperAdmin, isProviderOrAdmin } from '../middleware/auth';
 
 const router = Router();
 
@@ -19,8 +19,8 @@ router.get('/users', isAdminOrManager, getUsers);
 router.get('/users/:id', isAdminOrManager, getUserById);
 router.patch('/users/:id', isSuperAdmin, updateUserRole);
 
-router.get('/products', isAdminOrManager, getAdminProducts);
-router.get('/products/:id', isAdminOrManager, getAdminProductById);
+router.get('/products', isProviderOrAdmin, getAdminProducts);
+router.get('/products/:id', isProviderOrAdmin, getAdminProductById);
 
 router.get('/orders', isAdminOrManager, getAllOrders);
 router.get('/orders/:id', isAdminOrManager, getAdminOrderById);

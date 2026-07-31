@@ -111,6 +111,17 @@ const PAGES: PageDef[] = [
       // ── MARQUEE ──
       { key: 's_marquee', label: 'Scrolling Marquee', type: 'section' },
       { key: 'marquee', label: 'Marquee Items', type: 'text', placeholder: 'Silk Sarees, Designer Kurtis, Bridal Lehengas', help: 'Comma-separated list of words/phrases that scroll across the page' },
+      // ── PRODUCT ROW TITLES ──
+      { key: 's_rows', label: 'Product Section Titles', type: 'section' },
+      { key: 'row_new_label', label: 'New Arrivals - Label', type: 'text', placeholder: 'Fresh Drops' },
+      { key: 'row_new_title', label: 'New Arrivals - Title', type: 'text', placeholder: 'New Arrivals' },
+      { key: 'row_new_subtitle', label: 'New Arrivals - Subtitle', type: 'text', placeholder: 'First looks at the latest additions to our collection' },
+      { key: 'row_best_label', label: 'Best Sellers - Label', type: 'text', placeholder: 'Top Picks' },
+      { key: 'row_best_title', label: 'Best Sellers - Title', type: 'text', placeholder: 'Best Sellers' },
+      { key: 'row_best_subtitle', label: 'Best Sellers - Subtitle', type: 'text', placeholder: "The pieces our customers can't stop talking about" },
+      { key: 'row_trending_label', label: 'Trending - Label', type: 'text', placeholder: "What's Hot" },
+      { key: 'row_trending_title', label: 'Trending - Title', type: 'text', placeholder: 'Trending Now' },
+      { key: 'row_trending_subtitle', label: 'Trending - Subtitle', type: 'text', placeholder: 'Optional subtitle' },
       // ── COLLECTION BANNERS ──
       { key: 's_banners', label: 'Collection Banners', type: 'section' },
       { key: 'banner_1_label', label: 'Banner 1 - Label', type: 'text', placeholder: 'Exclusive' },
@@ -129,6 +140,11 @@ const PAGES: PageDef[] = [
       { key: 'banner_2_cta', label: 'Banner 2 - Button Text', type: 'text', placeholder: 'Shop Now' },
       { key: 'banner_2_dark', label: 'Banner 2 - Dark overlay? (true/false)', type: 'text', placeholder: 'false' },
       { key: 'banner_2_reverse', label: 'Banner 2 - Image on right? (true/false)', type: 'text', placeholder: 'true' },
+      // ── SHOP BY CATEGORY ──
+      { key: 's_catheader', label: 'Shop By Category — Section Title', type: 'section' },
+      { key: 'cat_label', label: 'Category - Label', type: 'text', placeholder: 'Browse' },
+      { key: 'cat_title', label: 'Category - Title', type: 'text', placeholder: 'Shop By Category' },
+      { key: 'cat_subtitle', label: 'Category - Subtitle', type: 'text', placeholder: 'Explore our curated collections across every style and occasion' },
       // ── FEATURED CATEGORIES ──
       { key: 's_catfeatured', label: 'Featured Category Banners', type: 'section' },
       { key: 'cat_featured_1_title', label: 'Featured 1 - Title', type: 'text', placeholder: 'Silk Sarees' },
@@ -166,6 +182,9 @@ const PAGES: PageDef[] = [
       { key: 'story_pillar3_body', label: 'Pillar 3 Body', type: 'text', placeholder: 'Every stitch reflects our passion for fashion.' },
       // ── TESTIMONIALS ──
       { key: 's_reviews', label: 'Customer Reviews', type: 'section' },
+      { key: 'reviews_label', label: 'Section - Label', type: 'text', placeholder: 'Love from our Customers' },
+      { key: 'reviews_title', label: 'Section - Title', type: 'text', placeholder: 'What Our Customers Say' },
+      { key: 'reviews_subtitle', label: 'Section - Subtitle', type: 'text', placeholder: 'Real stories from real women who chose elegance' },
       { key: 'review_1_name', label: 'Review 1 - Name', type: 'text', placeholder: 'Priya Sharma' },
       { key: 'review_1_city', label: 'Review 1 - City', type: 'text', placeholder: 'Mumbai' },
       { key: 'review_1_product', label: 'Review 1 - Product', type: 'text', placeholder: 'Kanjeevaram Silk Saree' },

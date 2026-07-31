@@ -29,10 +29,10 @@ export default function ProductsPage() {
   useEffect(() => { fetch(); }, [fetch]);
 
   const handleDelete = async (id: string, name: string) => {
-    if (!(await confirm({ title: 'Deactivate product?', message: `"${name}" will be hidden and its images removed from storage.`, confirmText: 'Deactivate' }))) return;
+    if (!(await confirm({ title: 'Delete product?', message: `"${name}" will be permanently deleted from the database and its images removed. This cannot be undone.`, confirmText: 'Delete', danger: true }))) return;
     try {
       await productApi.delete(id);
-      toast.success('Product deactivated');
+      toast.success('Product deleted');
       fetch();
     } catch {}
   };

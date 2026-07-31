@@ -42,3 +42,6 @@ export const restrictTo = (...roles: UserRole[]) =>
 export const isAdmin = restrictTo('admin');
 export const isSuperAdmin = restrictTo('admin');
 export const isAdminOrManager = restrictTo('admin');
+// Providers (suppliers) may add/edit products only — nothing else in the admin.
+export const isProviderOrAdmin = restrictTo('admin', 'provider');
+export const isProvider = restrictTo('provider');

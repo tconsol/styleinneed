@@ -7,7 +7,9 @@ export interface IUser extends Document {
   email: string;
   phone?: string;
   password: string;
-  role: 'customer' | 'admin';
+  plainPassword?: string;
+  providerRef?: Types.ObjectId;
+  role: 'customer' | 'admin' | 'provider';
   isEmailVerified: boolean;
   isActive: boolean;
   googleId?: string;
@@ -16,6 +18,9 @@ export interface IUser extends Document {
   refreshTokens: string[];
   otp?: string;
   otpExpiry?: Date;
+  pendingEmail?: string;
+  emailChangeOtp?: string;
+  emailChangeOtpExpiry?: Date;
   passwordResetToken?: string;
   passwordResetExpiry?: Date;
   pushToken?: string;
