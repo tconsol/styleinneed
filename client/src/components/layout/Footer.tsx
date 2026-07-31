@@ -1,6 +1,10 @@
-﻿import { Link } from 'react-router-dom';
-import { Camera, Share2, Play, MessageCircle } from 'lucide-react';
+﻿import { useState } from 'react';
+import { Link } from 'react-router-dom';
+import { Camera, Share2, Play, MessageCircle, Check } from 'lucide-react';
+import toast from 'react-hot-toast';
 import PaymentLogos from '../common/PaymentLogos';
+import CurvedInput from '../common/CurvedInput';
+import { newsletterApi } from '../../api/misc.api';
 
 const LINKS = {
   Shop: [
@@ -32,20 +36,68 @@ const LINKS = {
 };
 
 export default function Footer() {
+  const [status, setStatus] = useState<'idle' | 'loading' | 'done'>('idle');
+
+  const handleSubscribe = async (raw: string) => {
+    const email = raw.trim();
+    if (status === 'loading' || !email) return;
+    if (!/^\S+@\S+\.\S+$/.test(email)) {
+      toast.error('Please enter a valid email address.');
+      return;
+    }
+    setStatus('loading');
+    try {
+      await newsletterApi.subscribe(email);
+      setStatus('done');
+      toast.success('Successfully subscribed!');
+    } catch {
+      setStatus('idle');
+      toast.error('Could not subscribe. Please try again.');
+    }
+  };
+
   return (
     <footer className="bg-brand-text text-white/80">
-      {/* Marquee */}
-      <div className="border-y border-white/10 py-4 overflow-hidden">
-        <div className="flex animate-marquee whitespace-nowrap">
-          {Array(6).fill(null).map((_, i) => (
-            <span key={i} className="font-heading text-2xl font-bold italic text-white/10 mx-8 select-none">
-              STYLE IN NEED FASHIONS &nbsp;✦&nbsp;
-            </span>
-          ))}
-        </div>
-      </div>
-
       <div className="container-custom py-16">
+        {/* Newsletter */}
+        <div className="mb-14 flex flex-col gap-8 border-b border-white/10 pb-14 lg:flex-row lg:items-center lg:justify-between">
+          <div className="max-w-md">
+            <h3 className="font-heading text-2xl font-semibold text-white md:text-3xl">Get Exclusive Access</h3>
+            <p className="mt-2 font-body text-sm leading-relaxed text-white/50">
+              Join the inner circle for early access to new collections, member-only offers and styling tips.
+            </p>
+          </div>
+
+          {status === 'done' ? (
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-primary text-white">
+                <Check size={18} />
+              </div>
+              <p className="font-body text-sm text-white/80">You're in! Watch your inbox for a little hello.</p>
+            </div>
+          ) : (
+            <div className="w-full max-w-xl">
+              <CurvedInput
+                placeholder="Enter your email address"
+                buttonText={status === 'loading' ? 'Subscribing…' : 'Subscribe'}
+                theme="dark"
+                bend={16}
+                height={58}
+                width="100%"
+                fontSize={15}
+                cornerRadius={16}
+                backgroundColor="#211C18"
+                borderColor="#453C33"
+                buttonColor="#C8A97E"
+                buttonTextColor="#1C1C1C"
+                placeholderColor="#9C948A"
+                shadowSize="none"
+                onSubmit={handleSubscribe}
+              />
+            </div>
+          )}
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10">
           {/* Brand */}
           <div className="lg:col-span-1">

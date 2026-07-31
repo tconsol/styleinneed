@@ -1,85 +1,81 @@
-import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Star, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Star, Quote } from 'lucide-react';
 import SectionHeader from '../common/SectionHeader';
+import GalaxyParticles from '../common/GalaxyParticles';
+import {
+  ThreeDScrollTriggerContainer,
+  ThreeDScrollTriggerRow,
+} from '../lightswind/ThreeDScrollTrigger';
 import type { TestimonialCms, SectionHeaderCms } from '../../hooks/useHomepageCms';
 
 interface Props { data: TestimonialCms[]; header?: SectionHeaderCms; }
 
+function TestimonialCard({ t }: { t: TestimonialCms }) {
+  return (
+    <div className="relative mx-3 inline-flex w-[300px] flex-col gap-4 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.06] p-6 backdrop-blur-md md:mx-4 md:w-[350px]">
+      {/* Top accent hairline */}
+      <div aria-hidden className="absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-primary/60 to-transparent" />
+
+      <div className="flex items-center justify-between">
+        <div className="flex gap-1">
+          {Array.from({ length: t.rating || 5 }).map((_, s) => (
+            <Star key={s} size={14} className="fill-primary text-primary" />
+          ))}
+        </div>
+        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/15">
+          <Quote size={16} className="text-primary-light" />
+        </div>
+      </div>
+
+      <p className="font-body text-sm leading-relaxed text-white/65 line-clamp-4">"{t.text}"</p>
+
+      <div className="mt-auto flex items-center gap-3 border-t border-white/10 pt-4">
+        <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-primary font-heading text-sm font-bold text-white">
+          {t.name.slice(0, 2).toUpperCase()}
+        </div>
+        <div className="min-w-0">
+          <p className="truncate font-body text-sm font-semibold text-white">{t.name}</p>
+          <p className="truncate font-body text-xs text-white/50">{t.city} · {t.product}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Testimonials({ data, header }: Props) {
-  const [current, setCurrent] = useState(0);
+  if (!data.length) return null;
 
-  const prev = () => setCurrent((c) => (c - 1 + data.length) % data.length);
-  const next = () => setCurrent((c) => (c + 1) % data.length);
-
-  const t = data[current] || data[0];
+  const reversed = [...data].reverse();
 
   return (
-    <section className="page-section bg-brand-surface overflow-hidden">
-      <div className="container-custom max-w-4xl">
-        <SectionHeader
-          label={header?.label || 'Love from our Customers'}
-          title={header?.title || 'What Our Customers Say'}
-          subtitle={header?.subtitle || 'Real stories from real women who chose elegance'}
-        />
+    <section className="page-section relative overflow-hidden bg-brand-text">
+      {/* Nebula orbs */}
+      <div aria-hidden className="pointer-events-none absolute inset-0">
+        <div className="absolute -top-32 -left-24 h-96 w-96 rounded-full bg-primary/10 blur-3xl" />
+        <div className="absolute -bottom-24 right-0 h-[28rem] w-[28rem] rounded-full bg-secondary/10 blur-3xl" />
+        <div className="absolute top-1/2 left-1/3 h-72 w-72 rounded-full bg-primary/5 blur-3xl" />
+      </div>
 
-        <div className="relative">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={current}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.4 }}
-              className="text-center px-4 md:px-12"
-            >
-              {/* Stars */}
-              <div className="flex justify-center gap-1 mb-6">
-                {[1, 2, 3, 4, 5].map((s) => (
-                  <Star key={s} size={20} className="text-primary fill-primary" />
-                ))}
-              </div>
+      {/* Galaxy stars */}
+      <GalaxyParticles count={90} />
 
-              {/* Quote */}
-              <blockquote className="font-heading text-xl md:text-2xl text-brand-text italic leading-relaxed mb-8 text-balance">
-                "{t.text}"
-              </blockquote>
-
-              {/* Author */}
-              <div className="flex flex-col items-center gap-2">
-                <div className="w-12 h-12 rounded-full bg-primary text-white flex items-center justify-center font-heading font-bold text-lg">
-                  {t.name.slice(0, 2).toUpperCase()}
-                </div>
-                <div>
-                  <p className="font-body font-semibold text-brand-text">{t.name}</p>
-                  <p className="font-body text-sm text-brand-muted">{t.city} · {t.product}</p>
-                </div>
-              </div>
-            </motion.div>
-          </AnimatePresence>
-
-          {/* Navigation */}
-          <div className="flex items-center justify-center gap-4 mt-10">
-            <button onClick={prev} className="w-10 h-10 border border-brand-border flex items-center justify-center hover:border-primary hover:text-primary transition-all duration-200">
-              <ChevronLeft size={18} />
-            </button>
-            <div className="flex gap-2">
-              {data.map((_, i) => (
-                <button
-                  key={i}
-                  onClick={() => setCurrent(i)}
-                  className={`transition-all duration-300 rounded-full ${
-                    i === current ? 'w-6 h-2 bg-primary' : 'w-2 h-2 bg-brand-border hover:bg-primary/50'
-                  }`}
-                  aria-label={`Testimonial ${i + 1}`}
-                />
-              ))}
-            </div>
-            <button onClick={next} className="w-10 h-10 border border-brand-border flex items-center justify-center hover:border-primary hover:text-primary transition-all duration-200">
-              <ChevronRight size={18} />
-            </button>
-          </div>
+      <div className="relative">
+        <div className="container-custom">
+          <SectionHeader
+            dark
+            label={header?.label || 'Love from our Customers'}
+            title={header?.title || 'What Our Customers Say'}
+            subtitle={header?.subtitle || 'Real stories from real women who chose elegance'}
+          />
         </div>
+
+        <ThreeDScrollTriggerContainer className="mt-2 space-y-6">
+          <ThreeDScrollTriggerRow baseVelocity={4} direction={1}>
+            {data.map((t, i) => <TestimonialCard key={`${t.name}-${i}`} t={t} />)}
+          </ThreeDScrollTriggerRow>
+          <ThreeDScrollTriggerRow baseVelocity={4} direction={-1}>
+            {reversed.map((t, i) => <TestimonialCard key={`${t.name}-${i}`} t={t} />)}
+          </ThreeDScrollTriggerRow>
+        </ThreeDScrollTriggerContainer>
       </div>
     </section>
   );

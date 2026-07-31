@@ -1,7 +1,8 @@
-﻿import { useEffect, useRef, useState } from 'react';
+﻿import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
+import CircularText from '../common/CircularText';
 import type { HeroCmsSlide } from '../../hooks/useHomepageCms';
 
 interface Props { slides: HeroCmsSlide[]; }
@@ -11,19 +12,18 @@ export default function HeroSection({ slides }: Props) {
   const [direction, setDirection] = useState(1);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const startInterval = () => {
+  const startInterval = useCallback(() => {
     if (intervalRef.current) clearInterval(intervalRef.current);
     intervalRef.current = setInterval(() => {
       setDirection(1);
       setCurrent((c) => (c + 1) % slides.length);
     }, 6000);
-  };
+  }, [slides.length]);
 
   useEffect(() => {
-    setCurrent(0);
     startInterval();
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
-  }, [slides.length]);
+  }, [startInterval]);
 
   const goTo = (idx: number) => {
     setDirection(idx > current ? 1 : -1);
@@ -31,7 +31,9 @@ export default function HeroSection({ slides }: Props) {
     startInterval();
   };
 
-  const slide = slides[current] || slides[0];
+  // Clamp the index so a shrinking slide list (CMS edit) never breaks the hero.
+  const idx = slides.length ? current % slides.length : 0;
+  const slide = slides[idx];
 
   return (
     <section
@@ -117,14 +119,40 @@ export default function HeroSection({ slides }: Props) {
           </motion.div>
         </AnimatePresence>
 
-        {/* Slide dots */}
+        {/* Circular text + scroll indicator — bottom right */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 1.2, duration: 1 }}
+        className="absolute bottom-8 right-6 hidden items-center gap-8 lg:flex md:right-10"
+      >
+        <div className="flex h-[200px] w-[200px] scale-[0.72] items-center justify-center rounded-full border border-white/15 bg-brand-text/25 backdrop-blur-md shadow-luxury">
+          <CircularText
+            text="STYLE IN NEED ✦ FASHIONS ✦ "
+            onHover="speedUp"
+            spinDuration={18}
+            className="text-white"
+          />
+        </div>
+
+        <div className="flex flex-col items-center gap-2">
+          <motion.div
+            animate={{ y: [0, 8, 0] }}
+            transition={{ duration: 1.8, repeat: Infinity }}
+            className="w-px h-10 bg-gradient-to-b from-white/60 to-transparent"
+          />
+          <span className="font-body text-[9px] tracking-[0.3em] uppercase text-white/50 [writing-mode:vertical-lr]">Scroll</span>
+        </div>
+      </motion.div>
+
+      {/* Slide dots */}
         <div className="absolute bottom-[calc(var(--bottomnav-height)+env(safe-area-inset-bottom)+1rem)] lg:bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-2">
           {slides.map((_, i) => (
             <button
               key={i}
               onClick={() => goTo(i)}
               aria-label={`Slide ${i + 1}`}
-              className={`transition-all duration-300 rounded-full ${i === current ? 'w-6 h-2 bg-primary' : 'w-2 h-2 bg-white/40 hover:bg-white/70'}`}
+              className={`transition-all duration-300 rounded-full ${i === idx ? 'w-6 h-2 bg-primary' : 'w-2 h-2 bg-white/40 hover:bg-white/70'}`}
             />
           ))}
         </div>
@@ -141,18 +169,6 @@ export default function HeroSection({ slides }: Props) {
         aria-label="Next slide">
         <ChevronRight size={20} />
       </button>
-
-      {/* Scroll indicator — desktop */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 2, duration: 1 }}
-        className="absolute bottom-10 right-8 hidden lg:flex flex-col items-center gap-2"
-      >
-        <motion.div animate={{ y: [0, 8, 0] }} transition={{ duration: 1.8, repeat: Infinity }}
-          className="w-px h-10 bg-gradient-to-b from-white/60 to-transparent" />
-        <span className="font-body text-[9px] tracking-[0.3em] uppercase text-white/50 [writing-mode:vertical-lr]">Scroll</span>
-      </motion.div>
     </section>
   );
 }

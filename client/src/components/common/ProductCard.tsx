@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Heart, ShoppingBag, Star } from 'lucide-react';
 import type { Product } from '../../types';
 import { useMoney } from '../../hooks/useMoney';
@@ -14,6 +14,7 @@ interface Props {
 export default function ProductCard({ product }: Props) {
   const [imgIdx, setImgIdx] = useState(0);
   const [imgLoaded, setImgLoaded] = useState(false);
+  const navigate = useNavigate();
   const { isAuthenticated } = useAuthStore();
   const { addItem } = useCartStore();
   const { toggle, isWishlisted } = useWishlistStore();
@@ -25,6 +26,10 @@ export default function ProductCard({ product }: Props) {
 
   const handleAddToCart = async (e: React.MouseEvent) => {
     e.preventDefault();
+    if (!isAuthenticated) {
+      navigate('/auth/login', { state: { from: window.location.pathname } });
+      return;
+    }
     if (!defaultVariant) return;
     await addItem(product._id, defaultVariant.sku);
   };
@@ -84,11 +89,11 @@ export default function ProductCard({ product }: Props) {
             <Heart size={15} fill={wishlisted ? 'currentColor' : 'none'} />
           </button>
 
-          {/* Quick Add — bottom overlay */}
+          {/* Quick Add — always visible on mobile, hover reveal on desktop */}
           {hasStock && (
             <button
               onClick={handleAddToCart}
-              className="absolute bottom-0 left-0 right-0 bg-brand-text/90 text-white font-body text-[11px] tracking-[0.2em] uppercase py-3 translate-y-full group-hover:translate-y-0 transition-transform duration-300 flex items-center justify-center gap-2"
+              className="absolute bottom-0 left-0 right-0 bg-brand-text/90 text-white font-body text-[11px] tracking-[0.2em] uppercase py-3 translate-y-0 sm:translate-y-full sm:group-hover:translate-y-0 transition-transform duration-300 flex items-center justify-center gap-2"
               style={{ minHeight: '44px' }}
             >
               <ShoppingBag size={13} /> Add to Bag
@@ -97,7 +102,7 @@ export default function ProductCard({ product }: Props) {
 
           {/* Image counter — mobile */}
           {product.images.length > 1 && (
-            <div className="absolute bottom-2 right-2 bg-black/40 text-white font-body text-[9px] px-1.5 py-0.5 sm:hidden">
+            <div className="absolute bottom-12 right-2 bg-black/40 text-white font-body text-[9px] px-1.5 py-0.5 sm:hidden">
               {product.images.length} pics
             </div>
           )}

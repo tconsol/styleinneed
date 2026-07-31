@@ -222,3 +222,25 @@
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
 }
+
+/* Galaxy particles */
+@keyframes twinkle {
+  0%, 100% { opacity: 0.1; }
+  50% { opacity: 1; }
+}
+
+@keyframes drift {
+  0% { transform: translate(0, 0); }
+  33% { transform: translate(var(--drift-x1, 0), var(--drift-y1, 0)); }
+  66% { transform: translate(var(--drift-x2, 0), var(--drift-y2, 0)); }
+  100% { transform: translate(var(--drift-x3, 0), var(--drift-y3, 0)); }
+}
+
+.galaxy-particle {
+  position: absolute;
+  border-radius: 9999px;
+  background: #ffffff;
+  animation:
+    twinkle var(--twinkle-dur, 4s) ease-in-out infinite,
+    drift var(--drift-dur, 14s) ease-in-out infinite alternate;
+}

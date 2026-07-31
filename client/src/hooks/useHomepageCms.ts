@@ -105,6 +105,10 @@ const DEFAULT: HomepageCms = {
     { name: 'Anitha Reddy', city: 'Hyderabad', product: 'Bridal Lehenga', text: 'Style In Need Fashions is my go-to for festive shopping. The designs are unique and delivery was super fast!', rating: 5 },
     { name: 'Meena Krishnan', city: 'Chennai', product: 'Cotton Kurti Set', text: 'I\'ve bought from many online stores but Style In Need stands apart. The quality is consistent and packaging is beautiful.', rating: 5 },
     { name: 'Deepa Nair', city: 'Kochi', product: 'Banarasi Silk Saree', text: 'The designer saree collection here is unmatched. Got so many compliments at the wedding. Love Style In Need!', rating: 5 },
+    { name: 'Kavya Iyer', city: 'Bengaluru', product: 'Co-Ord Set', text: 'The co-ord sets are so trendy yet elegant. Fits perfectly and the colour was exactly as shown on the site.', rating: 5 },
+    { name: 'Ritu Malhotra', city: 'Delhi', product: 'Festive Kurti', text: 'Bought three kurtis for Navratri — all gorgeous. The stitching, the fabric, the fall — everything is premium.', rating: 5 },
+    { name: 'Sunita Rao', city: 'Pune', product: 'Designer Saree', text: 'Beautiful packaging and even more beautiful sarees. The draping guide they sent was a lovely touch.', rating: 5 },
+    { name: 'Lakshmi Menon', city: 'Trivandrum', product: 'Bridal Collection', text: 'My bridal lehenga was a dream! The craftsmanship and attention to detail are beyond words.', rating: 5 },
   ],
   newsletter: {
     label: 'Stay Connected', heading: 'Get Exclusive Access',
