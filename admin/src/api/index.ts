@@ -125,6 +125,7 @@ export const cmsApi = {
   list: () => client.get('/cms'),
   get: (key: string) => client.get(`/cms/${key}`),
   upsert: (key: string, data: object) => client.put(`/cms/${key}`, data),
+  uploadImage: (file: FormData) => client.post('/cms/upload', file, { headers: { 'Content-Type': 'multipart/form-data' } }),
 };
 
 export const auditApi = {
@@ -160,6 +161,16 @@ export const settingsApi = {
   get: () => client.get('/settings/admin'),
   update: (data: object) => client.patch('/settings', data),
   refreshRate: () => client.post('/settings/refresh-rate'),
+};
+
+export const themeApi = {
+  getActive: () => client.get('/settings/theme'),
+  getAll: () => client.get('/settings/themes'),
+  setActive: (key: string) => client.put('/settings/themes/active', { key }),
+  save: (theme: object) => client.put('/settings/themes', theme),
+  remove: (key: string) => client.delete(`/settings/themes/${key}`),
+  setAppearance: (data: { fontHeading?: string; fontBody?: string; applyToAdmin?: boolean }) =>
+    client.put('/settings/appearance', data),
 };
 
 export const shippingApi = {

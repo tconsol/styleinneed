@@ -32,4 +32,7 @@ export const SOCKET_EVENTS = {
   orderUpdated:   'order:updated',
   orderNew:       'order:new',
   ticketNew:      'ticket:new',
+  themeChanged:   'theme:changed',   // active theme tokens changed
+  cmsUpdated:     'cms:updated',      // a CMS page (homepage, about, …) was saved
+  contentUpdated: 'content:updated',  // catalog/content changed — clients refetch
 } as const;

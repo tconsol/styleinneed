@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Package, Tag, Layers, ShoppingCart, Users,
   Ticket, Megaphone, Zap, FileText, Mail, Headphones,
   RotateCcw, FileEdit, BarChart2, ScrollText,
-  Star, LogOut, Settings, X, Shapes, SlidersHorizontal, Truck, BellRing, Ruler, Globe, UserCircle, KeyRound,
+  Star, LogOut, Settings, X, Shapes, SlidersHorizontal, Truck, BellRing, Ruler, Globe, UserCircle, KeyRound, Palette,
 } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
 import { useThemeStore } from '../../stores/themeStore';
@@ -44,6 +44,7 @@ export const NAV_ITEMS = [
   ]},
   { section: 'System', items: [
     { label: 'Support', href: '/support', icon: Headphones },
+    { label: 'Themes', href: '/themes', icon: Palette },
     { label: 'Audit Logs', href: '/audit-logs', icon: ScrollText },
   ]},
 ];
@@ -80,24 +81,22 @@ export default function Sidebar({ isOpen, onClose }: Props) {
   };
   const handleLogout = async () => { await logout(); navigate('/login'); };
 
-  // Theme-specific tokens
-  const bg         = isDark ? '#080816'                       : '#FFFFFF';
-  const border     = isDark ? 'rgba(255,255,255,0.06)'        : '#E2E8F0';
-  const labelClr   = isDark ? 'rgba(255,255,255,0.18)'        : '#94A3B8';
-  const navDefault = isDark ? 'rgba(255,255,255,0.42)'        : '#64748B';
-  const activeGrad = isDark
-    ? 'linear-gradient(135deg, rgba(79,70,229,0.45), rgba(129,140,248,0.25))'
-    : 'linear-gradient(135deg, #EEF2FF, #E0E7FF)';
-  const activeClr  = isDark ? '#C7D2FE'                       : '#4F46E5';
-  const activeShadow = isDark ? '0 2px 8px rgba(79,70,229,0.2)' : '0 1px 4px rgba(79,70,229,0.15)';
-  const iconActive = isDark ? '#818CF8'                       : '#4F46E5';
-  const footerClr  = isDark ? 'rgba(255,255,255,0.3)'         : '#94A3B8';
-  const footerHoverBg = isDark ? 'rgba(255,255,255,0.05)'     : '#F1F5F9';
+  // All colours resolve from theme tokens so the sidebar follows the active theme.
+  const bg         = 'var(--c-surface)';
+  const border     = 'var(--c-border)';
+  const labelClr   = 'var(--c-muted)';
+  const navDefault = 'var(--c-muted)';
+  const activeGrad = 'var(--c-primary-soft)';
+  const activeClr  = 'var(--c-primary)';
+  const activeShadow = '0 1px 4px var(--c-primary-soft)';
+  const iconActive = 'var(--c-primary)';
+  const footerClr  = 'var(--c-muted)';
+  const footerHoverBg = 'var(--c-tr-hover)';
   const logoutHoverBg = isDark ? 'rgba(239,68,68,0.1)'        : '#FEE2E2';
   const logoutHoverClr = '#EF4444';
-  const userNameClr  = isDark ? 'rgba(255,255,255,0.82)'      : '#1E293B';
-  const userRoleClr  = isDark ? 'rgba(255,255,255,0.3)'       : '#94A3B8';
-  const hoverBg    = isDark ? 'rgba(255,255,255,0.05)'        : '#F8FAFF';
+  const userNameClr  = 'var(--c-text)';
+  const userRoleClr  = 'var(--c-muted)';
+  const hoverBg    = 'var(--c-tr-hover)';
 
   const SidebarContent = () => (
     <div className="flex flex-col h-full" style={{ background: bg, borderRight: `1px solid ${border}`, transition: 'background 0.2s' }}>
@@ -106,13 +105,13 @@ export default function Sidebar({ isOpen, onClose }: Props) {
         style={{ borderBottom: `1px solid ${border}` }}>
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
-            style={{ background: 'linear-gradient(135deg, #4F46E5, #818CF8)', boxShadow: '0 2px 8px rgba(79,70,229,0.35)' }}>
+            style={{ background: 'var(--c-primary)', boxShadow: '0 2px 8px var(--c-primary-soft)' }}>
             <span className="text-white text-[12px] font-black">A</span>
           </div>
           <div>
             <p className="text-[13px] font-bold tracking-wide leading-none"
               style={{ color: isDark ? 'white' : '#1E293B' }}>STYLE IN NEED</p>
-            <p className="text-[10px] leading-none mt-0.5" style={{ color: '#818CF8' }}>Admin Panel</p>
+            <p className="text-[10px] leading-none mt-0.5" style={{ color: 'var(--c-primary)' }}>Admin Panel</p>
           </div>
         </div>
         <button onClick={onClose} className="lg:hidden p-1 rounded-md transition-colors"
@@ -187,7 +186,7 @@ export default function Sidebar({ isOpen, onClose }: Props) {
           onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = footerHoverBg; }}
           onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}>
           <div className="w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold flex-shrink-0"
-            style={{ background: 'linear-gradient(135deg, #4F46E5, #818CF8)', color: '#fff' }}>
+            style={{ background: 'var(--c-primary)', color: '#fff' }}>
             {user?.name?.[0]}
           </div>
           <div className="min-w-0">

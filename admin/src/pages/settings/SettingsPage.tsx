@@ -68,7 +68,7 @@ export default function SettingsPage() {
       <Link
         to="/shipping-rates"
         className="flex items-center justify-between gap-3 rounded-xl px-5 py-4 text-white transition-transform hover:-translate-y-0.5"
-        style={{ background: 'linear-gradient(135deg, #4F46E5, #818CF8)', boxShadow: '0 4px 16px rgba(79,70,229,0.35)' }}
+        style={{ background: 'var(--c-primary)', boxShadow: '0 4px 16px rgba(79,70,229,0.35)' }}
       >
         <span className="flex items-center gap-3">
           <Truck size={20} />

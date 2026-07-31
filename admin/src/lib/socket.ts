@@ -20,4 +20,5 @@ export const ADMIN_SOCKET_EVENTS = {
   orderUpdated: 'order:updated',
   stockUpdated: 'stock:updated',
   ticketNew:    'ticket:new',
+  themeChanged: 'theme:changed',
 } as const;

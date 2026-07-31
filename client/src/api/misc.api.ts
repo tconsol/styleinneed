@@ -38,7 +38,10 @@ export const couponApi = {
 };
 
 export const cmsApi = {
-  getPage: (key: string) => client.get(`/cms/${key}`),
+  // `fresh` bypasses the browser's cached copy (CMS responses carry max-age),
+  // used when a live socket event says the content just changed.
+  getPage: (key: string, fresh = false) =>
+    client.get(`/cms/${key}`, fresh ? { params: { _: Date.now() } } : undefined),
 };
 
 export const settingsApi = {

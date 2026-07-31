@@ -97,7 +97,7 @@ export default function NewOrderIsland({ alert, onClose }: Props) {
             {/* Icon */}
             <div style={{
               width: 40, height: 40, borderRadius: '50%',
-              background: 'linear-gradient(135deg, #4F46E5, #818CF8)',
+              background: 'var(--c-primary)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               flexShrink: 0, boxShadow: '0 0 0 3px rgba(129,140,248,0.3)',
             }}>

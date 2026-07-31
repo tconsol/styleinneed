@@ -15,7 +15,13 @@
   --c-th-bg:    #F8FAFC;
   --c-tr-hover: #F8FAFF;
   --c-primary:  #4F46E5;
+  --c-primary-dark: #3730A3;
+  --c-secondary: #EC4899;
+  --c-primary-soft: rgba(79,70,229,0.12);
   --c-sidebar:  #0F0E2E;
+  /* Fonts — overridden at runtime only when "apply to admin" is on. */
+  --font-heading: 'Poppins', system-ui, sans-serif;
+  --font-body: 'Poppins', system-ui, sans-serif;
 }
 
 .dark {
@@ -28,6 +34,9 @@
   --c-th-bg:    #0C0C24;
   --c-tr-hover: rgba(129,140,248,0.05);
   --c-primary:  #818CF8;
+  --c-primary-dark: #4338CA;
+  --c-secondary: #F472B6;
+  --c-primary-soft: rgba(129,140,248,0.16);
   --c-sidebar:  #080816;
 }
 
@@ -38,7 +47,7 @@
   body {
     background-color: var(--c-bg);
     color: var(--c-text);
-    font-family: 'Poppins', system-ui, sans-serif;
+    font-family: var(--font-body);
     -webkit-font-smoothing: antialiased;
     overflow-x: hidden;
     transition: background-color 0.2s, color 0.2s;

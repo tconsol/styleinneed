@@ -19,6 +19,9 @@
     --color-text: 28 28 28;              /* #1C1C1C */
     --color-muted: 107 107 107;          /* #6B6B6B */
     --color-border: 232 221 212;         /* #E8DDD4 */
+    /* Font families — overridden at runtime by the admin appearance settings. */
+    --font-heading: 'Playfair Display', Georgia, serif;
+    --font-body: 'Inter', system-ui, sans-serif;
     --header-height: 56px;
     --topbar-height: 96px; /* announcement (~40px) + nav (56px) */
     --bottomnav-height: 64px;
@@ -60,7 +63,7 @@
   body {
     background-color: rgb(var(--color-bg));
     color: rgb(var(--color-text));
-    font-family: 'Inter', system-ui, sans-serif;
+    font-family: var(--font-body);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     overflow-x: clip;

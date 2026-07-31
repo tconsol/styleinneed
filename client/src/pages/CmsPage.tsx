@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import Spinner from '../components/common/Spinner';
 import Breadcrumb from '../components/common/Breadcrumb';
 import { cmsApi } from '../api/misc.api';
+import { socket, SOCKET_EVENTS } from '../lib/socket';
 
 interface CmsContent {
   heading?: string;
@@ -25,13 +26,20 @@ export default function CmsPage() {
 
   useEffect(() => {
     if (!key) return;
-    setLoading(true);
-    setNotFound(false);
-    cmsApi
-      .getPage(key)
-      .then(({ data }) => setPage(data.data))
-      .catch(() => setNotFound(true))
-      .finally(() => setLoading(false));
+    const load = (first = false) => {
+      if (first) setLoading(true);
+      setNotFound(false);
+      cmsApi
+        .getPage(key, !first)
+        .then(({ data }) => setPage(data.data))
+        .catch(() => setNotFound(true))
+        .finally(() => setLoading(false));
+    };
+    load(true);
+    // Live refresh when the admin saves this page.
+    const onCms = (p: { key?: string }) => { if (!p || p.key === key) load(); };
+    socket.on(SOCKET_EVENTS.cmsUpdated, onCms);
+    return () => { socket.off(SOCKET_EVENTS.cmsUpdated, onCms); };
   }, [key]);
 
   if (loading) return <div className="min-h-screen flex items-center justify-center"><Spinner size="lg" /></div>;

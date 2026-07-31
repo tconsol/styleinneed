@@ -61,7 +61,7 @@ export default function ProfilePage() {
     <div className="max-w-5xl mx-auto space-y-5">
       {/* Hero banner */}
       <div className="relative overflow-hidden rounded-2xl p-6"
-        style={{ background: 'linear-gradient(120deg, #4338CA 0%, #4F46E5 45%, #818CF8 100%)' }}>
+        style={{ background: 'var(--c-primary)' }}>
         <div className="absolute -top-16 -right-10 w-56 h-56 rounded-full opacity-20 blur-2xl pointer-events-none"
           style={{ background: 'radial-gradient(circle, #fff, transparent)' }} />
         <div className="absolute -bottom-20 -left-8 w-52 h-52 rounded-full opacity-10 blur-2xl pointer-events-none"

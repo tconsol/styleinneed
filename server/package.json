@@ -8,6 +8,7 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "seed": "ts-node src/scripts/seed.ts",
+    "seed:cms": "ts-node src/scripts/seedCms.ts",
     "lint": "eslint src --ext .ts"
   },
   "dependencies": {

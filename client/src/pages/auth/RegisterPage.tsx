@@ -63,7 +63,7 @@ function RegisterForm() {
     onError: () => {},
   });
 
-  const inputCls = 'w-full px-4 py-3 bg-brand-surface border border-brand-border text-brand-text text-sm outline-none focus:border-primary focus:bg-white transition-all duration-200 placeholder:text-brand-muted/60 rounded-lg';
+  const inputCls = 'w-full px-4 py-3 bg-brand-surface border border-brand-border text-brand-text text-sm outline-none focus:border-primary focus:bg-brand-bg transition-all duration-200 placeholder:text-brand-muted/60 rounded-lg';
 
   return (
     <div className="min-h-screen flex bg-brand-bg">
@@ -119,7 +119,7 @@ function RegisterForm() {
             <button
               type="button"
               onClick={() => handleGoogle()}
-              className="w-full flex items-center justify-center gap-3 px-4 py-3 border border-brand-border bg-white text-brand-text text-sm font-medium rounded-lg hover:bg-brand-surface transition-colors duration-200 mb-4 shadow-sm"
+              className="w-full flex items-center justify-center gap-3 px-4 py-3 border border-brand-border bg-brand-surface text-brand-text text-sm font-medium rounded-lg hover:bg-brand-surface transition-colors duration-200 mb-4 shadow-sm"
             >
               <GoogleIcon />
               Sign up with Google

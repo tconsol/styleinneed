@@ -9,6 +9,7 @@ import NewsletterSection from '../components/home/NewsletterSection';
 import InfiniteMarquee from '../components/home/InfiniteMarquee';
 import { productApi } from '../api/product.api';
 import { useHomepageCms } from '../hooks/useHomepageCms';
+import { socket, SOCKET_EVENTS } from '../lib/socket';
 import type { Product } from '../types';
 
 export default function HomePage() {
@@ -33,6 +34,17 @@ export default function HomePage() {
       setLoading(false);
     };
     fetchProducts();
+
+    // Live refresh the product rows when the catalogue changes in admin.
+    const refetch = () => fetchProducts();
+    socket.on(SOCKET_EVENTS.productCreated, refetch);
+    socket.on(SOCKET_EVENTS.productUpdated, refetch);
+    socket.on(SOCKET_EVENTS.productDeleted, refetch);
+    return () => {
+      socket.off(SOCKET_EVENTS.productCreated, refetch);
+      socket.off(SOCKET_EVENTS.productUpdated, refetch);
+      socket.off(SOCKET_EVENTS.productDeleted, refetch);
+    };
   }, []);
 
   const b = cms.banners;

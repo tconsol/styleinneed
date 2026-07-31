@@ -1,13 +1,12 @@
-import { Menu, Sun, Moon } from 'lucide-react';
+import { Menu } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import ThemeSwitcher from './ThemeSwitcher';
 import { useAuthStore } from '../../stores/authStore';
-import { useThemeStore } from '../../stores/themeStore';
 
 interface Props { onMenuClick: () => void; title: string; }
 
 export default function Topbar({ onMenuClick, title }: Props) {
   const { user } = useAuthStore();
-  const { isDark, toggle } = useThemeStore();
 
   return (
     <header className="h-14 flex items-center justify-between px-5"
@@ -26,31 +25,15 @@ export default function Topbar({ onMenuClick, title }: Props) {
       </div>
 
       <div className="flex items-center gap-3">
-        {/* Theme Toggle */}
-        <button
-          onClick={toggle}
-          title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-          className="w-9 h-9 rounded-xl flex items-center justify-center transition-all"
-          style={{
-            background: isDark ? 'rgba(129,140,248,0.12)' : '#F1F5F9',
-            color: isDark ? '#818CF8' : '#64748B',
-          }}
-          onMouseEnter={(e) => {
-            (e.currentTarget as HTMLElement).style.background = isDark ? 'rgba(129,140,248,0.2)' : '#E2E8F0';
-          }}
-          onMouseLeave={(e) => {
-            (e.currentTarget as HTMLElement).style.background = isDark ? 'rgba(129,140,248,0.12)' : '#F1F5F9';
-          }}
-        >
-          {isDark ? <Sun size={16} /> : <Moon size={16} />}
-        </button>
+        {/* Quick theme picker */}
+        <ThemeSwitcher />
 
         {/* User badge */}
         <Link to="/profile" title="My Profile"
           className="flex items-center gap-2.5 pl-3 rounded-lg transition-opacity hover:opacity-80"
           style={{ borderLeft: '1px solid var(--c-border)' }}>
           <div className="w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-bold"
-            style={{ background: 'linear-gradient(135deg,#4F46E5,#818CF8)', color: '#fff' }}>
+            style={{ background: 'var(--c-primary)', color: '#fff' }}>
             {user?.name?.[0]}
           </div>
           <div className="hidden sm:block">

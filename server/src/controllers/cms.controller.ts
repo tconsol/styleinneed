@@ -1,7 +1,22 @@
 import { Request, Response, NextFunction } from 'express';
 import CmsPage from '../models/CmsPage';
 import { AuthRequest } from '../types';
+import { uploadToGCS } from '../config/gcs';
+import { emitEvent, SOCKET_EVENTS } from '../config/socket';
 import { sendSuccess, sendError } from '../utils/apiResponse';
+
+// Upload a single image for any CMS section (hero, banners, story, etc.).
+// Returns the public GCS URL to store in the page content.
+export const uploadCmsImage = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const file = req.file as Express.Multer.File | undefined;
+    if (!file) { sendError(res, 'No image uploaded', 400); return; }
+    const url = await uploadToGCS(file, 'cms');
+    sendSuccess(res, 'Image uploaded', { url });
+  } catch (err) {
+    next(err);
+  }
+};
 
 export const getCmsPage = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
@@ -24,6 +39,7 @@ export const upsertCmsPage = async (req: AuthRequest, res: Response, next: NextF
       { new: true, upsert: true, runValidators: true }
     );
 
+    emitEvent(SOCKET_EVENTS.cmsUpdated, { key });
     sendSuccess(res, 'CMS page saved', page);
   } catch (err) {
     next(err);

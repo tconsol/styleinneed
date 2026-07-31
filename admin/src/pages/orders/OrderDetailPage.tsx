@@ -519,7 +519,7 @@ export default function OrderDetailPage() {
             </div>
             <div className="flex items-center gap-2.5 mb-3">
               <div className="w-10 h-10 rounded-full flex items-center justify-center text-white text-[13px] font-bold flex-shrink-0"
-                style={{ background: 'linear-gradient(135deg, #4F46E5, #818CF8)' }}>
+                style={{ background: 'var(--c-primary)' }}>
                 {order.user?.name?.[0]?.toUpperCase()}
               </div>
               <div>

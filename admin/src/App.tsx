@@ -1,4 +1,4 @@
-﻿import { lazy, Suspense } from 'react';
+﻿import { lazy, Suspense, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -6,6 +6,8 @@ import AdminLayout from './components/layout/AdminLayout';
 import { PageSpinner } from './components/common/Spinner';
 import { ConfirmProvider } from './components/common/ConfirmDialog';
 import { useAuthStore } from './stores/authStore';
+import { refreshTheme, applyAppearance, type Appearance } from './lib/theme';
+import { getSocket, ADMIN_SOCKET_EVENTS } from './lib/socket';
 
 const LoginPage = lazy(() => import('./pages/LoginPage'));
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
@@ -38,6 +40,7 @@ const SettingsPage = lazy(() => import('./pages/settings/SettingsPage'));
 const ShippingRatesPage = lazy(() => import('./pages/settings/ShippingRatesPage'));
 const ChangePasswordPage = lazy(() => import('./pages/ChangePasswordPage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
+const ThemesPage = lazy(() => import('./pages/settings/ThemesPage'));
 
 const queryClient = new QueryClient({ defaultOptions: { queries: { staleTime: 60_000, retry: 1 } } });
 
@@ -48,6 +51,14 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
+  useEffect(() => {
+    void refreshTheme();
+    // Apply theme changes made from any other admin session live.
+    const socket = getSocket();
+    const onTheme = (a: Appearance) => applyAppearance(a);
+    socket.on(ADMIN_SOCKET_EVENTS.themeChanged, onTheme);
+    return () => { socket.off(ADMIN_SOCKET_EVENTS.themeChanged, onTheme); };
+  }, []);
   return (
     <QueryClientProvider client={queryClient}>
       <ConfirmProvider>
@@ -87,6 +98,7 @@ export default function App() {
               <Route path="/push-notifications" element={<PushNotificationsPage />} />
               <Route path="/settings" element={<SettingsPage />} />
               <Route path="/shipping-rates" element={<ShippingRatesPage />} />
+              <Route path="/themes" element={<ThemesPage />} />
               <Route path="/change-password" element={<ChangePasswordPage />} />
               <Route path="/profile" element={<ProfilePage />} />
               <Route path="*" element={<Navigate to="/" replace />} />
@@ -96,8 +108,9 @@ export default function App() {
         <Toaster
           position="top-right"
           toastOptions={{
-            style: { fontFamily: 'Poppins, sans-serif', fontSize: '12px', borderRadius: '10px', border: '1px solid var(--c-border)', boxShadow: '0 4px 16px rgba(0,0,0,0.08)' },
-            success: { iconTheme: { primary: '#4F46E5', secondary: '#fff' } },
+            style: { fontFamily: 'var(--font-body)', fontSize: '12px', borderRadius: '10px', background: 'var(--c-surface)', color: 'var(--c-text)', border: '1px solid var(--c-border)', boxShadow: '0 4px 16px rgba(0,0,0,0.12)' },
+            success: { iconTheme: { primary: 'var(--c-primary)', secondary: 'var(--c-surface)' } },
+            error: { iconTheme: { primary: '#EF4444', secondary: 'var(--c-surface)' } },
           }}
         />
       </BrowserRouter>

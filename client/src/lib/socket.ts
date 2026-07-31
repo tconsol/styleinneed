@@ -14,4 +14,7 @@ export const SOCKET_EVENTS = {
   productUpdated: 'product:updated',
   productDeleted: 'product:deleted',
   stockUpdated: 'stock:updated',
+  themeChanged: 'theme:changed',
+  cmsUpdated: 'cms:updated',
+  contentUpdated: 'content:updated',
 } as const;

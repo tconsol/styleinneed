@@ -1,10 +1,12 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import Layout from './components/layout/Layout';
 import { PageLoader } from './components/common/Spinner';
 import { useAuthStore } from './stores/authStore';
+import { refreshTheme, applyAppearance, type Appearance } from './lib/theme';
+import { socket, SOCKET_EVENTS } from './lib/socket';
 
 const HomePage = lazy(() => import('./pages/HomePage'));
 const ProductListPage = lazy(() => import('./pages/ProductListPage'));
@@ -39,6 +41,13 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
+  useEffect(() => {
+    void refreshTheme();
+    // Live theme updates pushed from the admin panel — recolour without refresh.
+    const onTheme = (a: Appearance) => applyAppearance(a);
+    socket.on(SOCKET_EVENTS.themeChanged, onTheme);
+    return () => { socket.off(SOCKET_EVENTS.themeChanged, onTheme); };
+  }, []);
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
@@ -113,12 +122,15 @@ export default function App() {
           position="top-right"
           toastOptions={{
             style: {
-              fontFamily: 'Inter, sans-serif',
+              fontFamily: 'var(--font-body)',
               fontSize: '14px',
               borderRadius: '0',
-              border: '1px solid #E8DDD4',
+              background: 'rgb(var(--color-surface))',
+              color: 'rgb(var(--color-text))',
+              border: '1px solid rgb(var(--color-border))',
             },
-            success: { iconTheme: { primary: '#C8A97E', secondary: '#fff' } },
+            success: { iconTheme: { primary: 'rgb(var(--color-primary))', secondary: 'rgb(var(--color-surface))' } },
+            error: { iconTheme: { primary: '#EF4444', secondary: 'rgb(var(--color-surface))' } },
           }}
         />
       </BrowserRouter>

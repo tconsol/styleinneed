@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { cmsApi } from '../api/misc.api';
+import { socket, SOCKET_EVENTS } from '../lib/socket';
 
 export interface HeroCmsSlide {
   label: string;
@@ -127,41 +128,49 @@ function header(c: Record<string, string>, prefix: string, def: SectionHeaderCms
   };
 }
 
+// How many items a repeatable section has: explicit `<prefix>_count`, else scan
+// by the presence suffix (supports admin-added/removed entries).
+function countOf(c: Record<string, string>, prefix: string, presence: string, max = 30): number {
+  const explicit = Number(c[`${prefix}_count`]);
+  if (explicit > 0) return explicit;
+  let n = 0;
+  for (let i = 1; i <= max; i++) if (c[`${prefix}_${i}_${presence}`]) n = i;
+  return n;
+}
+
 function parseCms(c: Record<string, string>): Partial<HomepageCms> {
   const out: Partial<HomepageCms> = {};
 
   const hero: HeroCmsSlide[] = [];
-  [1, 2, 3].forEach((n) => {
-    if (c[`hero_${n}_label`]) {
-      hero.push({
-        label: c[`hero_${n}_label`] || '',
-        title: c[`hero_${n}_title`] || '',
-        subtitle: c[`hero_${n}_subtitle`] || '',
-        cta: c[`hero_${n}_cta`] || 'Shop Now',
-        ctaHref: c[`hero_${n}_cta_href`] || '/products',
-        cta2: c[`hero_${n}_cta2`] || '',
-        cta2Href: c[`hero_${n}_cta2_href`] || '/',
-        image: c[`hero_${n}_image`] || '',
-      });
-    }
-  });
+  for (let n = 1; n <= countOf(c, 'hero', 'label'); n++) {
+    if (!c[`hero_${n}_label`] && !c[`hero_${n}_title`]) continue;
+    hero.push({
+      label: c[`hero_${n}_label`] || '',
+      title: c[`hero_${n}_title`] || '',
+      subtitle: c[`hero_${n}_subtitle`] || '',
+      cta: c[`hero_${n}_cta`] || 'Shop Now',
+      ctaHref: c[`hero_${n}_cta_href`] || '/products',
+      cta2: c[`hero_${n}_cta2`] || '',
+      cta2Href: c[`hero_${n}_cta2_href`] || '/',
+      image: c[`hero_${n}_image`] || '',
+    });
+  }
   if (hero.length) out.hero = hero;
 
   const banners: BannerCms[] = [];
-  [1, 2].forEach((n) => {
-    if (c[`banner_${n}_title`]) {
-      banners.push({
-        label: c[`banner_${n}_label`] || '',
-        title: c[`banner_${n}_title`] || '',
-        subtitle: c[`banner_${n}_subtitle`] || '',
-        image: c[`banner_${n}_image`] || '',
-        href: c[`banner_${n}_href`] || '/products',
-        cta: c[`banner_${n}_cta`] || 'Shop Now',
-        dark: c[`banner_${n}_dark`] === 'true',
-        reverse: c[`banner_${n}_reverse`] === 'true',
-      });
-    }
-  });
+  for (let n = 1; n <= countOf(c, 'banner', 'title'); n++) {
+    if (!c[`banner_${n}_title`]) continue;
+    banners.push({
+      label: c[`banner_${n}_label`] || '',
+      title: c[`banner_${n}_title`] || '',
+      subtitle: c[`banner_${n}_subtitle`] || '',
+      image: c[`banner_${n}_image`] || '',
+      href: c[`banner_${n}_href`] || '/products',
+      cta: c[`banner_${n}_cta`] || 'Shop Now',
+      dark: c[`banner_${n}_dark`] === 'true',
+      reverse: c[`banner_${n}_reverse`] === 'true',
+    });
+  }
   if (banners.length) out.banners = banners;
 
   if (c.story_heading) {
@@ -189,17 +198,16 @@ function parseCms(c: Record<string, string>): Partial<HomepageCms> {
   }
 
   const testimonials: TestimonialCms[] = [];
-  [1, 2, 3, 4].forEach((n) => {
-    if (c[`review_${n}_name`]) {
-      testimonials.push({
-        name: c[`review_${n}_name`],
-        city: c[`review_${n}_city`] || '',
-        product: c[`review_${n}_product`] || '',
-        text: c[`review_${n}_text`] || '',
-        rating: 5,
-      });
-    }
-  });
+  for (let n = 1; n <= countOf(c, 'review', 'name'); n++) {
+    if (!c[`review_${n}_name`]) continue;
+    testimonials.push({
+      name: c[`review_${n}_name`],
+      city: c[`review_${n}_city`] || '',
+      product: c[`review_${n}_product`] || '',
+      text: c[`review_${n}_text`] || '',
+      rating: 5,
+    });
+  }
   if (testimonials.length) out.testimonials = testimonials;
 
   if (c.newsletter_heading) {
@@ -231,13 +239,21 @@ export function useHomepageCms(): HomepageCms {
   const [cms, setCms] = useState<HomepageCms>(DEFAULT);
 
   useEffect(() => {
-    cmsApi.getPage('homepage').then((res) => {
-      const content = res.data.data?.content;
-      if (content && typeof content === 'object' && Object.keys(content).length > 0) {
-        const parsed = parseCms(content as Record<string, string>);
-        setCms((prev) => ({ ...prev, ...parsed }));
-      }
-    }).catch(() => {});
+    const load = (fresh = false) => {
+      cmsApi.getPage('homepage', fresh).then((res) => {
+        const content = res.data.data?.content;
+        if (content && typeof content === 'object' && Object.keys(content).length > 0) {
+          const parsed = parseCms(content as Record<string, string>);
+          setCms({ ...DEFAULT, ...parsed });
+        }
+      }).catch(() => {});
+    };
+    load();
+
+    // Live refresh when the admin saves the homepage CMS.
+    const onCms = (p: { key?: string }) => { if (!p || p.key === 'homepage') load(true); };
+    socket.on(SOCKET_EVENTS.cmsUpdated, onCms);
+    return () => { socket.off(SOCKET_EVENTS.cmsUpdated, onCms); };
   }, []);
 
   return cms;

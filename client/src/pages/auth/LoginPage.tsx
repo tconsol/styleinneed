@@ -1,17 +1,46 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Eye, EyeOff, ArrowRight } from 'lucide-react';
+import { Eye, EyeOff, ArrowRight, ArrowLeft, Home } from 'lucide-react';
 import { GoogleOAuthProvider, useGoogleLogin } from '@react-oauth/google';
 import { useAuthStore } from '../../stores/authStore';
 import { useCartStore } from '../../stores/cartStore';
 import { useWishlistStore } from '../../stores/wishlistStore';
+import { cmsApi } from '../../api/misc.api';
+import { socket, SOCKET_EVENTS } from '../../lib/socket';
 
 const FASHION_IMAGES = [
   'https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=900&q=80',
   'https://images.unsplash.com/photo-1583391733956-6c78276477e1?w=900&q=80',
   'https://images.unsplash.com/photo-1614093302611-8efc4c438a87?w=900&q=80',
 ];
+
+// Login side-panel content, admin-editable via the "Login Page" CMS.
+interface AuthCms {
+  eyebrow: string; heading: string; subtitle: string;
+  images: string[]; stats: { value: string; label: string }[];
+}
+const AUTH_DEFAULT: AuthCms = {
+  eyebrow: 'STYLE IN NEED FASHIONS',
+  heading: 'Where Heritage\nMeets Elegance',
+  subtitle: "Discover 5000+ handpicked styles from India's finest weavers and designers.",
+  images: FASHION_IMAGES,
+  stats: [{ value: '5000+', label: 'Styles' }, { value: '50K+', label: 'Customers' }, { value: '4.8★', label: 'Rating' }],
+};
+
+function parseAuthCms(c: Record<string, string>): AuthCms {
+  const images = [c.login_image_1, c.login_image_2, c.login_image_3].filter(Boolean);
+  const stats = [1, 2, 3]
+    .map((n) => ({ value: c[`login_stat${n}_value`] || '', label: c[`login_stat${n}_label`] || '' }))
+    .filter((s) => s.value || s.label);
+  return {
+    eyebrow: c.login_eyebrow || AUTH_DEFAULT.eyebrow,
+    heading: c.login_heading || AUTH_DEFAULT.heading,
+    subtitle: c.login_subtitle || AUTH_DEFAULT.subtitle,
+    images: images.length ? images : AUTH_DEFAULT.images,
+    stats: stats.length ? stats : AUTH_DEFAULT.stats,
+  };
+}
 
 function GoogleIcon() {
   return (
@@ -45,7 +74,23 @@ function LoginForm() {
 
   const [form, setForm] = useState({ email: '', password: '' });
   const [showPw, setShowPw] = useState(false);
-  const [imgIdx] = useState(Math.floor(Math.random() * FASHION_IMAGES.length));
+  const [cms, setCms] = useState<AuthCms>(AUTH_DEFAULT);
+  const [imgSeed] = useState(Math.random());
+
+  useEffect(() => {
+    const load = (fresh = false) => {
+      cmsApi.getPage('auth', fresh).then((res) => {
+        const content = res.data.data?.content;
+        if (content && typeof content === 'object') setCms(parseAuthCms(content as Record<string, string>));
+      }).catch(() => {});
+    };
+    load();
+    const onCms = (p: { key?: string }) => { if (!p || p.key === 'auth') load(true); };
+    socket.on(SOCKET_EVENTS.cmsUpdated, onCms);
+    return () => { socket.off(SOCKET_EVENTS.cmsUpdated, onCms); };
+  }, []);
+
+  const image = cms.images[Math.floor(imgSeed * cms.images.length)] || cms.images[0];
 
   const afterLogin = async () => {
     await Promise.all([fetchCart(), fetchWishlist()]);
@@ -70,20 +115,22 @@ function LoginForm() {
     <div className="min-h-screen flex bg-brand-bg">
       {/* Left — Image (desktop only) */}
       <div className="hidden lg:block relative w-[45%] xl:w-1/2 flex-shrink-0">
-        <img src={FASHION_IMAGES[imgIdx]} alt="Fashion" className="absolute inset-0 w-full h-full object-cover" />
+        <img src={image} alt="Fashion" className="absolute inset-0 w-full h-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-r from-brand-text/60 via-brand-text/30 to-transparent" />
         <div className="absolute inset-0 flex flex-col justify-end p-10 xl:p-14">
           <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4, duration: 0.8 }}>
-            <p className="font-body text-[10px] tracking-[0.4em] uppercase text-primary mb-3">STYLE IN NEED FASHIONS</p>
+            {cms.eyebrow && <p className="font-body text-[10px] tracking-[0.4em] uppercase text-primary mb-3">{cms.eyebrow}</p>}
             <h2 className="font-heading text-4xl xl:text-5xl font-bold text-white leading-tight mb-4">
-              Where Heritage<br />Meets Elegance
+              {cms.heading.split('\n').map((line, i) => (
+                <span key={i}>{i > 0 && <br />}{line}</span>
+              ))}
             </h2>
             <p className="font-body text-white/70 text-base max-w-xs leading-relaxed">
-              Discover 5000+ handpicked styles from India's finest weavers and designers.
+              {cms.subtitle}
             </p>
             <div className="flex gap-6 mt-8">
-              {[{ value: '5000+', label: 'Styles' }, { value: '50K+', label: 'Customers' }, { value: '4.8★', label: 'Rating' }].map((s) => (
-                <div key={s.label}>
+              {cms.stats.map((s, i) => (
+                <div key={i}>
                   <p className="font-heading text-2xl font-bold text-primary">{s.value}</p>
                   <p className="font-body text-xs text-white/60">{s.label}</p>
                 </div>
@@ -103,6 +150,16 @@ function LoginForm() {
             transition={{ duration: 0.4 }}
             className="w-full"
           >
+            {/* Back to home */}
+            <div className="flex items-center justify-between mb-6">
+              <Link to="/" className="inline-flex items-center gap-1.5 font-body text-xs font-medium text-brand-muted hover:text-primary transition-colors">
+                <ArrowLeft size={15} /> Back to Home
+              </Link>
+              <Link to="/products" className="inline-flex items-center gap-1.5 font-body text-xs font-medium text-primary hover:text-primary-dark transition-colors">
+                <Home size={14} /> Continue Shopping
+              </Link>
+            </div>
+
             {/* Logo */}
             <Link to="/" className="inline-block mb-8">
               <span className="font-heading text-2xl font-bold tracking-wider text-brand-text">STYLE IN NEED</span>
@@ -123,7 +180,7 @@ function LoginForm() {
             <button
               type="button"
               onClick={() => handleGoogle()}
-              className="w-full flex items-center justify-center gap-3 px-4 py-3 border border-brand-border bg-white text-brand-text text-sm font-medium rounded-lg hover:bg-brand-surface transition-colors duration-200 mb-5 shadow-sm"
+              className="w-full flex items-center justify-center gap-3 px-4 py-3 border border-brand-border bg-brand-surface text-brand-text text-sm font-medium rounded-lg hover:bg-brand-surface transition-colors duration-200 mb-5 shadow-sm"
             >
               <GoogleIcon />
               Continue with Google
@@ -143,7 +200,7 @@ function LoginForm() {
                   type="email"
                   value={form.email}
                   onChange={(e) => setForm({ ...form, email: e.target.value })}
-                  className="w-full px-4 py-3 bg-brand-surface border border-brand-border text-brand-text text-sm outline-none focus:border-primary focus:bg-white transition-all duration-200 placeholder:text-brand-muted/60 rounded-lg"
+                  className="w-full px-4 py-3 bg-brand-surface border border-brand-border text-brand-text text-sm outline-none focus:border-primary focus:bg-brand-bg transition-all duration-200 placeholder:text-brand-muted/60 rounded-lg"
                   placeholder="you@example.com"
                   required
                   autoComplete="email"
@@ -162,7 +219,7 @@ function LoginForm() {
                     type={showPw ? 'text' : 'password'}
                     value={form.password}
                     onChange={(e) => setForm({ ...form, password: e.target.value })}
-                    className="w-full px-4 py-3 bg-brand-surface border border-brand-border text-brand-text text-sm outline-none focus:border-primary focus:bg-white transition-all duration-200 placeholder:text-brand-muted/60 pr-12 rounded-lg"
+                    className="w-full px-4 py-3 bg-brand-surface border border-brand-border text-brand-text text-sm outline-none focus:border-primary focus:bg-brand-bg transition-all duration-200 placeholder:text-brand-muted/60 pr-12 rounded-lg"
                     placeholder="Enter your password"
                     required
                     autoComplete="current-password"

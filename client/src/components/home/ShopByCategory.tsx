@@ -5,6 +5,7 @@ import SectionHeader from '../common/SectionHeader';
 import { ArrowRight } from 'lucide-react';
 import { productApi } from '../../api/product.api';
 import { cmsApi } from '../../api/misc.api';
+import { socket, SOCKET_EVENTS } from '../../lib/socket';
 import type { SectionHeaderCms } from '../../hooks/useHomepageCms';
 
 interface Category {
@@ -29,34 +30,59 @@ const DEFAULT_FEATURED: FeaturedBanner[] = [
   { title: 'Festive Wear', subtitle: 'Season specials', image: 'https://images.unsplash.com/photo-1614093302611-8efc4c438a87?w=600&q=80', href: '/products?collection=festive-collection', span: 'col-span-1 row-span-1' },
 ];
 
-const SPANS = ['col-span-2 row-span-2', 'col-span-1 row-span-1', 'col-span-1 row-span-1'];
+// First tile is the large hero cell; the rest are standard cells. Works for any count.
+const spanFor = (i: number) => (i === 0 ? 'col-span-2 row-span-2' : 'col-span-1 row-span-1');
+
+const featuredCount = (c: Record<string, string>, max = 12): number => {
+  const explicit = Number(c.cat_featured_count);
+  if (explicit > 0) return explicit;
+  let n = 0;
+  for (let i = 1; i <= max; i++) if (c[`cat_featured_${i}_title`]) n = i;
+  return n;
+};
 
 export default function ShopByCategory({ header }: { header?: SectionHeaderCms }) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [featured, setFeatured] = useState<FeaturedBanner[]>(DEFAULT_FEATURED);
 
   useEffect(() => {
-    productApi.getCategories().then((res) => {
-      setCategories(res.data.data || []);
-    }).catch(() => {});
-
-    cmsApi.getPage('homepage').then((res) => {
-      const c = res.data.data?.content || {};
-      const banners: FeaturedBanner[] = [];
-      [1, 2, 3].forEach((n, i) => {
-        const title = c[`cat_featured_${n}_title`];
-        if (title) {
+    const loadCategories = () => {
+      productApi.getCategories().then((res) => setCategories(res.data.data || [])).catch(() => {});
+    };
+    const loadFeatured = (fresh = false) => {
+      cmsApi.getPage('homepage', fresh).then((res) => {
+        const c = res.data.data?.content || {};
+        const banners: FeaturedBanner[] = [];
+        const total = featuredCount(c);
+        for (let n = 1; n <= total; n++) {
+          const title = c[`cat_featured_${n}_title`];
+          if (!title) continue;
+          const i = banners.length;
           banners.push({
             title,
             subtitle: c[`cat_featured_${n}_subtitle`] || '',
             image: c[`cat_featured_${n}_image`] || DEFAULT_FEATURED[i]?.image || '',
             href: c[`cat_featured_${n}_href`] || '/',
-            span: SPANS[i],
+            span: spanFor(i),
           });
         }
-      });
-      if (banners.length) setFeatured(banners);
-    }).catch(() => {});
+        setFeatured(banners.length ? banners : DEFAULT_FEATURED);
+      }).catch(() => {});
+    };
+    loadCategories();
+    loadFeatured();
+
+    // Live: featured banners on CMS save, category circles on catalogue changes.
+    const onCms = (p: { key?: string }) => { if (!p || p.key === 'homepage') loadFeatured(true); };
+    const onProd = () => loadCategories();
+    socket.on(SOCKET_EVENTS.cmsUpdated, onCms);
+    socket.on(SOCKET_EVENTS.productCreated, onProd);
+    socket.on(SOCKET_EVENTS.productDeleted, onProd);
+    return () => {
+      socket.off(SOCKET_EVENTS.cmsUpdated, onCms);
+      socket.off(SOCKET_EVENTS.productCreated, onProd);
+      socket.off(SOCKET_EVENTS.productDeleted, onProd);
+    };
   }, []);
 
   return (
@@ -103,7 +129,7 @@ export default function ShopByCategory({ header }: { header?: SectionHeaderCms }
 
           {/* Featured grid — desktop */}
           {featured.length > 0 && (
-            <div className="hidden md:grid grid-cols-3 grid-rows-2 gap-4 mt-12" style={{ height: '420px' }}>
+            <div className="hidden md:grid grid-cols-3 gap-4 mt-12" style={{ gridAutoRows: '200px' }}>
               {featured.map((f, i) => (
                 <motion.div
                   key={f.title}

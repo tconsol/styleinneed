@@ -1,15 +1,33 @@
-import { useState } from 'react';
-import { Save, Globe, Check, AlertCircle, Building2, Phone, Lock, CornerDownLeft, Truck, Briefcase, Home, LayoutTemplate } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { Save, Globe, Check, AlertCircle, Building2, Phone, Lock, CornerDownLeft, Truck, Briefcase, Home, LayoutTemplate, Upload, X, ImageIcon, Trash2, Plus, LogIn } from 'lucide-react';
 import { cmsApi } from '../../api';
 import toast from 'react-hot-toast';
+
+interface GroupItemField {
+  suffix: string;
+  label: string;
+  type: 'text' | 'textarea' | 'image' | 'link';
+  placeholder?: string;
+  help?: string;
+  rows?: number;
+}
+
+interface GroupDef {
+  itemLabel: string;   // e.g. "Slide", "Banner"
+  presence: string;    // suffix used to detect a non-empty item
+  min: number;
+  max: number;
+  fields: GroupItemField[];
+}
 
 interface FieldDef {
   key: string;
   label: string;
-  type: 'text' | 'textarea' | 'richtext' | 'url' | 'email' | 'phone' | 'section';
+  type: 'text' | 'textarea' | 'richtext' | 'url' | 'email' | 'phone' | 'section' | 'image' | 'link' | 'group';
   placeholder?: string;
   help?: string;
   rows?: number;
+  group?: GroupDef;
 }
 
 interface PageDef { key: string; title: string; icon: React.ElementType; description: string; fields: FieldDef[]; }
@@ -84,30 +102,19 @@ const PAGES: PageDef[] = [
     fields: [
       // ── HERO ──
       { key: 's_hero', label: 'Hero Slideshow', type: 'section' },
-      { key: 'hero_1_label', label: 'Slide 1 - Label', type: 'text', placeholder: 'New Collection 2025', help: 'Small tag shown above the title' },
-      { key: 'hero_1_title', label: 'Slide 1 - Title', type: 'text', placeholder: 'Elegance Redefined', help: 'Use \\n for a line break (second line becomes italic)' },
-      { key: 'hero_1_subtitle', label: 'Slide 1 - Subtitle', type: 'textarea', placeholder: 'Discover premium ethnic and western wear...', rows: 2 },
-      { key: 'hero_1_cta', label: 'Slide 1 - Button 1 Text', type: 'text', placeholder: 'Shop Now' },
-      { key: 'hero_1_cta_href', label: 'Slide 1 - Button 1 Link', type: 'text', placeholder: '/products' },
-      { key: 'hero_1_cta2', label: 'Slide 1 - Button 2 Text', type: 'text', placeholder: 'View Collections' },
-      { key: 'hero_1_cta2_href', label: 'Slide 1 - Button 2 Link', type: 'text', placeholder: '/collections' },
-      { key: 'hero_1_image', label: 'Slide 1 - Background Image URL', type: 'url', placeholder: 'https://...' },
-      { key: 'hero_2_label', label: 'Slide 2 - Label', type: 'text', placeholder: 'Wedding Collection' },
-      { key: 'hero_2_title', label: 'Slide 2 - Title', type: 'text', placeholder: 'Bridal Splendour' },
-      { key: 'hero_2_subtitle', label: 'Slide 2 - Subtitle', type: 'textarea', placeholder: 'Handcrafted silks for your special day...', rows: 2 },
-      { key: 'hero_2_cta', label: 'Slide 2 - Button 1 Text', type: 'text', placeholder: 'Explore Bridal' },
-      { key: 'hero_2_cta_href', label: 'Slide 2 - Button 1 Link', type: 'text', placeholder: '/products?category=sarees' },
-      { key: 'hero_2_cta2', label: 'Slide 2 - Button 2 Text', type: 'text', placeholder: '' },
-      { key: 'hero_2_cta2_href', label: 'Slide 2 - Button 2 Link', type: 'text', placeholder: '/' },
-      { key: 'hero_2_image', label: 'Slide 2 - Background Image URL', type: 'url', placeholder: 'https://...' },
-      { key: 'hero_3_label', label: 'Slide 3 - Label', type: 'text', placeholder: 'Festive Season' },
-      { key: 'hero_3_title', label: 'Slide 3 - Title', type: 'text', placeholder: 'Celebrate in Style' },
-      { key: 'hero_3_subtitle', label: 'Slide 3 - Subtitle', type: 'textarea', placeholder: 'Kurtis, lehengas and more...', rows: 2 },
-      { key: 'hero_3_cta', label: 'Slide 3 - Button 1 Text', type: 'text', placeholder: 'Shop Festive' },
-      { key: 'hero_3_cta_href', label: 'Slide 3 - Button 1 Link', type: 'text', placeholder: '/products?isFeatured=true' },
-      { key: 'hero_3_cta2', label: 'Slide 3 - Button 2 Text', type: 'text', placeholder: '' },
-      { key: 'hero_3_cta2_href', label: 'Slide 3 - Button 2 Link', type: 'text', placeholder: '/' },
-      { key: 'hero_3_image', label: 'Slide 3 - Background Image URL', type: 'url', placeholder: 'https://...' },
+      { key: 'hero', label: 'Hero Slides', type: 'group', group: {
+        itemLabel: 'Slide', presence: 'label', min: 1, max: 10,
+        fields: [
+          { suffix: 'label', label: 'Label', type: 'text', placeholder: 'New Collection 2025', help: 'Small tag shown above the title' },
+          { suffix: 'title', label: 'Title', type: 'text', placeholder: 'Elegance Redefined', help: 'Use \\n for a line break' },
+          { suffix: 'subtitle', label: 'Subtitle', type: 'textarea', placeholder: 'Discover premium ethnic and western wear...', rows: 2 },
+          { suffix: 'cta', label: 'Button 1 Text', type: 'text', placeholder: 'Shop Now' },
+          { suffix: 'cta_href', label: 'Button 1 Link', type: 'link', placeholder: '/products' },
+          { suffix: 'cta2', label: 'Button 2 Text', type: 'text', placeholder: 'View Collections' },
+          { suffix: 'cta2_href', label: 'Button 2 Link', type: 'link', placeholder: '/collections' },
+          { suffix: 'image', label: 'Background Image', type: 'image' },
+        ],
+      } },
       // ── MARQUEE ──
       { key: 's_marquee', label: 'Scrolling Marquee', type: 'section' },
       { key: 'marquee', label: 'Marquee Items', type: 'text', placeholder: 'Silk Sarees, Designer Kurtis, Bridal Lehengas', help: 'Comma-separated list of words/phrases that scroll across the page' },
@@ -124,22 +131,19 @@ const PAGES: PageDef[] = [
       { key: 'row_trending_subtitle', label: 'Trending - Subtitle', type: 'text', placeholder: 'Optional subtitle' },
       // ── COLLECTION BANNERS ──
       { key: 's_banners', label: 'Collection Banners', type: 'section' },
-      { key: 'banner_1_label', label: 'Banner 1 - Label', type: 'text', placeholder: 'Exclusive' },
-      { key: 'banner_1_title', label: 'Banner 1 - Title', type: 'text', placeholder: 'Wedding Season Collection' },
-      { key: 'banner_1_subtitle', label: 'Banner 1 - Subtitle', type: 'textarea', placeholder: 'Handcrafted silks and brocades...', rows: 2 },
-      { key: 'banner_1_image', label: 'Banner 1 - Image URL', type: 'url', placeholder: 'https://...' },
-      { key: 'banner_1_href', label: 'Banner 1 - Link', type: 'text', placeholder: '/products?category=sarees' },
-      { key: 'banner_1_cta', label: 'Banner 1 - Button Text', type: 'text', placeholder: 'Explore Collection' },
-      { key: 'banner_1_dark', label: 'Banner 1 - Dark overlay? (true/false)', type: 'text', placeholder: 'true' },
-      { key: 'banner_1_reverse', label: 'Banner 1 - Image on right? (true/false)', type: 'text', placeholder: 'false' },
-      { key: 'banner_2_label', label: 'Banner 2 - Label', type: 'text', placeholder: 'New Season' },
-      { key: 'banner_2_title', label: 'Banner 2 - Title', type: 'text', placeholder: 'Modern Indian Fashion' },
-      { key: 'banner_2_subtitle', label: 'Banner 2 - Subtitle', type: 'textarea', placeholder: 'Contemporary styles with Indian craftsmanship...', rows: 2 },
-      { key: 'banner_2_image', label: 'Banner 2 - Image URL', type: 'url', placeholder: 'https://...' },
-      { key: 'banner_2_href', label: 'Banner 2 - Link', type: 'text', placeholder: '/products?category=kurtis' },
-      { key: 'banner_2_cta', label: 'Banner 2 - Button Text', type: 'text', placeholder: 'Shop Now' },
-      { key: 'banner_2_dark', label: 'Banner 2 - Dark overlay? (true/false)', type: 'text', placeholder: 'false' },
-      { key: 'banner_2_reverse', label: 'Banner 2 - Image on right? (true/false)', type: 'text', placeholder: 'true' },
+      { key: 'banner', label: 'Banners', type: 'group', group: {
+        itemLabel: 'Banner', presence: 'title', min: 0, max: 10,
+        fields: [
+          { suffix: 'label', label: 'Label', type: 'text', placeholder: 'Exclusive' },
+          { suffix: 'title', label: 'Title', type: 'text', placeholder: 'Wedding Season Collection' },
+          { suffix: 'subtitle', label: 'Subtitle', type: 'textarea', placeholder: 'Handcrafted silks and brocades...', rows: 2 },
+          { suffix: 'image', label: 'Image', type: 'image' },
+          { suffix: 'href', label: 'Link', type: 'link', placeholder: '/products?category=sarees' },
+          { suffix: 'cta', label: 'Button Text', type: 'text', placeholder: 'Explore Collection' },
+          { suffix: 'dark', label: 'Dark overlay? (true/false)', type: 'text', placeholder: 'true' },
+          { suffix: 'reverse', label: 'Image on right? (true/false)', type: 'text', placeholder: 'false' },
+        ],
+      } },
       // ── SHOP BY CATEGORY ──
       { key: 's_catheader', label: 'Shop By Category — Section Title', type: 'section' },
       { key: 'cat_label', label: 'Category - Label', type: 'text', placeholder: 'Browse' },
@@ -147,25 +151,22 @@ const PAGES: PageDef[] = [
       { key: 'cat_subtitle', label: 'Category - Subtitle', type: 'text', placeholder: 'Explore our curated collections across every style and occasion' },
       // ── FEATURED CATEGORIES ──
       { key: 's_catfeatured', label: 'Featured Category Banners', type: 'section' },
-      { key: 'cat_featured_1_title', label: 'Featured 1 - Title', type: 'text', placeholder: 'Silk Sarees' },
-      { key: 'cat_featured_1_subtitle', label: 'Featured 1 - Subtitle', type: 'text', placeholder: 'Timeless elegance' },
-      { key: 'cat_featured_1_image', label: 'Featured 1 - Image URL', type: 'url', placeholder: 'https://...' },
-      { key: 'cat_featured_1_href', label: 'Featured 1 - Link', type: 'text', placeholder: '/products?category=sarees' },
-      { key: 'cat_featured_2_title', label: 'Featured 2 - Title', type: 'text', placeholder: 'Bridal Lehengas' },
-      { key: 'cat_featured_2_subtitle', label: 'Featured 2 - Subtitle', type: 'text', placeholder: 'Your dream bridal look' },
-      { key: 'cat_featured_2_image', label: 'Featured 2 - Image URL', type: 'url', placeholder: 'https://...' },
-      { key: 'cat_featured_2_href', label: 'Featured 2 - Link', type: 'text', placeholder: '/products?category=lehengas' },
-      { key: 'cat_featured_3_title', label: 'Featured 3 - Title', type: 'text', placeholder: 'Designer Kurtis' },
-      { key: 'cat_featured_3_subtitle', label: 'Featured 3 - Subtitle', type: 'text', placeholder: 'Everyday elegance' },
-      { key: 'cat_featured_3_image', label: 'Featured 3 - Image URL', type: 'url', placeholder: 'https://...' },
-      { key: 'cat_featured_3_href', label: 'Featured 3 - Link', type: 'text', placeholder: '/products?category=kurtis' },
+      { key: 'cat_featured', label: 'Featured', type: 'group', group: {
+        itemLabel: 'Featured', presence: 'title', min: 0, max: 9,
+        fields: [
+          { suffix: 'title', label: 'Title', type: 'text', placeholder: 'Silk Sarees' },
+          { suffix: 'subtitle', label: 'Subtitle', type: 'text', placeholder: 'Timeless elegance' },
+          { suffix: 'image', label: 'Image', type: 'image' },
+          { suffix: 'href', label: 'Link', type: 'link', placeholder: '/products?category=sarees' },
+        ],
+      } },
       // ── FASHION STORY ──
       { key: 's_story', label: 'Our Story Section', type: 'section' },
       { key: 'story_label', label: 'Section Label', type: 'text', placeholder: 'Our Heritage' },
       { key: 'story_heading', label: 'Heading', type: 'text', placeholder: 'Crafting Elegance\nSince 2019', help: 'Use \\n for line break' },
       { key: 'story_para1', label: 'Paragraph 1', type: 'textarea', placeholder: 'Founded with a passion...', rows: 3 },
       { key: 'story_para2', label: 'Paragraph 2', type: 'textarea', placeholder: 'Every piece in our collection...', rows: 3 },
-      { key: 'story_image', label: 'Image URL', type: 'url', placeholder: 'https://...' },
+      { key: 'story_image', label: 'Image URL', type: 'image', placeholder: 'https://...' },
       { key: 'story_years', label: 'Years Value', type: 'text', placeholder: '5+' },
       { key: 'story_years_label', label: 'Years Label', type: 'text', placeholder: 'Years of Craftsmanship' },
       { key: 'story_stat1_value', label: 'Stat 1 Value', type: 'text', placeholder: '5000+' },
@@ -185,22 +186,15 @@ const PAGES: PageDef[] = [
       { key: 'reviews_label', label: 'Section - Label', type: 'text', placeholder: 'Love from our Customers' },
       { key: 'reviews_title', label: 'Section - Title', type: 'text', placeholder: 'What Our Customers Say' },
       { key: 'reviews_subtitle', label: 'Section - Subtitle', type: 'text', placeholder: 'Real stories from real women who chose elegance' },
-      { key: 'review_1_name', label: 'Review 1 - Name', type: 'text', placeholder: 'Priya Sharma' },
-      { key: 'review_1_city', label: 'Review 1 - City', type: 'text', placeholder: 'Mumbai' },
-      { key: 'review_1_product', label: 'Review 1 - Product', type: 'text', placeholder: 'Kanjeevaram Silk Saree' },
-      { key: 'review_1_text', label: 'Review 1 - Text', type: 'textarea', placeholder: 'The silk saree I ordered was absolutely stunning...', rows: 2 },
-      { key: 'review_2_name', label: 'Review 2 - Name', type: 'text', placeholder: 'Anitha Reddy' },
-      { key: 'review_2_city', label: 'Review 2 - City', type: 'text', placeholder: 'Hyderabad' },
-      { key: 'review_2_product', label: 'Review 2 - Product', type: 'text', placeholder: 'Bridal Lehenga' },
-      { key: 'review_2_text', label: 'Review 2 - Text', type: 'textarea', placeholder: 'Style In Need Fashions is my go-to...', rows: 2 },
-      { key: 'review_3_name', label: 'Review 3 - Name', type: 'text', placeholder: 'Meena Krishnan' },
-      { key: 'review_3_city', label: 'Review 3 - City', type: 'text', placeholder: 'Chennai' },
-      { key: 'review_3_product', label: 'Review 3 - Product', type: 'text', placeholder: 'Cotton Kurti Set' },
-      { key: 'review_3_text', label: 'Review 3 - Text', type: 'textarea', placeholder: "I've bought from many online stores but Style In Need stands apart...", rows: 2 },
-      { key: 'review_4_name', label: 'Review 4 - Name', type: 'text', placeholder: 'Deepa Nair' },
-      { key: 'review_4_city', label: 'Review 4 - City', type: 'text', placeholder: 'Kochi' },
-      { key: 'review_4_product', label: 'Review 4 - Product', type: 'text', placeholder: 'Banarasi Silk Saree' },
-      { key: 'review_4_text', label: 'Review 4 - Text', type: 'textarea', placeholder: 'The designer saree collection here is unmatched...', rows: 2 },
+      { key: 'review', label: 'Reviews', type: 'group', group: {
+        itemLabel: 'Review', presence: 'name', min: 0, max: 20,
+        fields: [
+          { suffix: 'name', label: 'Name', type: 'text', placeholder: 'Priya Sharma' },
+          { suffix: 'city', label: 'City', type: 'text', placeholder: 'Mumbai' },
+          { suffix: 'product', label: 'Product', type: 'text', placeholder: 'Kanjeevaram Silk Saree' },
+          { suffix: 'text', label: 'Review Text', type: 'textarea', placeholder: 'The silk saree I ordered was absolutely stunning...', rows: 2 },
+        ],
+      } },
       // ── NEWSLETTER ──
       { key: 's_newsletter', label: 'Newsletter Section', type: 'section' },
       { key: 'newsletter_label', label: 'Label Tag', type: 'text', placeholder: 'Stay Connected' },
@@ -209,6 +203,25 @@ const PAGES: PageDef[] = [
       { key: 'newsletter_placeholder', label: 'Input Placeholder', type: 'text', placeholder: 'Enter your email address' },
       { key: 'newsletter_thank_you', label: 'Thank You Message', type: 'text', placeholder: "Thank you! You're now on the list." },
       { key: 'newsletter_note', label: 'Fine Print', type: 'text', placeholder: 'No spam, ever. Unsubscribe anytime.' },
+    ],
+  },
+  { key: 'auth', title: 'Login Page', icon: LogIn, description: 'Storefront sign-in / register marketing panel',
+    fields: [
+      { key: 's_login', label: 'Login — Side Panel', type: 'section' },
+      { key: 'login_eyebrow', label: 'Eyebrow Text', type: 'text', placeholder: 'STYLE IN NEED FASHIONS' },
+      { key: 'login_heading', label: 'Heading', type: 'text', placeholder: 'Where Heritage\\nMeets Elegance', help: 'Use \\n for a line break' },
+      { key: 'login_subtitle', label: 'Subtitle', type: 'textarea', placeholder: "Discover 5000+ handpicked styles from India's finest weavers and designers.", rows: 2 },
+      { key: 's_login_images', label: 'Background Images (shown at random)', type: 'section' },
+      { key: 'login_image_1', label: 'Image 1', type: 'image' },
+      { key: 'login_image_2', label: 'Image 2', type: 'image' },
+      { key: 'login_image_3', label: 'Image 3', type: 'image' },
+      { key: 's_login_stats', label: 'Stats', type: 'section' },
+      { key: 'login_stat1_value', label: 'Stat 1 Value', type: 'text', placeholder: '5000+' },
+      { key: 'login_stat1_label', label: 'Stat 1 Label', type: 'text', placeholder: 'Styles' },
+      { key: 'login_stat2_value', label: 'Stat 2 Value', type: 'text', placeholder: '50K+' },
+      { key: 'login_stat2_label', label: 'Stat 2 Label', type: 'text', placeholder: 'Customers' },
+      { key: 'login_stat3_value', label: 'Stat 3 Value', type: 'text', placeholder: '4.8★' },
+      { key: 'login_stat3_label', label: 'Stat 3 Label', type: 'text', placeholder: 'Rating' },
     ],
   },
   { key: 'store_info', title: 'Store Info', icon: Home, description: 'General store settings',
@@ -223,14 +236,36 @@ const PAGES: PageDef[] = [
   },
 ];
 
+// Known client-side destinations, offered as suggestions on link fields so the
+// admin doesn't have to memorise route paths. Custom paths are still allowed.
+const ROUTES: { path: string; label: string }[] = [
+  { path: '/', label: 'Home' },
+  { path: '/products', label: 'All Products' },
+  { path: '/products?isNewArrival=true', label: 'New Arrivals' },
+  { path: '/products?isBestSeller=true', label: 'Best Sellers' },
+  { path: '/products?isTrending=true', label: 'Trending' },
+  { path: '/products?isFeatured=true', label: 'Featured' },
+  { path: '/products?category=', label: 'Category (append slug)' },
+  { path: '/products?collection=', label: 'Collection (append slug)' },
+  { path: '/collections', label: 'Collections' },
+  { path: '/blogs', label: 'Blog' },
+  { path: '/search', label: 'Search' },
+  { path: '/wishlist', label: 'Wishlist' },
+  { path: '/support', label: 'Support' },
+  { path: '/returns', label: 'Returns' },
+];
+
 export default function CmsPage() {
-  const [selected, setSelected] = useState<string | null>(null);
+  const [selected, setSelected] = useState<string | null>('homepage');
   const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
   const def = PAGES.find((p) => p.key === selected);
+
+  // Open Homepage by default so the editor is never blank.
+  useEffect(() => { void loadPage('homepage'); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadPage = async (key: string) => {
     setSelected(key);
@@ -259,9 +294,21 @@ export default function CmsPage() {
   };
 
   const set = (key: string, value: string) => { setFieldValues((p) => ({ ...p, [key]: value })); setSaved(false); };
+  const setMany = (updater: (p: Record<string, string>) => Record<string, string>) => { setFieldValues(updater); setSaved(false); };
 
   return (
     <div className="flex gap-5" style={{ minHeight: '70vh' }}>
+      {/* Floating save button — always reachable while scrolling a long page */}
+      {selected && def && !loading && (
+        <button onClick={save} disabled={saving}
+          className="fixed bottom-6 right-6 z-40 flex items-center gap-2 px-5 py-3 rounded-full font-body text-[13px] font-semibold text-white shadow-lg transition-all hover:brightness-110 disabled:opacity-70"
+          style={{ background: saved ? '#10B981' : 'var(--c-primary)', boxShadow: '0 8px 24px rgba(79,70,229,0.35)' }}>
+          {saving ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            : saved ? <Check size={16} /> : <Save size={16} />}
+          {saving ? 'Saving…' : saved ? 'Saved' : 'Save Changes'}
+        </button>
+      )}
+
       <aside className="w-52 flex-shrink-0">
         <div className="card p-2 sticky top-20">
           <p className="font-body text-[9px] font-bold text-brand-muted uppercase tracking-wider px-3 py-1 mb-1">Pages</p>
@@ -315,6 +362,29 @@ export default function CmsPage() {
                     <div className="border-t border-brand-border pt-4 -mx-5 px-5">
                       <p className="font-body text-[11px] font-bold uppercase tracking-wider text-primary">{field.label}</p>
                     </div>
+                  ) : field.type === 'group' && field.group ? (
+                    <GroupField groupKey={field.key} group={field.group} values={fieldValues} setMany={setMany} />
+                  ) : field.type === 'image' ? (
+                    <ImageField
+                      label={field.label.replace(/ URL$/, '')}
+                      value={fieldValues[field.key] || ''}
+                      onChange={(url) => set(field.key, url)}
+                    />
+                  ) : field.type === 'link' ? (
+                    <>
+                      <label className="input-label">{field.label}</label>
+                      <input
+                        list="cms-routes"
+                        value={fieldValues[field.key] || ''}
+                        onChange={(e) => set(field.key, e.target.value)}
+                        placeholder={field.placeholder}
+                        className="input-field"
+                      />
+                      <datalist id="cms-routes">
+                        {ROUTES.map((r) => <option key={r.path} value={r.path}>{r.label}</option>)}
+                      </datalist>
+                      <p className="mt-1 font-body text-[11px] text-brand-muted">Pick a page from the list or type a custom path.</p>
+                    </>
                   ) : (
                   <>
                   <label className="input-label">{field.label}</label>
@@ -350,14 +420,162 @@ export default function CmsPage() {
               ))}
             </div>
 
-            <div className="flex justify-end pb-4">
-              <button onClick={save} disabled={saving} className={`btn-primary ${saved ? '!bg-green-500' : ''}`}>
-                {saving ? 'Saving...' : saved ? 'All Saved!' : 'Save Changes'}
-              </button>
-            </div>
           </div>
         ) : null}
       </div>
     </div>
+  );
+}
+
+// Image field with drag-free upload: click to pick a file, uploads to GCS,
+// stores the returned URL. Manual URL paste still supported via the text box.
+// Repeatable section (hero slides, banners, featured, reviews). Items are stored
+// as flat keys `${groupKey}_${i}_${suffix}`; a `${groupKey}_count` key tracks how
+// many exist so admins can add/remove entries freely.
+function GroupField({ groupKey, group, values, setMany }: {
+  groupKey: string; group: GroupDef;
+  values: Record<string, string>;
+  setMany: (updater: (p: Record<string, string>) => Record<string, string>) => void;
+}) {
+  // Resolve the current item count: explicit count key, else scan by presence.
+  const explicit = Number(values[`${groupKey}_count`]);
+  let count = explicit > 0 ? explicit : 0;
+  if (!explicit) {
+    for (let i = 1; i <= group.max; i++) {
+      if (values[`${groupKey}_${i}_${group.presence}`]) count = i;
+    }
+  }
+  count = Math.max(count, group.min);
+
+  const itemKey = (i: number, suffix: string) => `${groupKey}_${i}_${suffix}`;
+
+  const add = () => setMany((p) => ({ ...p, [`${groupKey}_count`]: String(count + 1) }));
+
+  const removeAt = (idx: number) => setMany((p) => {
+    const next = { ...p };
+    // Shift every item after idx up by one, then clear the last.
+    for (let j = idx; j < count; j++) {
+      group.fields.forEach((f) => { next[itemKey(j, f.suffix)] = p[itemKey(j + 1, f.suffix)] || ''; });
+    }
+    group.fields.forEach((f) => { delete next[itemKey(count, f.suffix)]; });
+    next[`${groupKey}_count`] = String(Math.max(count - 1, group.min));
+    return next;
+  });
+
+  const setField = (i: number, suffix: string, value: string) =>
+    setMany((p) => ({ ...p, [itemKey(i, suffix)]: value }));
+
+  const items = Array.from({ length: count }, (_, i) => i + 1);
+
+  return (
+    <div className="space-y-3">
+      {items.map((i) => (
+        <div key={i} className="rounded-xl p-3" style={{ border: '1px solid var(--c-border)', background: 'var(--c-bg)' }}>
+          <div className="flex items-center justify-between mb-2.5">
+            <span className="text-[11px] font-bold text-brand-text">{group.itemLabel} {i}</span>
+            {count > group.min && (
+              <button type="button" onClick={() => removeAt(i)} title="Remove"
+                className="flex items-center gap-1 text-[10px] font-semibold px-2 py-1 rounded-md"
+                style={{ color: '#EF4444' }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = '#FEE2E2'; }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}>
+                <Trash2 size={11} /> Remove
+              </button>
+            )}
+          </div>
+          <div className="space-y-3">
+            {group.fields.map((f) => {
+              const val = values[itemKey(i, f.suffix)] || '';
+              if (f.type === 'image') {
+                return <ImageField key={f.suffix} label={f.label} value={val} onChange={(url) => setField(i, f.suffix, url)} />;
+              }
+              return (
+                <div key={f.suffix}>
+                  <label className="input-label">{f.label}</label>
+                  {f.type === 'textarea' ? (
+                    <textarea value={val} onChange={(e) => setField(i, f.suffix, e.target.value)}
+                      rows={f.rows || 2} placeholder={f.placeholder} className="input-field resize-y" />
+                  ) : (
+                    <input list={f.type === 'link' ? 'cms-routes' : undefined}
+                      value={val} onChange={(e) => setField(i, f.suffix, e.target.value)}
+                      placeholder={f.placeholder} className="input-field" />
+                  )}
+                  {f.help && <p className="mt-1 font-body text-[11px] text-brand-muted">{f.help}</p>}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+
+      {count < group.max && (
+        <button type="button" onClick={add}
+          className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl text-[12px] font-semibold border border-dashed transition-colors"
+          style={{ borderColor: 'var(--c-primary)', color: 'var(--c-primary)' }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--c-primary-soft)'; }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}>
+          <Plus size={14} /> Add {group.itemLabel}
+        </button>
+      )}
+      {/* Shared route suggestions for link fields inside groups */}
+      <datalist id="cms-routes">
+        {ROUTES.map((r) => <option key={r.path} value={r.path}>{r.label}</option>)}
+      </datalist>
+    </div>
+  );
+}
+
+function ImageField({ label, value, onChange }: { label: string; value: string; onChange: (url: string) => void }) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState(false);
+
+  const upload = async (file: File) => {
+    if (!file.type.startsWith('image/')) { toast.error('Please choose an image file'); return; }
+    setBusy(true);
+    try {
+      const fd = new FormData();
+      fd.append('image', file);
+      const { data } = await cmsApi.uploadImage(fd);
+      onChange(data.data.url);
+      toast.success('Image uploaded');
+    } catch { /* interceptor toasts */ } finally { setBusy(false); }
+  };
+
+  return (
+    <>
+      <label className="input-label">{label}</label>
+      <div className="flex items-start gap-3">
+        {/* Preview */}
+        <div className="relative w-24 h-24 rounded-lg overflow-hidden flex-shrink-0 border border-brand-border bg-brand-bg flex items-center justify-center">
+          {value ? (
+            <>
+              <img src={value} alt="" className="w-full h-full object-cover" />
+              <button type="button" onClick={() => onChange('')}
+                className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80"
+                title="Remove image">
+                <X size={11} />
+              </button>
+            </>
+          ) : (
+            <ImageIcon size={22} className="text-brand-border" />
+          )}
+        </div>
+
+        {/* Controls */}
+        <div className="flex-1 min-w-0 space-y-2">
+          <input ref={inputRef} type="file" accept="image/*" className="hidden"
+            onChange={(e) => { const f = e.target.files?.[0]; if (f) upload(f); e.target.value = ''; }} />
+          <button type="button" onClick={() => inputRef.current?.click()} disabled={busy}
+            className="btn-outline text-[12px] disabled:opacity-60">
+            {busy ? <span className="w-3.5 h-3.5 border-2 border-brand-border border-t-primary rounded-full animate-spin" />
+              : <Upload size={13} />}
+            {busy ? 'Uploading…' : value ? 'Replace Image' : 'Upload Image'}
+          </button>
+          <input type="url" value={value} onChange={(e) => onChange(e.target.value)}
+            placeholder="…or paste an image URL"
+            className="input-field text-[11px]" />
+        </div>
+      </div>
+    </>
   );
 }
