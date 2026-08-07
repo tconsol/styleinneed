@@ -2,6 +2,7 @@ import { Router } from 'express';
 import {
   getCategories, getCategoryBySlug, createCategory, updateCategory, deleteCategory,
   getCollections, createCollection, updateCollection, deleteCollection,
+  uploadCategoryImage, deleteCategoryImage,
 } from '../controllers/category.controller';
 import {
   getProductTypes, createProductType, updateProductType, deleteProductType,
@@ -10,6 +11,7 @@ import {
   getAttributes, createAttribute, updateAttribute, deleteAttribute,
 } from '../controllers/attribute.controller';
 import { protect, isAdminOrManager } from '../middleware/auth';
+import { bannerUpload } from '../middleware/upload';
 import { cache, flushCache } from '../middleware/cache';
 
 const router = Router();
@@ -17,6 +19,10 @@ const router = Router();
 // Catalog config rarely changes — cache GETs 5 min; flush on any catalog write.
 const cacheCatalog = cache(300);
 const flushCatalog = flushCache('/api/v1/catalog');
+
+// Category image upload (single, 2MB cap) — must be declared before /:slug.
+router.post('/categories/upload', protect, isAdminOrManager, bannerUpload.single('image'), uploadCategoryImage);
+router.delete('/categories/upload', protect, isAdminOrManager, deleteCategoryImage);
 
 router.get('/categories', cacheCatalog, getCategories);
 router.get('/categories/:slug', cacheCatalog, getCategoryBySlug);

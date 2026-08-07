@@ -25,6 +25,8 @@ export const productApi = {
   delete: (id: string) => client.delete(`/products/${id}`),
   uploadImages: (files: FormData) => client.post('/products/upload/images', files, { headers: { 'Content-Type': 'multipart/form-data' } }),
   deleteImage: (url: string) => client.delete('/products/upload/image', { data: { url } }),
+  bulkTemplate: (type: string) => client.get('/products/bulk/template', { params: { type }, responseType: 'blob' }),
+  bulkUpload: (data: FormData) => client.post('/products/bulk/upload', data, { headers: { 'Content-Type': 'multipart/form-data' } }),
 };
 
 export const categoryApi = {
@@ -32,6 +34,8 @@ export const categoryApi = {
   create: (data: object) => client.post('/catalog/categories', data),
   update: (id: string, data: object) => client.patch(`/catalog/categories/${id}`, data),
   delete: (id: string) => client.delete(`/catalog/categories/${id}`),
+  uploadImage: (file: FormData) => client.post('/catalog/categories/upload', file, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  deleteImage: (url: string) => client.delete('/catalog/categories/upload', { data: { url } }),
 };
 
 export const collectionApi = {

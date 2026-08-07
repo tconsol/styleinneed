@@ -92,8 +92,8 @@ export default function Sidebar({ isOpen, onClose }: Props) {
   const iconActive = 'var(--c-primary)';
   const footerClr  = 'var(--c-muted)';
   const footerHoverBg = 'var(--c-tr-hover)';
-  const logoutHoverBg = isDark ? 'rgba(239,68,68,0.1)'        : '#FEE2E2';
-  const logoutHoverClr = '#EF4444';
+  const logoutHoverBg = isDark ? 'rgba(239,68,68,0.1)'        : 'var(--c-danger-soft)';
+  const logoutHoverClr = 'var(--c-danger)';
   const userNameClr  = 'var(--c-text)';
   const userRoleClr  = 'var(--c-muted)';
   const hoverBg    = 'var(--c-tr-hover)';
@@ -110,7 +110,7 @@ export default function Sidebar({ isOpen, onClose }: Props) {
           </div>
           <div>
             <p className="text-[13px] font-bold tracking-wide leading-none"
-              style={{ color: isDark ? 'white' : '#1E293B' }}>STYLE IN NEED</p>
+              style={{ color: isDark ? 'white' : 'var(--c-text)' }}>STYLE IN NEED</p>
             <p className="text-[10px] leading-none mt-0.5" style={{ color: 'var(--c-primary)' }}>Admin Panel</p>
           </div>
         </div>
@@ -145,7 +145,7 @@ export default function Sidebar({ isOpen, onClose }: Props) {
                       <span className="flex-1">{label}</span>
                       {badge > 0 && (
                         <span style={{
-                          background: '#EF4444', color: '#fff',
+                          background: 'var(--c-danger)', color: '#fff',
                           fontSize: 9, fontWeight: 700,
                           borderRadius: 99, minWidth: 16, height: 16,
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -169,7 +169,7 @@ export default function Sidebar({ isOpen, onClose }: Props) {
           <NavLink to="/settings"
             className="flex items-center gap-2.5 px-3 py-2 text-[11px] rounded-lg transition-colors mb-0.5"
             style={{ color: footerClr }}
-            onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = footerHoverBg; (e.currentTarget as HTMLElement).style.color = isDark ? 'rgba(255,255,255,0.6)' : '#475569'; }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = footerHoverBg; (e.currentTarget as HTMLElement).style.color = isDark ? 'rgba(255,255,255,0.6)' : 'var(--c-muted)'; }}
             onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.color = footerClr; }}>
             <Settings size={12} /> Settings
           </NavLink>

@@ -79,19 +79,19 @@ export interface HomepageCms {
 
 const DEFAULT: HomepageCms = {
   hero: [
-    { label: 'New Collection 2025', title: 'Elegance Redefined', subtitle: 'Discover premium ethnic and western wear curated for the modern Indian woman.', cta: 'Shop Now', ctaHref: '/products', cta2: 'View Collections', cta2Href: '/collections', image: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=1920&q=80' },
-    { label: 'Wedding Collection', title: 'Bridal Splendour', subtitle: 'Handcrafted Kanjeevaram and Banarasi silks for your most precious day.', cta: 'Explore Bridal', ctaHref: '/products?search=silk sarees', cta2: 'View Lookbook', cta2Href: '/blogs', image: 'https://images.unsplash.com/photo-1583391733956-6c78276477e1?w=1920&q=80' },
-    { label: 'Festive Season', title: 'Celebrate in Style', subtitle: 'Kurtis, lehengas and co-ords curated for every festive occasion.', cta: 'Shop Festive', ctaHref: '/products?collection=festive-collection', cta2: 'New Arrivals', cta2Href: '/products?isNewArrival=true', image: 'https://images.unsplash.com/photo-1614093302611-8efc4c438a87?w=1920&q=80' },
+    { label: 'New Collection 2025', title: 'Elegance Redefined', subtitle: 'Discover premium ethnic and western wear curated for the modern Indian woman.', cta: 'Shop Now', ctaHref: '/products', cta2: 'View Collections', cta2Href: '/collections', image: '' },
+    { label: 'Wedding Collection', title: 'Bridal Splendour', subtitle: 'Handcrafted Kanjeevaram and Banarasi silks for your most precious day.', cta: 'Explore Bridal', ctaHref: '/products?search=silk sarees', cta2: 'View Lookbook', cta2Href: '/blogs', image: '' },
+    { label: 'Festive Season', title: 'Celebrate in Style', subtitle: 'Kurtis, lehengas and co-ords curated for every festive occasion.', cta: 'Shop Festive', ctaHref: '/products?collection=festive-collection', cta2: 'New Arrivals', cta2Href: '/products?isNewArrival=true', image: '' },
   ],
   banners: [
-    { label: 'Crafted in Silk', title: 'The Wedding Collection', subtitle: 'Handwoven Kanjeevaram and Banarasi silks, designed for the most precious moments of your life.', image: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=1000&q=80', href: '/products?search=silk sarees', cta: 'Explore Wedding Sarees', dark: true, reverse: false },
-    { label: 'Festive Season', title: 'Celebrate in Full Colour', subtitle: 'Lehengas, kurta sets, and co-ords curated for Diwali, Navratri, Eid, and every festive occasion.', image: 'https://images.unsplash.com/photo-1614093302611-8efc4c438a87?w=1000&q=80', href: '/products?collection=festive', cta: 'Shop Festive Wear', dark: false, reverse: true },
+    { label: 'Crafted in Silk', title: 'The Wedding Collection', subtitle: 'Handwoven Kanjeevaram and Banarasi silks, designed for the most precious moments of your life.', image: '', href: '/products?search=silk sarees', cta: 'Explore Wedding Sarees', dark: true, reverse: false },
+    { label: 'Festive Season', title: 'Celebrate in Full Colour', subtitle: 'Lehengas, kurta sets, and co-ords curated for Diwali, Navratri, Eid, and every festive occasion.', image: '', href: '/products?collection=festive', cta: 'Shop Festive Wear', dark: false, reverse: true },
   ],
   fashionStory: {
     label: 'Our Story', heading: 'Where Heritage\nMeets Modern Elegance',
     para1: 'Born from a deep love for Indian textiles and craftsmanship, Style In Need Fashions bridges the timeless beauty of traditional weaves with contemporary silhouettes designed for today\'s woman.',
     para2: 'Every piece in our collection tells a story — of skilled artisans, of rich heritage, and of a woman who carries grace in every step she takes.',
-    image: 'https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=900&q=80',
+    image: '',
     years: '12+', yearsLabel: 'Years of Crafting Excellence',
     stat1Value: '5000+', stat1Label: 'Styles',
     stat2Value: '50K+', stat2Label: 'Customers',
@@ -183,7 +183,7 @@ function parseCms(c: Record<string, string>): Partial<HomepageCms> {
       heading: c.story_heading,
       para1: c.story_para1 || DEFAULT.fashionStory.para1,
       para2: c.story_para2 || DEFAULT.fashionStory.para2,
-      image: c.story_image || DEFAULT.fashionStory.image,
+      image: c.story_image || '',
       years: c.story_years || DEFAULT.fashionStory.years,
       yearsLabel: c.story_years_label || DEFAULT.fashionStory.yearsLabel,
       stat1Value: c.story_stat1_value || DEFAULT.fashionStory.stat1Value,

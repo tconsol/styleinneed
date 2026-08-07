@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Check, Plus, Tag } from 'lucide-react';
+import { Check, Plus, Tag, X } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import { useCartStore, selectSubtotal } from '../stores/cartStore';
 import { useCurrencyStore } from '../stores/currencyStore';
 import { orderApi } from '../api/order.api';
+import { authApi } from '../api/auth.api';
 import { couponApi, shippingApi } from '../api/misc.api';
 import { formatPrice } from '../utils/format';
 import toast from 'react-hot-toast';
@@ -21,7 +22,7 @@ const regionOf = (country?: string): 'IN' | 'US' | 'CA' => {
 
 export default function CheckoutPage() {
   const navigate = useNavigate();
-  const { user } = useAuthStore();
+  const { user, fetchMe } = useAuthStore();
   const { items, couponCode, couponDiscount, setCoupon, clearCoupon, clearCart } = useCartStore();
   const subtotal = useCartStore(selectSubtotal); // INR
   const rate = useCurrencyStore((s) => s.rate);
@@ -35,6 +36,27 @@ export default function CheckoutPage() {
   const [placing, setPlacing] = useState(false);
   const [payConfig, setPayConfig] = useState<{ razorpayKeyId: string | null; stripePublishableKey: string | null }>({ razorpayKeyId: null, stripePublishableKey: null });
   const [shipping, setShipping] = useState<{ charge: number; currency: 'INR' | 'USD'; freeShippingEligible: boolean } | null>(null);
+
+  // Inline add-address form (no need to leave checkout).
+  const emptyAddr = { label: 'Home', fullName: '', phone: '', email: '', line1: '', line2: '', city: '', state: '', pincode: '', country: 'India', isDefault: false };
+  const [showAddrForm, setShowAddrForm] = useState(false);
+  const [addrForm, setAddrForm] = useState(emptyAddr);
+  const [savingAddr, setSavingAddr] = useState(false);
+
+  const saveAddress = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingAddr(true);
+    try {
+      await authApi.manageAddresses({ action: 'add', address: addrForm });
+      await fetchMe();
+      const fresh = useAuthStore.getState().user;
+      const newest = fresh?.addresses?.[fresh.addresses.length - 1];
+      if (newest?._id) setSelectedAddress(newest._id);
+      setShowAddrForm(false);
+      setAddrForm(emptyAddr);
+      toast.success('Address added');
+    } catch { /* interceptor toasts */ } finally { setSavingAddr(false); }
+  };
 
   // Currency + region follow the SELECTED ADDRESS (this is what the server charges).
   const addr = user?.addresses.find((a) => a._id === selectedAddress);
@@ -133,11 +155,19 @@ export default function CheckoutPage() {
           <div className="lg:col-span-2 space-y-8">
             {/* Delivery Address */}
             <section className="bg-white border border-brand-border p-6">
-              <h2 className="font-heading text-lg font-semibold mb-5">Delivery Address</h2>
-              {user?.addresses.length === 0 ? (
+              <div className="flex items-center justify-between mb-5">
+                <h2 className="font-heading text-lg font-semibold">Delivery Address</h2>
+                {(user?.addresses.length ?? 0) > 0 && (
+                  <button onClick={() => setShowAddrForm((s) => !s)} className="inline-flex items-center gap-1.5 font-body text-xs font-semibold text-primary hover:text-primary-dark transition-colors">
+                    {showAddrForm ? <><X size={14} /> Cancel</> : <><Plus size={14} /> Add New</>}
+                  </button>
+                )}
+              </div>
+
+              {user?.addresses.length === 0 && !showAddrForm ? (
                 <div className="text-center py-6">
                   <p className="font-body text-sm text-brand-muted mb-3">No saved addresses</p>
-                  <button onClick={() => navigate('/addresses')} className="btn-outline text-sm">
+                  <button onClick={() => setShowAddrForm(true)} className="btn-outline text-sm">
                     <Plus size={16} /> Add Address
                   </button>
                 </div>
@@ -162,6 +192,39 @@ export default function CheckoutPage() {
                     </label>
                   ))}
                 </div>
+              )}
+
+              {/* Inline add-address form */}
+              {showAddrForm && (
+                <form onSubmit={saveAddress} className="mt-4 border-2 border-primary/30 rounded-xl p-4 space-y-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {([
+                      { k: 'label', ph: 'Label (Home/Work)', col: 1 },
+                      { k: 'fullName', ph: 'Full name', col: 1 },
+                      { k: 'phone', ph: 'Phone (10-digit)', col: 1 },
+                      { k: 'email', ph: 'Email (order updates)', col: 1 },
+                      { k: 'line1', ph: 'Address line 1', col: 2 },
+                      { k: 'line2', ph: 'Line 2 (optional)', col: 2 },
+                      { k: 'city', ph: 'City', col: 1 },
+                      { k: 'state', ph: 'State', col: 1 },
+                      { k: 'pincode', ph: 'Pincode', col: 1 },
+                      { k: 'country', ph: 'Country', col: 1 },
+                    ] as const).map(({ k, ph, col }) => (
+                      <input key={k} value={String(addrForm[k])}
+                        onChange={(e) => setAddrForm({ ...addrForm, [k]: e.target.value })}
+                        placeholder={ph} required={k !== 'line2'}
+                        className={`${col === 2 ? 'sm:col-span-2' : ''} w-full px-3.5 py-2.5 bg-brand-surface border border-brand-border rounded-lg text-brand-text text-sm outline-none focus:border-primary transition-colors placeholder:text-brand-muted/60`} />
+                    ))}
+                  </div>
+                  <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                    <input type="checkbox" checked={addrForm.isDefault} onChange={(e) => setAddrForm({ ...addrForm, isDefault: e.target.checked })} className="w-4 h-4 accent-primary" />
+                    <span className="font-body text-sm text-brand-text">Set as default</span>
+                  </label>
+                  <div className="flex justify-end gap-2">
+                    <button type="button" onClick={() => setShowAddrForm(false)} className="btn-outline text-sm rounded-lg">Cancel</button>
+                    <button type="submit" disabled={savingAddr} className="btn-primary text-sm rounded-lg">{savingAddr ? 'Saving…' : 'Save Address'}</button>
+                  </div>
+                </form>
               )}
             </section>
 
@@ -205,7 +268,7 @@ export default function CheckoutPage() {
               <ul className="space-y-3 mb-5 pb-5 border-b border-brand-border">
                 {items.map((item) => (
                   <li key={`${item.product._id}-${item.variantSku}`} className="flex gap-3">
-                    <img src={item.product.images?.[0] || '/placeholder.jpg'} alt={item.product.name}
+                    <img src={item.product.images?.[0]} alt={item.product.name}
                       className="w-14 h-16 object-cover bg-brand-surface flex-shrink-0" />
                     <div className="flex-1 min-w-0">
                       <p className="font-body text-xs font-medium line-clamp-2">{item.product.name}</p>

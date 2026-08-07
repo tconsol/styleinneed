@@ -2,7 +2,34 @@ import { Request, Response, NextFunction } from 'express';
 import Category from '../models/Category';
 import Collection from '../models/Collection';
 import Product from '../models/Product';
+import { uploadToGCS, deleteFromGCS } from '../config/gcs';
 import { sendSuccess, sendError } from '../utils/apiResponse';
+
+// Upload a single category image to GCS ('categories' folder). Returns the
+// public URL — the admin then saves it on the category via updateCategory.
+export const uploadCategoryImage = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const file = req.file as Express.Multer.File | undefined;
+    if (!file) { sendError(res, 'No image uploaded', 400); return; }
+    const url = await uploadToGCS(file, 'categories');
+    sendSuccess(res, 'Image uploaded', { url });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Delete a category image from the bucket (used when the admin removes the
+// image from the category form). Body: { url }.
+export const deleteCategoryImage = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { url } = req.body as { url?: string };
+    if (!url) { sendError(res, 'Image url required', 400); return; }
+    await deleteFromGCS(url);
+    sendSuccess(res, 'Image deleted');
+  } catch (err) {
+    next(err);
+  }
+};
 
 export const getCategories = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {

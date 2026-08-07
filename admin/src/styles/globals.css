@@ -19,6 +19,26 @@
   --c-secondary: #EC4899;
   --c-primary-soft: rgba(79,70,229,0.12);
   --c-sidebar:  #0F0E2E;
+  /* RGB channels so Tailwind brand/primary utilities (+ opacity) follow the theme */
+  --c-primary-rgb: 79 70 229;
+  --c-primary-light-rgb: 129 140 248;
+  --c-primary-dark-rgb: 55 48 163;
+  --c-bg-rgb: 241 245 249;
+  --c-surface-rgb: 255 255 255;
+  --c-border-rgb: 226 232 240;
+  --c-text-rgb: 30 41 59;
+  --c-muted-rgb: 100 116 139;
+  /* Status palette (light) — pills, dots, badges, hover tints */
+  --c-info:        #3B82F6; --c-info-soft:        #DBEAFE;
+  --c-sky:         #0EA5E9; --c-sky-soft:         #E0F2FE;
+  --c-success:     #16A34A; --c-success-soft:     #DCFCE7;
+  --c-warning:     #B45309; --c-warning-soft:     #FEF3C7;
+  --c-danger:      #DC2626; --c-danger-soft:      #FEE2E2;
+  --c-purple:      #7C3AED; --c-purple-soft:      #EDE9FE;
+  --c-pink:        #DB2777; --c-pink-soft:        #FCE7F3;
+  --c-orange:      #EA580C; --c-orange-soft:      #FFEDD5;
+  --c-teal:        #0D9488; --c-teal-soft:        #CCFBF1;
+  --c-neutral:     #64748B; --c-neutral-soft:     #F1F5F9;
   /* Fonts — overridden at runtime only when "apply to admin" is on. */
   --font-heading: 'Poppins', system-ui, sans-serif;
   --font-body: 'Poppins', system-ui, sans-serif;
@@ -38,6 +58,26 @@
   --c-secondary: #F472B6;
   --c-primary-soft: rgba(129,140,248,0.16);
   --c-sidebar:  #080816;
+  /* RGB channels (dark) — neutrals stay dark; accent uses the light tone */
+  --c-primary-rgb: 129 140 248;
+  --c-primary-light-rgb: 165 180 252;
+  --c-primary-dark-rgb: 67 56 202;
+  --c-bg-rgb: 11 11 30;
+  --c-surface-rgb: 17 17 42;
+  --c-border-rgb: 44 47 68;
+  --c-text-rgb: 226 232 240;
+  --c-muted-rgb: 139 156 184;
+  /* Status palette (dark) — translucent softs so pills work on dark surfaces */
+  --c-info:        #60A5FA; --c-info-soft:        rgba(59,130,246,0.18);
+  --c-sky:         #38BDF8; --c-sky-soft:         rgba(14,165,233,0.18);
+  --c-success:     #4ADE80; --c-success-soft:     rgba(22,163,74,0.18);
+  --c-warning:     #FBBF24; --c-warning-soft:     rgba(245,158,11,0.18);
+  --c-danger:      #F87171; --c-danger-soft:      rgba(239,68,68,0.18);
+  --c-purple:      #A78BFA; --c-purple-soft:      rgba(139,92,246,0.18);
+  --c-pink:        #F472B6; --c-pink-soft:        rgba(236,72,153,0.18);
+  --c-orange:      #FB923C; --c-orange-soft:      rgba(249,115,22,0.18);
+  --c-teal:        #2DD4BF; --c-teal-soft:        rgba(45,212,191,0.18);
+  --c-neutral:     #8B9CB8; --c-neutral-soft:     rgba(255,255,255,0.07);
 }
 
 /* ── BASE ──────────────────────────────────────────────── */
@@ -52,10 +92,19 @@
     overflow-x: hidden;
     transition: background-color 0.2s, color 0.2s;
   }
-  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  /* Modern scrollbars — thin, rounded, transparent track, primary on hover */
+  ::-webkit-scrollbar { width: 9px; height: 9px; }
   ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: rgba(79,70,229,0.25); border-radius: 4px; }
-  ::-webkit-scrollbar-thumb:hover { background: var(--c-primary); }
+  ::-webkit-scrollbar-thumb {
+    background: rgb(var(--c-muted-rgb) / 0.35);
+    border-radius: 9999px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+    transition: background 0.2s;
+  }
+  ::-webkit-scrollbar-thumb:hover { background: rgb(var(--c-primary-rgb) / 0.7); background-clip: content-box; }
+  ::-webkit-scrollbar-corner { background: transparent; }
+  * { scrollbar-width: thin; scrollbar-color: rgb(var(--c-muted-rgb) / 0.4) transparent; }
   :focus-visible { outline: 2px solid var(--c-primary); outline-offset: 2px; }
   :focus:not(:focus-visible) { outline: none; }
 }
@@ -156,6 +205,12 @@
     box-shadow: 0 1px 3px rgba(0,0,0,0.04);
     transition: background 0.2s, border-color 0.2s;
   }
+}
+
+/* Literal white cards follow the theme surface in every theme (Rose Gold, etc.),
+   not only dark mode. Default surface is #FFFFFF so light-indigo is unchanged. */
+.bg-white {
+  background-color: var(--c-surface) !important;
 }
 
 /* ── DARK MODE: SURFACE OVERRIDES ──────────────────────── */

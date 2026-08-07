@@ -32,7 +32,7 @@ export default function Layout() {
       fetchCart();
       fetchWishlist();
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, fetchMe, fetchCart, fetchWishlist]);
 
   const isAuthPage = location.pathname.startsWith('/auth');
   const isCheckout = location.pathname.startsWith('/checkout');
@@ -62,7 +62,6 @@ export default function Layout() {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
-          className={showBottomNav ? 'pb-[calc(var(--bottomnav-height)+env(safe-area-inset-bottom))] lg:pb-0' : ''}
         >
           <Outlet />
         </motion.main>

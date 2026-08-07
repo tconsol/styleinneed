@@ -11,23 +11,23 @@ const COLORS: Record<string, string> = {
   refunded: 'bg-orange-100 text-orange-700',
   open: 'bg-blue-100 text-blue-700',
   resolved: 'bg-green-100 text-green-700',
-  closed: 'bg-gray-100 text-gray-600',
+  closed: 'bg-brand-bg text-brand-text',
   requested: 'bg-yellow-100 text-yellow-700',
   approved: 'bg-blue-100 text-blue-700',
   processing: 'bg-indigo-100 text-indigo-700',
   completed: 'bg-green-100 text-green-700',
   rejected: 'bg-red-100 text-red-700',
   active: 'bg-green-100 text-green-700',
-  inactive: 'bg-gray-100 text-gray-600',
+  inactive: 'bg-brand-bg text-brand-text',
   high: 'bg-red-100 text-red-700',
   medium: 'bg-yellow-100 text-yellow-700',
   low: 'bg-green-100 text-green-700',
   admin: 'bg-blue-100 text-blue-700',
-  customer: 'bg-gray-100 text-gray-600',
+  customer: 'bg-brand-bg text-brand-text',
 };
 
 export default function Badge({ value }: { value: string }) {
-  const cls = COLORS[value] || 'bg-gray-100 text-gray-600';
+  const cls = COLORS[value] || 'bg-brand-bg text-brand-text';
   return (
     <span className={`badge ${cls} capitalize`}>{value.replace(/_/g, ' ')}</span>
   );

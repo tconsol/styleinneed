@@ -49,7 +49,7 @@ export default function ProductCard({ product }: Props) {
           {!imgLoaded && <div className="absolute inset-0 skeleton" />}
 
           <img
-            src={product.images?.[imgIdx] || '/placeholder.jpg'}
+            src={product.images?.[imgIdx]}
             alt={product.name}
             className={`w-full h-full object-cover transition-all duration-700 group-hover:scale-[1.04] ${imgLoaded ? 'opacity-100' : 'opacity-0'}`}
             onLoad={() => setImgLoaded(true)}

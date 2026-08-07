@@ -16,27 +16,27 @@ import toast from 'react-hot-toast';
 const STATUSES = ['pending', 'confirmed', 'packed', 'shipped', 'delivered', 'returned', 'cancelled'];
 
 const STATUS_META: Record<string, { bg: string; text: string; dot: string; icon: React.ElementType }> = {
-  pending:   { bg: '#FEF9C3', text: '#854D0E', dot: '#EAB308', icon: Clock },
-  confirmed: { bg: '#DBEAFE', text: '#1E40AF', dot: '#3B82F6', icon: CheckCircle2 },
-  packed:    { bg: '#E0E7FF', text: '#3730A3', dot: '#6366F1', icon: Package },
-  shipped:   { bg: '#EDE9FE', text: '#5B21B6', dot: '#8B5CF6', icon: Truck },
-  delivered: { bg: '#DCFCE7', text: '#166534', dot: '#22C55E', icon: CheckCircle2 },
-  cancelled: { bg: '#FEE2E2', text: '#991B1B', dot: '#EF4444', icon: XCircle },
-  returned:  { bg: '#FFEDD5', text: '#9A3412', dot: '#F97316', icon: ArrowLeft },
+  pending:   { bg: 'var(--c-warning-soft)', text: 'var(--c-warning)', dot: 'var(--c-warning)', icon: Clock },
+  confirmed: { bg: 'var(--c-info-soft)', text: 'var(--c-info)', dot: 'var(--c-info)', icon: CheckCircle2 },
+  packed:    { bg: 'var(--c-info-soft)', text: 'var(--c-primary-dark)', dot: 'var(--c-info)', icon: Package },
+  shipped:   { bg: 'var(--c-purple-soft)', text: 'var(--c-purple)', dot: 'var(--c-purple)', icon: Truck },
+  delivered: { bg: 'var(--c-success-soft)', text: 'var(--c-success)', dot: 'var(--c-success)', icon: CheckCircle2 },
+  cancelled: { bg: 'var(--c-danger-soft)', text: 'var(--c-danger)', dot: 'var(--c-danger)', icon: XCircle },
+  returned:  { bg: 'var(--c-orange-soft)', text: 'var(--c-orange)', dot: 'var(--c-orange)', icon: ArrowLeft },
 };
 
 const PAY_META: Record<string, { bg: string; text: string; dot: string }> = {
-  paid:     { bg: '#DCFCE7', text: '#166534', dot: '#22C55E' },
-  pending:  { bg: '#FEF9C3', text: '#854D0E', dot: '#EAB308' },
-  refunded: { bg: '#FFEDD5', text: '#9A3412', dot: '#F97316' },
-  failed:   { bg: '#FEE2E2', text: '#991B1B', dot: '#EF4444' },
+  paid:     { bg: 'var(--c-success-soft)', text: 'var(--c-success)', dot: 'var(--c-success)' },
+  pending:  { bg: 'var(--c-warning-soft)', text: 'var(--c-warning)', dot: 'var(--c-warning)' },
+  refunded: { bg: 'var(--c-orange-soft)', text: 'var(--c-orange)', dot: 'var(--c-orange)' },
+  failed:   { bg: 'var(--c-danger-soft)', text: 'var(--c-danger)', dot: 'var(--c-danger)' },
 };
 
 const TIMELINE_ORDER = ['pending', 'confirmed', 'packed', 'shipped', 'delivered'];
 
 function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div className="flex items-start justify-between py-2 border-b border-slate-100 last:border-0">
+    <div className="flex items-start justify-between py-2 border-b border-brand-border last:border-0">
       <span className="text-[10px] font-semibold uppercase tracking-wider text-brand-muted">{label}</span>
       <span className="text-[11px] font-medium text-brand-text text-right max-w-[60%]">{value}</span>
     </div>
@@ -107,7 +107,7 @@ export default function OrderDetailPage() {
     const setTxt = (hex: string) => doc.setTextColor(...rgb(hex));
     const setDrw = (hex: string) => { doc.setDrawColor(...rgb(hex)); };
     const setFll = (hex: string) => { doc.setFillColor(...rgb(hex)); };
-    const hline = (yy: number, hex = '#E2E8F0', w = 0.25) => {
+    const hline = (yy: number, hex = 'var(--c-border)', w = 0.25) => {
       setDrw(hex); doc.setLineWidth(w); doc.line(M, yy, W - M, yy);
     };
     const bold = (sz: number) => { doc.setFont('helvetica', 'bold'); doc.setFontSize(sz); };
@@ -115,34 +115,34 @@ export default function OrderDetailPage() {
 
     // ── HEADER ──────────────────────────────────────────────
     y = 18;
-    bold(20); setTxt('#4F46E5');
+    bold(20); setTxt('var(--c-primary)');
     doc.text('STYLE IN NEED FASHIONS', M, y);
 
-    bold(13); setTxt('#1E293B');
+    bold(13); setTxt('var(--c-text)');
     doc.text('TAX INVOICE', W - M, y, { align: 'right' });
 
     y += 6;
-    reg(8); setTxt('#94A3B8');
+    reg(8); setTxt('var(--c-muted)');
     doc.text('Hyderabad, Telangana, India  |  support@styleinneedfashions.com', M, y);
-    bold(8); setTxt('#4F46E5');
+    bold(8); setTxt('var(--c-primary)');
     doc.text(`Order #${order.orderId}`, W - M, y, { align: 'right' });
 
     y += 4;
-    reg(8); setTxt('#94A3B8');
+    reg(8); setTxt('var(--c-muted)');
     doc.text(`Date: ${formatDate(order.createdAt)}`, W - M, y, { align: 'right' });
     hline(y + 3);
     y += 9;
 
     // ── AWB BOX ─────────────────────────────────────────────
     if (order.awbCode) {
-      setFll('#EEF2FF'); setDrw('#4F46E5'); doc.setLineWidth(0.6);
+      setFll('var(--c-primary-soft)'); setDrw('var(--c-primary)'); doc.setLineWidth(0.6);
       doc.roundedRect(M, y, cw, 20, 2, 2, 'FD');
-      reg(7); setTxt('#6366F1');
+      reg(7); setTxt('var(--c-info)');
       doc.text('AWB / TRACKING NUMBER (COURIER)', M + 4, y + 6);
-      bold(15); setTxt('#3730A3');
+      bold(15); setTxt('var(--c-primary-dark)');
       doc.text(order.awbCode, M + 4, y + 15);
       if (order.trackingUrl) {
-        reg(7); setTxt('#64748B');
+        reg(7); setTxt('var(--c-muted)');
         doc.text(order.trackingUrl, W - M - 4, y + 15, { align: 'right', maxWidth: 90 });
       }
       y += 26;
@@ -150,7 +150,7 @@ export default function OrderDetailPage() {
 
     // ── 3-COLUMN: addresses + order details ─────────────────
     const c1 = M, c2 = M + 62, c3 = M + 124;
-    bold(7); setTxt('#94A3B8');
+    bold(7); setTxt('var(--c-muted)');
     doc.text('BILL TO / SHIP TO', c1, y);
     doc.text('SHIP FROM', c2, y);
     doc.text('ORDER DETAILS', c3, y);
@@ -167,13 +167,13 @@ export default function OrderDetailPage() {
     ].filter(Boolean);
 
     addrLines.forEach((line, i) => {
-      if (i === 0) { bold(8); setTxt('#1E293B'); } else { reg(8); setTxt('#374151'); }
+      if (i === 0) { bold(8); setTxt('var(--c-text)'); } else { reg(8); setTxt('#374151'); }
       doc.text(line, c1, y + i * 4.5);
     });
 
     const fromLines = ['Style In Need Fashions', '123 Fashion Street', 'Hyderabad, Telangana', 'PIN: 500001', 'Ph: +91 98765 43210'];
     fromLines.forEach((line, i) => {
-      if (i === 0) { bold(8); setTxt('#1E293B'); } else { reg(8); setTxt('#374151'); }
+      if (i === 0) { bold(8); setTxt('var(--c-text)'); } else { reg(8); setTxt('#374151'); }
       doc.text(line, c2, y + i * 4.5);
     });
 
@@ -185,9 +185,9 @@ export default function OrderDetailPage() {
     ];
     if (order.razorpayPaymentId) details.push(['Pay ID', order.razorpayPaymentId.slice(-12)]);
     details.forEach(([lbl, val], i) => {
-      bold(7); setTxt('#94A3B8');
+      bold(7); setTxt('var(--c-muted)');
       doc.text(lbl + ':', c3, y + i * 4.8);
-      reg(8); setTxt('#1E293B');
+      reg(8); setTxt('var(--c-text)');
       doc.text(val, c3 + 22, y + i * 4.8);
     });
 
@@ -195,9 +195,9 @@ export default function OrderDetailPage() {
     hline(y); y += 6;
 
     // ── TABLE HEADER ─────────────────────────────────────────
-    setFll('#F8FAFC'); doc.setLineWidth(0);
+    setFll('var(--c-th-bg)'); doc.setLineWidth(0);
     doc.rect(M, y - 4, cw, 8, 'F');
-    bold(7); setTxt('#94A3B8');
+    bold(7); setTxt('var(--c-muted)');
     const cx = { n: M + 2, prod: M + 9, sku: M + 74, var: M + 106, qty: M + 135, up: M + 150, tot: W - M - 2 };
     doc.text('#', cx.n, y);
     doc.text('PRODUCT', cx.prod, y);
@@ -210,16 +210,16 @@ export default function OrderDetailPage() {
 
     // ── TABLE ROWS ───────────────────────────────────────────
     order.items.forEach((item, i) => {
-      if (i % 2 === 1) { setFll('#F8FAFC'); doc.rect(M, y - 5, cw, 8, 'F'); }
+      if (i % 2 === 1) { setFll('var(--c-th-bg)'); doc.rect(M, y - 5, cw, 8, 'F'); }
 
-      reg(8); setTxt('#64748B');
+      reg(8); setTxt('var(--c-muted)');
       doc.text(String(i + 1), cx.n, y);
 
       const name = item.product?.name || 'Product';
-      bold(8); setTxt('#1E293B');
+      bold(8); setTxt('var(--c-text)');
       doc.text(name.length > 27 ? name.slice(0, 27) + '...' : name, cx.prod, y);
 
-      reg(7); setTxt('#64748B');
+      reg(7); setTxt('var(--c-muted)');
       doc.text(item.variant?.sku || '—', cx.sku, y);
       const vt = [item.variant?.attributes?.size, item.variant?.attributes?.color].filter(Boolean).join(' / ') || '—';
       doc.text(vt, cx.var, y);
@@ -227,7 +227,7 @@ export default function OrderDetailPage() {
 
       reg(8); setTxt('#374151');
       doc.text(formatPrice(item.price), cx.up, y);
-      bold(8); setTxt('#1E293B');
+      bold(8); setTxt('var(--c-text)');
       doc.text(formatPrice(item.price * item.quantity), cx.tot, y, { align: 'right' });
 
       y += 9;
@@ -239,23 +239,23 @@ export default function OrderDetailPage() {
     // ── PRICE BREAKDOWN ──────────────────────────────────────
     const bx = W - M - 58, vx = W - M;
     const prRow = (lbl: string, val: string, big = false) => {
-      if (big) { bold(11); setTxt('#4F46E5'); } else { reg(8); setTxt('#64748B'); }
+      if (big) { bold(11); setTxt('var(--c-primary)'); } else { reg(8); setTxt('var(--c-muted)'); }
       doc.text(lbl, bx, y, { align: 'right' });
-      if (big) { bold(11); setTxt('#4F46E5'); } else { reg(8); setTxt('#1E293B'); }
+      if (big) { bold(11); setTxt('var(--c-primary)'); } else { reg(8); setTxt('var(--c-text)'); }
       doc.text(val, vx, y, { align: 'right' });
       y += big ? 7 : 5;
     };
     prRow('Subtotal', formatPrice(order.subtotal));
     if (order.discount > 0) prRow('Discount', `-${formatPrice(order.discount)}`);
     prRow('Shipping', order.shippingCharge === 0 ? 'FREE' : formatPrice(order.shippingCharge));
-    hline(y, '#1E293B', 0.5); y += 5;
+    hline(y, 'var(--c-text)', 0.5); y += 5;
     prRow('TOTAL AMOUNT', formatPrice(order.total), true);
 
     // ── FOOTER ───────────────────────────────────────────────
     y = 283;
     hline(y);
     y += 5;
-    reg(7); setTxt('#94A3B8');
+    reg(7); setTxt('var(--c-muted)');
     doc.text('Thank you for shopping with Style In Need Fashions!', M, y);
     doc.text('support@styleinneedfashions.com', W - M, y, { align: 'right' });
     y += 4;
@@ -273,27 +273,27 @@ export default function OrderDetailPage() {
       <title>Invoice - ${order.orderId}</title>
       <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', Arial, sans-serif; color: #1E293B; background: white; padding: 32px; }
-        .inv-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 28px; padding-bottom: 20px; border-bottom: 2px solid #E2E8F0; }
-        .inv-brand { font-size: 22px; font-weight: 800; color: #4F46E5; letter-spacing: -0.5px; }
-        .inv-sub { font-size: 11px; color: #64748B; margin-top: 3px; }
-        .inv-title { font-size: 13px; font-weight: 700; color: #1E293B; text-align: right; }
-        .inv-id { font-size: 11px; color: #64748B; margin-top: 2px; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; color: var(--c-text); background: white; padding: 32px; }
+        .inv-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 28px; padding-bottom: 20px; border-bottom: 2px solid var(--c-border); }
+        .inv-brand { font-size: 22px; font-weight: 800; color: var(--c-primary); letter-spacing: -0.5px; }
+        .inv-sub { font-size: 11px; color: var(--c-muted); margin-top: 3px; }
+        .inv-title { font-size: 13px; font-weight: 700; color: var(--c-text); text-align: right; }
+        .inv-id { font-size: 11px; color: var(--c-muted); margin-top: 2px; }
         .inv-cols { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-bottom: 24px; }
-        .inv-section-title { font-size: 9px; font-weight: 700; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px; }
+        .inv-section-title { font-size: 9px; font-weight: 700; color: var(--c-muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px; }
         .inv-text { font-size: 11px; color: #374151; line-height: 1.6; }
-        .inv-text strong { color: #1E293B; font-weight: 600; }
+        .inv-text strong { color: var(--c-text); font-weight: 600; }
         .inv-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-        .inv-table th { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #94A3B8; padding: 8px 10px; border-bottom: 2px solid #E2E8F0; text-align: left; }
-        .inv-table td { font-size: 11px; color: #374151; padding: 10px 10px; border-bottom: 1px solid #F1F5F9; }
-        .inv-table td.right { text-align: right; font-weight: 600; color: #1E293B; }
+        .inv-table th { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--c-muted); padding: 8px 10px; border-bottom: 2px solid var(--c-border); text-align: left; }
+        .inv-table td { font-size: 11px; color: #374151; padding: 10px 10px; border-bottom: 1px solid var(--c-th-bg); }
+        .inv-table td.right { text-align: right; font-weight: 600; color: var(--c-text); }
         .inv-totals { margin-left: auto; width: 240px; }
         .inv-total-row { display: flex; justify-content: space-between; font-size: 11px; color: #374151; padding: 4px 0; }
-        .inv-total-final { display: flex; justify-content: space-between; font-size: 14px; font-weight: 800; color: #1E293B; padding: 10px 0 4px; border-top: 2px solid #1E293B; margin-top: 6px; }
-        .inv-footer { margin-top: 32px; padding-top: 16px; border-top: 1px solid #E2E8F0; display: flex; justify-content: space-between; font-size: 10px; color: #94A3B8; }
-        .inv-awb { background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 12px 16px; margin-bottom: 24px; }
-        .inv-awb-label { font-size: 9px; font-weight: 700; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.1em; }
-        .inv-awb-val { font-size: 16px; font-weight: 800; color: #4F46E5; letter-spacing: 2px; margin-top: 2px; font-family: monospace; }
+        .inv-total-final { display: flex; justify-content: space-between; font-size: 14px; font-weight: 800; color: var(--c-text); padding: 10px 0 4px; border-top: 2px solid var(--c-text); margin-top: 6px; }
+        .inv-footer { margin-top: 32px; padding-top: 16px; border-top: 1px solid var(--c-border); display: flex; justify-content: space-between; font-size: 10px; color: var(--c-muted); }
+        .inv-awb { background: var(--c-th-bg); border: 1px solid var(--c-border); border-radius: 8px; padding: 12px 16px; margin-bottom: 24px; }
+        .inv-awb-label { font-size: 9px; font-weight: 700; color: var(--c-muted); text-transform: uppercase; letter-spacing: 0.1em; }
+        .inv-awb-val { font-size: 16px; font-weight: 800; color: var(--c-primary); letter-spacing: 2px; margin-top: 2px; font-family: monospace; }
         @media print { body { padding: 16px; } }
       </style>
     </head><body>${html}</body></html>`);
@@ -334,8 +334,8 @@ export default function OrderDetailPage() {
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <ShoppingBag size={14} style={{ color: '#4F46E5' }} />
-              <span className="font-mono text-[13px] font-black" style={{ color: '#4F46E5' }}>#{order.orderId}</span>
+              <ShoppingBag size={14} style={{ color: 'var(--c-primary)' }} />
+              <span className="font-mono text-[13px] font-black" style={{ color: 'var(--c-primary)' }}>#{order.orderId}</span>
             </div>
             <p className="text-[10px] text-brand-muted">Placed on {formatDateTime(order.createdAt)}</p>
           </div>
@@ -355,7 +355,7 @@ export default function OrderDetailPage() {
 
         {/* Timeline */}
         {order.status !== 'cancelled' && order.status !== 'returned' && (
-          <div className="mt-5 pt-5 border-t border-slate-100">
+          <div className="mt-5 pt-5 border-t border-brand-border">
             <div className="flex items-center">
               {TIMELINE_ORDER.map((s, i) => {
                 const done = timelineIdx >= i;
@@ -366,14 +366,14 @@ export default function OrderDetailPage() {
                   <div key={s} className="flex-1 flex flex-col items-center relative">
                     {i > 0 && (
                       <div className="absolute left-0 top-4 w-full h-0.5 -translate-y-1/2 z-0"
-                        style={{ right: '50%', left: '-50%', background: done ? '#4F46E5' : '#E2E8F0' }} />
+                        style={{ right: '50%', left: '-50%', background: done ? 'var(--c-primary)' : 'var(--c-border)' }} />
                     )}
                     <div className="relative z-10 w-8 h-8 rounded-full flex items-center justify-center mb-2 transition-all"
-                      style={{ background: done ? '#4F46E5' : '#F1F5F9', boxShadow: active ? '0 0 0 3px rgba(79,70,229,0.2)' : 'none' }}>
-                      <Icon size={14} style={{ color: done ? 'white' : '#94A3B8' }} />
+                      style={{ background: done ? 'var(--c-primary)' : 'var(--c-th-bg)', boxShadow: active ? '0 0 0 3px rgba(79,70,229,0.2)' : 'none' }}>
+                      <Icon size={14} style={{ color: done ? 'white' : 'var(--c-muted)' }} />
                     </div>
                     <span className="text-[9px] font-semibold capitalize text-center"
-                      style={{ color: done ? '#4F46E5' : '#94A3B8' }}>{s}</span>
+                      style={{ color: done ? 'var(--c-primary)' : 'var(--c-muted)' }}>{s}</span>
                   </div>
                 );
               })}
@@ -387,17 +387,17 @@ export default function OrderDetailPage() {
         <div className="lg:col-span-2 space-y-5">
           {/* Order Items */}
           <div className="bg-white rounded-2xl overflow-hidden" style={{ border: '1px solid var(--c-border)' }}>
-            <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+            <div className="px-5 py-4 border-b border-brand-border flex items-center justify-between">
               <h2 className="text-[13px] font-bold text-brand-text">Order Items</h2>
               <span className="text-[10px] text-brand-muted">{order.items.length} item(s)</span>
             </div>
-            <div className="divide-y divide-slate-100">
+            <div className="divide-y divide-brand-border">
               {order.items.map((item, i) => (
                 <div key={i} className="flex items-start gap-4 px-5 py-4">
-                  <div className="w-14 h-16 rounded-lg overflow-hidden bg-slate-100 flex-shrink-0">
+                  <div className="w-14 h-16 rounded-lg overflow-hidden bg-brand-bg flex-shrink-0">
                     {item.product?.images?.[0]
                       ? <img src={item.product.images[0]} alt="" className="w-full h-full object-cover" />
-                      : <Package size={20} className="m-auto mt-3 text-slate-300" />}
+                      : <Package size={20} className="m-auto mt-3 text-brand-border" />}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-[12px] font-semibold text-brand-text line-clamp-2">{item.product?.name || 'Product'}</p>
@@ -407,7 +407,7 @@ export default function OrderDetailPage() {
                       {item.variant?.attributes?.color && <span className="text-[10px] text-brand-muted">Color: {item.variant.attributes.color}</span>}
                     </div>
                     <div className="flex items-center gap-2 mt-1.5">
-                      <span className="text-[10px] bg-slate-100 px-2 py-0.5 rounded font-medium text-slate-600">Qty: {item.quantity}</span>
+                      <span className="text-[10px] bg-brand-bg px-2 py-0.5 rounded font-medium text-brand-text">Qty: {item.quantity}</span>
                       <span className="text-[10px] text-brand-muted">{formatPrice(item.price)} each</span>
                     </div>
                     {item.product?.provider && (
@@ -431,7 +431,7 @@ export default function OrderDetailPage() {
             </div>
 
             {/* Price breakdown */}
-            <div className="px-5 py-4 border-t border-slate-100" style={{ background: 'var(--c-th-bg)' }}>
+            <div className="px-5 py-4 border-t border-brand-border" style={{ background: 'var(--c-th-bg)' }}>
               <div className="space-y-2 max-w-xs ml-auto">
                 <div className="flex justify-between text-[11px] text-brand-muted">
                   <span>Subtotal</span><span>{formatPrice(order.subtotal)}</span>
@@ -445,8 +445,8 @@ export default function OrderDetailPage() {
                   <span>Shipping</span>
                   <span>{order.shippingCharge === 0 ? <span className="text-emerald-600 font-medium">FREE</span> : formatPrice(order.shippingCharge)}</span>
                 </div>
-                <div className="flex justify-between text-[14px] font-black text-brand-text pt-2 border-t border-slate-200">
-                  <span>Total</span><span style={{ color: '#4F46E5' }}>{formatPrice(order.total)}</span>
+                <div className="flex justify-between text-[14px] font-black text-brand-text pt-2 border-t border-brand-border">
+                  <span>Total</span><span style={{ color: 'var(--c-primary)' }}>{formatPrice(order.total)}</span>
                 </div>
               </div>
             </div>
@@ -455,8 +455,8 @@ export default function OrderDetailPage() {
           {/* Shipping Address */}
           <div className="bg-white rounded-2xl p-5" style={{ border: '1px solid var(--c-border)' }}>
             <div className="flex items-center gap-2 mb-4">
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: '#EEF2FF' }}>
-                <MapPin size={14} style={{ color: '#4F46E5' }} />
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'var(--c-primary-soft)' }}>
+                <MapPin size={14} style={{ color: 'var(--c-primary)' }} />
               </div>
               <h2 className="text-[13px] font-bold text-brand-text">Delivery Address</h2>
             </div>
@@ -485,15 +485,15 @@ export default function OrderDetailPage() {
           {(order.awbCode || order.trackingUrl) && (
             <div className="bg-white rounded-2xl p-5" style={{ border: '1px solid var(--c-border)' }}>
               <div className="flex items-center gap-2 mb-4">
-                <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: '#EEF2FF' }}>
-                  <Truck size={14} style={{ color: '#4F46E5' }} />
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'var(--c-primary-soft)' }}>
+                  <Truck size={14} style={{ color: 'var(--c-primary)' }} />
                 </div>
                 <h2 className="text-[13px] font-bold text-brand-text">Shipment Info</h2>
               </div>
               {order.awbCode && (
                 <div className="mb-3">
                   <p className="text-[9px] font-bold text-brand-muted uppercase tracking-wider mb-1">AWB Code</p>
-                  <p className="font-mono text-[14px] font-black" style={{ color: '#4F46E5' }}>{order.awbCode}</p>
+                  <p className="font-mono text-[14px] font-black" style={{ color: 'var(--c-primary)' }}>{order.awbCode}</p>
                 </div>
               )}
               {order.trackingUrl && (
@@ -512,8 +512,8 @@ export default function OrderDetailPage() {
           {/* Customer */}
           <div className="bg-white rounded-2xl p-5" style={{ border: '1px solid var(--c-border)' }}>
             <div className="flex items-center gap-2 mb-4">
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: '#EEF2FF' }}>
-                <User size={14} style={{ color: '#4F46E5' }} />
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'var(--c-primary-soft)' }}>
+                <User size={14} style={{ color: 'var(--c-primary)' }} />
               </div>
               <h2 className="text-[13px] font-bold text-brand-text">Customer</h2>
             </div>
@@ -537,8 +537,8 @@ export default function OrderDetailPage() {
           {/* Payment */}
           <div className="bg-white rounded-2xl p-5" style={{ border: '1px solid var(--c-border)' }}>
             <div className="flex items-center gap-2 mb-4">
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: '#EEF2FF' }}>
-                <CreditCard size={14} style={{ color: '#4F46E5' }} />
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'var(--c-primary-soft)' }}>
+                <CreditCard size={14} style={{ color: 'var(--c-primary)' }} />
               </div>
               <h2 className="text-[13px] font-bold text-brand-text">Payment</h2>
             </div>
@@ -552,7 +552,7 @@ export default function OrderDetailPage() {
             } />
             {order.razorpayOrderId && <InfoRow label="Razorpay ID" value={<span className="font-mono text-[10px]">{order.razorpayOrderId}</span>} />}
             {order.razorpayPaymentId && <InfoRow label="Payment ID" value={<span className="font-mono text-[10px]">{order.razorpayPaymentId}</span>} />}
-            <InfoRow label="Total Paid" value={<span className="text-[12px] font-black" style={{ color: '#4F46E5' }}>{formatPrice(order.total)}</span>} />
+            <InfoRow label="Total Paid" value={<span className="text-[12px] font-black" style={{ color: 'var(--c-primary)' }}>{formatPrice(order.total)}</span>} />
           </div>
 
           {/* Update Status */}
@@ -571,7 +571,7 @@ export default function OrderDetailPage() {
                         style={isSelected
                           ? { background: sm.bg, color: sm.text, boxShadow: `0 0 0 1.5px ${sm.dot}` }
                           : { background: 'var(--c-bg)', color: 'var(--c-muted)' }}>
-                        <Circle size={5} fill={isSelected ? sm.dot : '#CBD5E1'} style={{ color: isSelected ? sm.dot : '#CBD5E1' }} />
+                        <Circle size={5} fill={isSelected ? sm.dot : 'var(--c-border)'} style={{ color: isSelected ? sm.dot : 'var(--c-border)' }} />
                         {s}
                       </button>
                     );
@@ -620,7 +620,7 @@ export default function OrderDetailPage() {
           <div className="inv-awb">
             <div className="inv-awb-label">AWB / Tracking Number (Courier)</div>
             <div className="inv-awb-val">{order.awbCode}</div>
-            {order.trackingUrl && <div style={{ fontSize: 10, color: '#64748B', marginTop: 4 }}>{order.trackingUrl}</div>}
+            {order.trackingUrl && <div style={{ fontSize: 10, color: 'var(--c-muted)', marginTop: 4 }}>{order.trackingUrl}</div>}
           </div>
         )}
 
@@ -690,7 +690,7 @@ export default function OrderDetailPage() {
         {/* Totals */}
         <div className="inv-totals">
           <div className="inv-total-row"><span>Subtotal</span><span>{formatPrice(order.subtotal)}</span></div>
-          {order.discount > 0 && <div className="inv-total-row" style={{ color: '#16A34A' }}><span>Discount</span><span>-{formatPrice(order.discount)}</span></div>}
+          {order.discount > 0 && <div className="inv-total-row" style={{ color: 'var(--c-success)' }}><span>Discount</span><span>-{formatPrice(order.discount)}</span></div>}
           <div className="inv-total-row"><span>Shipping</span><span>{order.shippingCharge === 0 ? 'FREE' : formatPrice(order.shippingCharge)}</span></div>
           <div className="inv-total-final"><span>TOTAL</span><span>{formatPrice(order.total)}</span></div>
         </div>

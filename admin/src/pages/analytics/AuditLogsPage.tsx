@@ -5,16 +5,16 @@ import type { AuditLog, Pagination } from '../../types';
 import { formatDateTime } from '../../utils/format';
 
 const ACTION_COLORS: Record<string, { bg: string; text: string }> = {
-  CREATE: { bg: '#DCFCE7', text: '#166534' },
-  UPDATE: { bg: '#DBEAFE', text: '#1E40AF' },
-  DELETE: { bg: '#FEE2E2', text: '#991B1B' },
-  UPDATE_ORDER_STATUS: { bg: '#EDE9FE', text: '#5B21B6' },
-  APPROVE: { bg: '#DCFCE7', text: '#166534' },
+  CREATE: { bg: 'var(--c-success-soft)', text: 'var(--c-success)' },
+  UPDATE: { bg: 'var(--c-info-soft)', text: 'var(--c-info)' },
+  DELETE: { bg: 'var(--c-danger-soft)', text: 'var(--c-danger)' },
+  UPDATE_ORDER_STATUS: { bg: 'var(--c-purple-soft)', text: 'var(--c-purple)' },
+  APPROVE: { bg: 'var(--c-success-soft)', text: 'var(--c-success)' },
 };
 
 function getActionColor(action: string) {
   const key = Object.keys(ACTION_COLORS).find((k) => action.startsWith(k));
-  return key ? ACTION_COLORS[key] : { bg: '#F1F5F9', text: '#475569' };
+  return key ? ACTION_COLORS[key] : { bg: 'var(--c-th-bg)', text: 'var(--c-muted)' };
 }
 
 export default function AuditLogsPage() {
@@ -57,7 +57,7 @@ export default function AuditLogsPage() {
               Array.from({ length: 8 }).map((_, i) => (
                 <tr key={i} style={{ borderBottom: '1px solid var(--c-border)' }}>
                   {Array.from({ length: 6 }).map((__, j) => (
-                    <td key={j} className="px-3 py-3"><div className="h-3 rounded bg-slate-100 animate-pulse" style={{ width: j === 1 ? '130px' : '80px' }} /></td>
+                    <td key={j} className="px-3 py-3"><div className="h-3 rounded bg-brand-bg animate-pulse" style={{ width: j === 1 ? '130px' : '80px' }} /></td>
                   ))}
                 </tr>
               ))
@@ -98,7 +98,7 @@ export default function AuditLogsPage() {
                 const p = Math.max(1, Math.min(page - 2, pagination.pages - 4)) + i;
                 return (
                   <button key={p} onClick={() => setPage(p)} className="w-7 h-7 text-[10px] font-semibold rounded-lg transition-all"
-                    style={p === page ? { background: '#4F46E5', color: 'white' } : { background: 'var(--c-surface)', color: 'var(--c-muted)', border: '1px solid var(--c-border)' }}>
+                    style={p === page ? { background: 'var(--c-primary)', color: 'white' } : { background: 'var(--c-surface)', color: 'var(--c-muted)', border: '1px solid var(--c-border)' }}>
                     {p}
                   </button>
                 );

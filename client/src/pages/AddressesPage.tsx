@@ -1,10 +1,13 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronLeft } from 'lucide-react';
+import { MapPin, Plus, Trash2, LocateFixed, Home, Briefcase, X } from 'lucide-react';
 import { GoogleMap, Marker, useJsApiLoader } from '@react-google-maps/api';
 import { useAuthStore } from '../stores/authStore';
 import { authApi } from '../api/auth.api';
 import toast from 'react-hot-toast';
+import AccountHeader from '../components/account/AccountHeader';
+
+const LABEL_ICONS: Record<string, typeof Home> = { Home, Work: Briefcase, Other: MapPin };
 
 export default function AddressesPage() {
   const { user, fetchMe } = useAuthStore();
@@ -38,7 +41,7 @@ export default function AddressesPage() {
     navigator.geolocation.getCurrentPosition(async (pos) => {
       const { latitude, longitude } = pos.coords;
       setCoords({ lat: latitude, lng: longitude });
-      try { await reverseGeocode(latitude, longitude); } catch {}
+      try { await reverseGeocode(latitude, longitude); } catch { /* geocode best-effort */ }
       toast.success('Location captured');
     }, () => toast.error('Could not get your location'));
   };
@@ -52,8 +55,7 @@ export default function AddressesPage() {
       setAdding(false);
       setCoords(null);
       toast.success('Address added');
-    } catch {
-    } finally {
+    } catch { /* error toast shown by api interceptor */ } finally {
       setLoading(false);
     }
   };
@@ -63,7 +65,7 @@ export default function AddressesPage() {
       await authApi.manageAddresses({ action: 'remove', addressId: id });
       await fetchMe();
       toast.success('Address removed');
-    } catch {}
+    } catch { /* error toast shown by api interceptor */ }
   };
 
   const ADDR_FIELDS: { key: keyof typeof addrForm; label: string; placeholder: string; col?: number }[] = [
@@ -78,86 +80,162 @@ export default function AddressesPage() {
     { key: 'pincode', label: 'Pincode', placeholder: '6-digit' },
   ];
 
+  const inputCls =
+    'w-full px-4 py-3 bg-brand-surface border border-brand-border rounded-xl text-brand-text text-sm outline-none focus:border-primary focus:bg-white transition-all duration-200 placeholder:text-brand-muted/60';
+
   return (
     <div className="min-h-screen bg-brand-bg" style={{ paddingTop: 'var(--topbar-height)' }}>
-      <div className="container-custom py-10 max-w-4xl">
-        <Link to="/account" className="lg:hidden inline-flex items-center gap-1 font-body text-sm text-brand-muted hover:text-primary mb-4">
-          <ChevronLeft size={16} /> My Account
-        </Link>
-        <div className="bg-white border border-brand-border p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h1 className="font-heading text-xl font-semibold">Addresses</h1>
-            <button onClick={() => setAdding(!adding)} className="btn-outline text-sm">{adding ? 'Cancel' : '+ Add New'}</button>
-          </div>
-          {adding && (
-            <form onSubmit={handleAdd} className="grid grid-cols-2 gap-4 mb-6 p-4 bg-brand-surface">
-              <button type="button" onClick={useCurrentLocation} className="col-span-2 flex items-center justify-center gap-2 border border-primary text-primary text-sm py-2.5 rounded-none hover:bg-primary hover:text-white transition-colors">
-                📍 Use my current location{coords ? ' ✓' : ''}
-              </button>
-              {coords && mapsLoaded && (
-                <div className="col-span-2 overflow-hidden border border-brand-border" style={{ height: 200 }}>
-                  <GoogleMap
-                    mapContainerStyle={{ width: '100%', height: '100%' }}
-                    center={{ lat: coords.lat, lng: coords.lng }}
-                    zoom={16}
-                    options={{ disableDefaultUI: true, zoomControl: true }}
-                  >
-                    <Marker
-                      position={{ lat: coords.lat, lng: coords.lng }}
-                      draggable
-                      onDragEnd={async (e) => {
-                        if (!e.latLng) return;
-                        const lat = e.latLng.lat(); const lng = e.latLng.lng();
-                        setCoords({ lat, lng });
-                        await reverseGeocode(lat, lng);
-                      }}
-                    />
-                  </GoogleMap>
-                </div>
-              )}
+      <div className="container-custom py-8 md:py-12 max-w-4xl">
+        <AccountHeader
+          eyebrow="Account"
+          title="Addresses"
+          subtitle="Save delivery details for a faster, smoother checkout."
+          right={
+            <button
+              onClick={() => setAdding(!adding)}
+              className={`hidden sm:inline-flex items-center gap-2 font-body text-[10px] font-semibold uppercase tracking-[0.2em] px-5 py-3 rounded-full transition-colors ${
+                adding ? 'border border-brand-border text-brand-muted hover:text-brand-text' : 'bg-brand-text text-white hover:bg-brand-text/90'
+              }`}
+            >
+              {adding ? <><X size={13} /> Cancel</> : <><Plus size={13} /> Add New Address</>}
+            </button>
+          }
+        />
+
+        {/* Mobile add toggle */}
+        <button
+          onClick={() => setAdding(!adding)}
+          className={`sm:hidden w-full mb-4 inline-flex items-center justify-center gap-2 font-body text-[11px] font-semibold uppercase tracking-[0.2em] px-5 py-3.5 rounded-xl transition-colors ${
+            adding ? 'border border-brand-border text-brand-muted' : 'bg-brand-text text-white'
+          }`}
+        >
+          {adding ? <><X size={14} /> Cancel</> : <><Plus size={14} /> Add New Address</>}
+        </button>
+
+        {adding && (
+          <form onSubmit={handleAdd} className="bg-white border border-brand-border rounded-2xl p-6 md:p-8 mb-8 shadow-[0_8px_30px_rgba(28,28,28,0.05)]">
+            <div className="flex items-center gap-3 mb-6">
+              <span className="w-1 h-5 bg-primary rounded-full" />
+              <h3 className="font-heading text-lg font-semibold text-brand-text">Add New Address</h3>
+            </div>
+
+            <button
+              type="button"
+              onClick={useCurrentLocation}
+              className="w-full flex items-center justify-center gap-2 border border-primary/50 text-primary font-body text-sm font-medium py-3.5 rounded-xl bg-primary/5 hover:bg-primary hover:text-white transition-colors duration-200 mb-5"
+            >
+              <LocateFixed size={16} />
+              Use my current location{coords ? ' ✓' : ''}
+            </button>
+
+            {coords && mapsLoaded && (
+              <div className="mb-5 overflow-hidden rounded-xl border border-brand-border" style={{ height: 200 }}>
+                <GoogleMap
+                  mapContainerStyle={{ width: '100%', height: '100%' }}
+                  center={{ lat: coords.lat, lng: coords.lng }}
+                  zoom={16}
+                  options={{ disableDefaultUI: true, zoomControl: true }}
+                >
+                  <Marker
+                    position={{ lat: coords.lat, lng: coords.lng }}
+                    draggable
+                    onDragEnd={async (e) => {
+                      if (!e.latLng) return;
+                      const lat = e.latLng.lat(); const lng = e.latLng.lng();
+                      setCoords({ lat, lng });
+                      await reverseGeocode(lat, lng);
+                    }}
+                  />
+                </GoogleMap>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {ADDR_FIELDS.map(({ key, label, placeholder, col }) => (
-                <div key={key} className={col === 2 ? 'col-span-2' : ''}>
+                <div key={key} className={col === 2 ? 'sm:col-span-2' : ''}>
                   <label className="input-label">{label}</label>
                   <input
                     value={key === 'isDefault' ? '' : String(addrForm[key])}
                     onChange={(e) => setAddrForm({ ...addrForm, [key]: e.target.value })}
                     placeholder={placeholder}
-                    className="input-field"
+                    className={inputCls}
                     required={key !== 'line2'}
                   />
                 </div>
               ))}
-              <div className="col-span-2 flex items-center gap-2">
-                <input type="checkbox" id="isDefault" checked={addrForm.isDefault} onChange={(e) => setAddrForm({ ...addrForm, isDefault: e.target.checked })} className="accent-primary" />
-                <label htmlFor="isDefault" className="font-body text-sm">Set as default</label>
+              <label className="sm:col-span-2 flex items-center gap-3 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={addrForm.isDefault}
+                  onChange={(e) => setAddrForm({ ...addrForm, isDefault: e.target.checked })}
+                  className="w-4 h-4 accent-primary"
+                />
+                <span className="font-body text-sm text-brand-text">Set as default delivery address</span>
+              </label>
+              <div className="sm:col-span-2 flex justify-end">
+                <button type="submit" disabled={loading} className="btn-primary rounded-xl">
+                  {loading ? 'Saving...' : 'Save Address'}
+                </button>
               </div>
-              <div className="col-span-2">
-                <button type="submit" disabled={loading} className="btn-primary">{loading ? 'Saving...' : 'Save Address'}</button>
-              </div>
-            </form>
-          )}
-          {!user?.addresses.length && !adding ? (
-            <p className="font-body text-brand-muted text-sm text-center py-8">No saved addresses</p>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {user?.addresses.map((addr) => (
-                <div key={addr._id} className={`p-4 border-2 ${addr.isDefault ? 'border-primary bg-primary/5' : 'border-brand-border'}`}>
-                  <div className="flex items-start justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <span className="font-body text-xs bg-brand-text text-white px-2 py-0.5">{addr.label}</span>
-                      {addr.isDefault && <span className="font-body text-xs text-primary">Default</span>}
-                    </div>
-                    <button onClick={() => addr._id && handleRemove(addr._id)} className="text-brand-muted hover:text-red-500 text-xs">Remove</button>
-                  </div>
-                  <p className="font-body text-sm font-medium">{addr.fullName}</p>
-                  <p className="font-body text-sm text-brand-muted">{addr.line1}{addr.line2 ? `, ${addr.line2}` : ''}</p>
-                  <p className="font-body text-sm text-brand-muted">{addr.city}, {addr.state} - {addr.pincode}</p>
-                  <p className="font-body text-sm text-brand-muted">{addr.phone}</p>
-                </div>
-              ))}
             </div>
-          )}
-        </div>
+          </form>
+        )}
+
+        {!user?.addresses.length && !adding ? (
+          <div className="bg-white border border-dashed border-brand-border rounded-2xl py-16 px-6 text-center">
+            <div className="w-16 h-16 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center mx-auto mb-5">
+              <MapPin size={24} className="text-primary" />
+            </div>
+            <p className="font-heading text-lg font-semibold text-brand-text mb-1.5">No saved addresses</p>
+            <p className="font-body text-sm text-brand-muted mb-7">Add your first address for a faster checkout.</p>
+            <Link to="/products" className="btn-outline inline-flex">Start Shopping</Link>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {user?.addresses.map((addr) => {
+              const LabelIcon = LABEL_ICONS[addr.label] || MapPin;
+              return (
+                <div
+                  key={addr._id}
+                  className={`relative rounded-2xl border p-6 transition-all duration-300 ${
+                    addr.isDefault
+                      ? 'border-primary/60 bg-gradient-to-br from-primary/10 via-white to-white shadow-[0_8px_30px_rgba(200,169,126,0.15)]'
+                      : 'border-brand-border bg-white hover:border-primary/40 hover:shadow-[0_8px_30px_rgba(28,28,28,0.05)]'
+                  }`}
+                >
+                  <div className="flex items-start gap-4 mb-4">
+                    <div className={`w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 ${addr.isDefault ? 'bg-primary text-white' : 'bg-brand-surface text-brand-muted'}`}>
+                      <LabelIcon size={18} />
+                    </div>
+                    <div className="flex items-center gap-2 flex-wrap pt-1">
+                      <span className={`font-body text-[10px] font-bold uppercase tracking-[0.15em] px-2.5 py-1 rounded-full ${addr.isDefault ? 'bg-primary text-white' : 'bg-brand-surface text-brand-muted'}`}>
+                        {addr.label}
+                      </span>
+                      {addr.isDefault && (
+                        <span className="font-body text-[10px] font-semibold uppercase tracking-[0.15em] text-primary border border-primary/40 px-2.5 py-1 rounded-full">
+                          Default
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => addr._id && handleRemove(addr._id)}
+                      className="ml-auto w-8 h-8 rounded-full border border-transparent flex items-center justify-center text-brand-muted hover:text-red-500 hover:bg-red-50 hover:border-red-100 transition-all flex-shrink-0"
+                      title="Remove address"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                  <p className="font-body text-sm font-semibold text-brand-text">{addr.fullName}</p>
+                  <p className="font-body text-sm text-brand-muted leading-relaxed mt-0.5">
+                    {addr.line1}{addr.line2 ? `, ${addr.line2}` : ''},<br />
+                    {addr.city}, {addr.state} — {addr.pincode}
+                  </p>
+                  <p className="font-body text-xs text-brand-muted mt-2">{addr.phone}</p>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );

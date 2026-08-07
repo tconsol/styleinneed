@@ -163,7 +163,7 @@ export default function LoginPage() {
             {error && (
               <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
                 className="text-[12px] font-medium px-4 py-3 rounded-xl"
-                style={{ background: 'rgba(239,68,68,0.1)', color: '#EF4444', border: '1px solid rgba(239,68,68,0.2)' }}>
+                style={{ background: 'rgba(239,68,68,0.1)', color: 'var(--c-danger)', border: '1px solid rgba(239,68,68,0.2)' }}>
                 {error}
               </motion.p>
             )}

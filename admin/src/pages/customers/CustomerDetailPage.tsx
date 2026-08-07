@@ -18,17 +18,17 @@ interface Stats {
 }
 
 const STATUS_STYLE: Record<string, { bg: string; text: string; dot: string }> = {
-  pending:   { bg: '#FEF9C3', text: '#854D0E', dot: '#EAB308' },
-  confirmed: { bg: '#DBEAFE', text: '#1E40AF', dot: '#3B82F6' },
-  packed:    { bg: '#E0E7FF', text: '#3730A3', dot: '#6366F1' },
-  shipped:   { bg: '#EDE9FE', text: '#5B21B6', dot: '#8B5CF6' },
-  delivered: { bg: '#DCFCE7', text: '#166534', dot: '#22C55E' },
-  cancelled: { bg: '#FEE2E2', text: '#991B1B', dot: '#EF4444' },
-  returned:  { bg: '#FFEDD5', text: '#9A3412', dot: '#F97316' },
+  pending:   { bg: 'var(--c-warning-soft)', text: 'var(--c-warning)', dot: 'var(--c-warning)' },
+  confirmed: { bg: 'var(--c-info-soft)', text: 'var(--c-info)', dot: 'var(--c-info)' },
+  packed:    { bg: 'var(--c-info-soft)', text: 'var(--c-primary-dark)', dot: 'var(--c-info)' },
+  shipped:   { bg: 'var(--c-purple-soft)', text: 'var(--c-purple)', dot: 'var(--c-purple)' },
+  delivered: { bg: 'var(--c-success-soft)', text: 'var(--c-success)', dot: 'var(--c-success)' },
+  cancelled: { bg: 'var(--c-danger-soft)', text: 'var(--c-danger)', dot: 'var(--c-danger)' },
+  returned:  { bg: 'var(--c-orange-soft)', text: 'var(--c-orange)', dot: 'var(--c-orange)' },
 };
 
 function Avatar({ name, size = 56 }: { name: string; size?: number }) {
-  const colors = ['#4F46E5', '#0EA5E9', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'];
+  const colors = ['var(--c-primary)', 'var(--c-sky)', 'var(--c-success)', 'var(--c-warning)', 'var(--c-danger)', 'var(--c-purple)'];
   const c = colors[(name?.charCodeAt(0) || 0) % colors.length];
   return (
     <div className="rounded-full flex items-center justify-center text-white font-bold flex-shrink-0"
@@ -91,9 +91,9 @@ export default function CustomerDetailPage() {
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <h1 className="text-[18px] font-bold text-brand-text">{customer.name}</h1>
-              <span className="px-2 py-0.5 rounded-md text-[9px] font-semibold capitalize" style={{ background: '#EEF2FF', color: '#3730A3' }}>{customer.role}</span>
-              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-semibold ${customer.isActive ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-100 text-gray-500'}`}>
-                <span className={`w-1.5 h-1.5 rounded-full ${customer.isActive ? 'bg-emerald-500' : 'bg-gray-400'}`} /> {customer.isActive ? 'Active' : 'Inactive'}
+              <span className="px-2 py-0.5 rounded-md text-[9px] font-semibold capitalize" style={{ background: 'var(--c-primary-soft)', color: 'var(--c-primary-dark)' }}>{customer.role}</span>
+              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-semibold ${customer.isActive ? 'bg-emerald-50 text-emerald-700' : 'bg-brand-bg text-brand-muted'}`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${customer.isActive ? 'bg-emerald-500' : 'bg-brand-muted'}`} /> {customer.isActive ? 'Active' : 'Inactive'}
               </span>
             </div>
             <div className="flex flex-col gap-1 mt-2 text-[12px] text-brand-muted">
@@ -111,12 +111,12 @@ export default function CustomerDetailPage() {
 
       {/* Stat tiles */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-        <StatTile icon={ShoppingBag} label="Total Orders" value={stats?.totalOrders ?? 0} color="#4F46E5" />
-        <StatTile icon={Wallet} label="Total Spent" value={spent} color="#10B981" />
-        <StatTile icon={CheckCircle2} label="Delivered" value={s.delivered || 0} color="#22C55E" />
-        <StatTile icon={Package} label="Active" value={(s.pending || 0) + (s.confirmed || 0) + (s.packed || 0) + (s.shipped || 0)} color="#3B82F6" />
-        <StatTile icon={XCircle} label="Cancelled" value={s.cancelled || 0} color="#EF4444" />
-        <StatTile icon={RotateCcw} label="Returned" value={s.returned || 0} color="#F97316" />
+        <StatTile icon={ShoppingBag} label="Total Orders" value={stats?.totalOrders ?? 0} color="var(--c-primary)" />
+        <StatTile icon={Wallet} label="Total Spent" value={spent} color="var(--c-success)" />
+        <StatTile icon={CheckCircle2} label="Delivered" value={s.delivered || 0} color="var(--c-success)" />
+        <StatTile icon={Package} label="Active" value={(s.pending || 0) + (s.confirmed || 0) + (s.packed || 0) + (s.shipped || 0)} color="var(--c-info)" />
+        <StatTile icon={XCircle} label="Cancelled" value={s.cancelled || 0} color="var(--c-danger)" />
+        <StatTile icon={RotateCcw} label="Returned" value={s.returned || 0} color="var(--c-orange)" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
@@ -129,7 +129,7 @@ export default function CustomerDetailPage() {
             ) : (
               <div className="space-y-3">
                 {customer.addresses.map((a: CustomerAddress, i) => (
-                  <div key={a._id || i} className="rounded-xl bg-slate-50 p-3">
+                  <div key={a._id || i} className="rounded-xl bg-brand-bg p-3">
                     <div className="flex items-center gap-2 mb-1">
                       <span className="text-[9px] font-bold uppercase bg-brand-text text-white px-1.5 py-0.5 rounded">{a.label || 'Address'}</span>
                       {a.isDefault && <span className="text-[9px] text-indigo-500 font-semibold">Default</span>}
@@ -148,7 +148,7 @@ export default function CustomerDetailPage() {
         {/* Orders */}
         <div className="lg:col-span-2">
           <div className="bg-white rounded-2xl overflow-hidden" style={{ border: '1px solid var(--c-border)' }}>
-            <div className="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between">
+            <div className="px-5 py-3.5 border-b border-brand-border flex items-center justify-between">
               <h2 className="text-[13px] font-bold text-brand-text">Order History</h2>
               <span className="text-[11px] text-brand-muted">{orders.length} order{orders.length !== 1 ? 's' : ''}</span>
             </div>
@@ -158,21 +158,21 @@ export default function CustomerDetailPage() {
                 <p className="text-[11px] text-brand-muted">No orders yet</p>
               </div>
             ) : (
-              <div className="divide-y divide-slate-100">
+              <div className="divide-y divide-brand-border">
                 {orders.map((o) => {
                   const st = STATUS_STYLE[o.status] || STATUS_STYLE.pending;
                   return (
                     <Link key={o._id} to={`/orders/${o._id}`}
-                      className="flex items-center gap-3 px-5 py-3.5 hover:bg-slate-50 transition-colors">
+                      className="flex items-center gap-3 px-5 py-3.5 hover:bg-brand-bg transition-colors">
                       <div className="flex -space-x-2 flex-shrink-0">
                         {o.items?.slice(0, 3).map((it, i) => (
                           it.product?.images?.[0]
                             ? <img key={i} src={it.product.images[0]} alt="" className="w-9 h-11 object-cover rounded border-2 border-white" />
-                            : <div key={i} className="w-9 h-11 rounded border-2 border-white bg-slate-100" />
+                            : <div key={i} className="w-9 h-11 rounded border-2 border-white bg-brand-bg" />
                         ))}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="font-mono text-[11px] font-bold" style={{ color: '#4F46E5' }}>#{o.orderId?.slice(-12)}</p>
+                        <p className="font-mono text-[11px] font-bold" style={{ color: 'var(--c-primary)' }}>#{o.orderId?.slice(-12)}</p>
                         <p className="text-[10px] text-brand-muted">{formatDateTime(o.createdAt)} · {o.items?.length} item{(o.items?.length || 0) > 1 ? 's' : ''}</p>
                       </div>
                       <div className="text-right flex-shrink-0">

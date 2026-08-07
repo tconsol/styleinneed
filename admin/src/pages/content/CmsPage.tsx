@@ -302,7 +302,7 @@ export default function CmsPage() {
       {selected && def && !loading && (
         <button onClick={save} disabled={saving}
           className="fixed bottom-6 right-6 z-40 flex items-center gap-2 px-5 py-3 rounded-full font-body text-[13px] font-semibold text-white shadow-lg transition-all hover:brightness-110 disabled:opacity-70"
-          style={{ background: saved ? '#10B981' : 'var(--c-primary)', boxShadow: '0 8px 24px rgba(79,70,229,0.35)' }}>
+          style={{ background: saved ? 'var(--c-success)' : 'var(--c-primary)', boxShadow: '0 8px 24px rgba(79,70,229,0.35)' }}>
           {saving ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
             : saved ? <Check size={16} /> : <Save size={16} />}
           {saving ? 'Saving…' : saved ? 'Saved' : 'Save Changes'}
@@ -476,8 +476,8 @@ function GroupField({ groupKey, group, values, setMany }: {
             {count > group.min && (
               <button type="button" onClick={() => removeAt(i)} title="Remove"
                 className="flex items-center gap-1 text-[10px] font-semibold px-2 py-1 rounded-md"
-                style={{ color: '#EF4444' }}
-                onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = '#FEE2E2'; }}
+                style={{ color: 'var(--c-danger)' }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--c-danger-soft)'; }}
                 onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}>
                 <Trash2 size={11} /> Remove
               </button>

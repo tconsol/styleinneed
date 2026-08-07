@@ -11,25 +11,25 @@ import toast from 'react-hot-toast';
 const STATUSES = ['all', 'pending', 'confirmed', 'packed', 'shipped', 'delivered', 'returned', 'cancelled'];
 
 const STATUS_STYLE: Record<string, { bg: string; text: string; dot: string; pill: string }> = {
-  all:       { bg: '#EEF2FF', text: '#4F46E5', dot: '#4F46E5', pill: '#4F46E5' },
-  pending:   { bg: '#FEF9C3', text: '#854D0E', dot: '#EAB308', pill: '#EAB308' },
-  confirmed: { bg: '#DBEAFE', text: '#1E40AF', dot: '#3B82F6', pill: '#3B82F6' },
-  packed:    { bg: '#E0E7FF', text: '#3730A3', dot: '#6366F1', pill: '#6366F1' },
-  shipped:   { bg: '#EDE9FE', text: '#5B21B6', dot: '#8B5CF6', pill: '#8B5CF6' },
-  delivered: { bg: '#DCFCE7', text: '#166534', dot: '#22C55E', pill: '#22C55E' },
-  cancelled: { bg: '#FEE2E2', text: '#991B1B', dot: '#EF4444', pill: '#EF4444' },
-  returned:  { bg: '#FFEDD5', text: '#9A3412', dot: '#F97316', pill: '#F97316' },
+  all:       { bg: 'var(--c-primary-soft)', text: 'var(--c-primary)', dot: 'var(--c-primary)', pill: 'var(--c-primary)' },
+  pending:   { bg: 'var(--c-warning-soft)', text: 'var(--c-warning)', dot: 'var(--c-warning)', pill: 'var(--c-warning)' },
+  confirmed: { bg: 'var(--c-info-soft)', text: 'var(--c-info)', dot: 'var(--c-info)', pill: 'var(--c-info)' },
+  packed:    { bg: 'var(--c-info-soft)', text: 'var(--c-primary-dark)', dot: 'var(--c-info)', pill: 'var(--c-info)' },
+  shipped:   { bg: 'var(--c-purple-soft)', text: 'var(--c-purple)', dot: 'var(--c-purple)', pill: 'var(--c-purple)' },
+  delivered: { bg: 'var(--c-success-soft)', text: 'var(--c-success)', dot: 'var(--c-success)', pill: 'var(--c-success)' },
+  cancelled: { bg: 'var(--c-danger-soft)', text: 'var(--c-danger)', dot: 'var(--c-danger)', pill: 'var(--c-danger)' },
+  returned:  { bg: 'var(--c-orange-soft)', text: 'var(--c-orange)', dot: 'var(--c-orange)', pill: 'var(--c-orange)' },
 };
 
 const PAY_STYLE: Record<string, { bg: string; text: string; dot: string }> = {
-  paid:    { bg: '#DCFCE7', text: '#166534', dot: '#22C55E' },
-  pending: { bg: '#FEF9C3', text: '#854D0E', dot: '#EAB308' },
-  refunded: { bg: '#FFEDD5', text: '#9A3412', dot: '#F97316' },
-  failed:  { bg: '#FEE2E2', text: '#991B1B', dot: '#EF4444' },
+  paid:    { bg: 'var(--c-success-soft)', text: 'var(--c-success)', dot: 'var(--c-success)' },
+  pending: { bg: 'var(--c-warning-soft)', text: 'var(--c-warning)', dot: 'var(--c-warning)' },
+  refunded: { bg: 'var(--c-orange-soft)', text: 'var(--c-orange)', dot: 'var(--c-orange)' },
+  failed:  { bg: 'var(--c-danger-soft)', text: 'var(--c-danger)', dot: 'var(--c-danger)' },
 };
 
 function Avatar({ name }: { name: string }) {
-  const colors = ['#4F46E5','#0EA5E9','#10B981','#F59E0B','#EF4444','#8B5CF6','#06B6D4'];
+  const colors = ['var(--c-primary)','var(--c-sky)','var(--c-success)','var(--c-warning)','var(--c-danger)','var(--c-purple)','var(--c-sky)'];
   const c = colors[name.charCodeAt(0) % colors.length];
   return (
     <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-[11px] font-bold flex-shrink-0"
@@ -136,7 +136,7 @@ export default function OrdersPage() {
                 <tr key={i} style={{ borderBottom: '1px solid var(--c-border)' }}>
                   {Array.from({ length: 8 }).map((__, j) => (
                     <td key={j} className="px-3 py-3.5">
-                      <div className="h-3 rounded bg-slate-100 animate-pulse" style={{ width: j === 1 ? '120px' : j === 0 ? '80px' : '60px' }} />
+                      <div className="h-3 rounded bg-brand-bg animate-pulse" style={{ width: j === 1 ? '120px' : j === 0 ? '80px' : '60px' }} />
                     </td>
                   ))}
                 </tr>
@@ -162,7 +162,7 @@ export default function OrdersPage() {
                 >
                   {/* Order ID */}
                   <td className="pl-5 pr-3 py-3.5">
-                    <span className="font-mono text-[11px] font-bold" style={{ color: '#4F46E5' }}>
+                    <span className="font-mono text-[11px] font-bold" style={{ color: 'var(--c-primary)' }}>
                       #{order.orderId?.slice(-10) || order._id.slice(-8)}
                     </span>
                   </td>
@@ -187,7 +187,7 @@ export default function OrdersPage() {
                             <img key={i} src={item.product.images[0]} alt=""
                               className="w-7 h-8 object-cover rounded border-2 border-white flex-shrink-0" />
                           ) : (
-                            <div key={i} className="w-7 h-8 rounded border-2 border-white bg-slate-100 flex-shrink-0" />
+                            <div key={i} className="w-7 h-8 rounded border-2 border-white bg-brand-bg flex-shrink-0" />
                           )
                         ))}
                       </div>
@@ -232,10 +232,10 @@ export default function OrdersPage() {
                     <div className="flex items-center justify-center gap-1">
                       <button onClick={(e) => { e.stopPropagation(); navigate(`/orders/${order._id}`); }} title="View"
                         className="w-7 h-7 rounded-lg flex items-center justify-center transition-all hover:bg-indigo-50">
-                        <Eye size={13} style={{ color: '#4F46E5' }} />
+                        <Eye size={13} style={{ color: 'var(--c-primary)' }} />
                       </button>
                       <button onClick={(e) => { e.stopPropagation(); void handleDelete(order); }} title="Delete order"
-                        className="w-7 h-7 rounded-lg flex items-center justify-center transition-all text-slate-400 hover:bg-red-50 hover:text-red-500">
+                        className="w-7 h-7 rounded-lg flex items-center justify-center transition-all text-brand-muted hover:bg-red-50 hover:text-red-500">
                         <Trash2 size={13} />
                       </button>
                     </div>
@@ -259,7 +259,7 @@ export default function OrdersPage() {
                   <button key={p} onClick={(e) => { e.stopPropagation(); setPage(p); }}
                     className="w-7 h-7 text-[10px] font-semibold rounded-lg transition-all"
                     style={p === pagination.page
-                      ? { background: '#4F46E5', color: 'white' }
+                      ? { background: 'var(--c-primary)', color: 'white' }
                       : { background: 'var(--c-surface)', color: 'var(--c-muted)', border: '1px solid var(--c-border)' }}>
                     {p}
                   </button>

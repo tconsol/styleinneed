@@ -10,11 +10,11 @@ import toast from 'react-hot-toast';
 const STATUSES = ['all', 'requested', 'approved', 'processing', 'completed', 'rejected'];
 
 const STATUS_STYLE: Record<string, { bg: string; text: string; dot: string }> = {
-  requested:  { bg: '#FEF9C3', text: '#854D0E', dot: '#EAB308' },
-  approved:   { bg: '#DBEAFE', text: '#1E40AF', dot: '#3B82F6' },
-  processing: { bg: '#EDE9FE', text: '#5B21B6', dot: '#8B5CF6' },
-  completed:  { bg: '#DCFCE7', text: '#166534', dot: '#22C55E' },
-  rejected:   { bg: '#FEE2E2', text: '#991B1B', dot: '#EF4444' },
+  requested:  { bg: 'var(--c-warning-soft)', text: 'var(--c-warning)', dot: 'var(--c-warning)' },
+  approved:   { bg: 'var(--c-info-soft)', text: 'var(--c-info)', dot: 'var(--c-info)' },
+  processing: { bg: 'var(--c-purple-soft)', text: 'var(--c-purple)', dot: 'var(--c-purple)' },
+  completed:  { bg: 'var(--c-success-soft)', text: 'var(--c-success)', dot: 'var(--c-success)' },
+  rejected:   { bg: 'var(--c-danger-soft)', text: 'var(--c-danger)', dot: 'var(--c-danger)' },
 };
 
 export default function ReturnsPage() {
@@ -65,7 +65,7 @@ export default function ReturnsPage() {
           value={activeStatus}
           onChange={(v) => { setActiveStatus(v); setPage(1); }}
           tabs={STATUSES.map((s) => {
-            const st = STATUS_STYLE[s] || { bg: '#EEF2FF', text: '#4F46E5', dot: '#4F46E5' };
+            const st = STATUS_STYLE[s] || { bg: 'var(--c-primary-soft)', text: 'var(--c-primary)', dot: 'var(--c-primary)' };
             return { value: s, label: s === 'all' ? 'All Returns' : s, text: st.text, dot: st.dot };
           })}
         />
@@ -95,7 +95,7 @@ export default function ReturnsPage() {
                     onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--c-tr-hover)')}
                     onMouseLeave={(e) => (e.currentTarget.style.background = 'var(--c-surface)')}>
                     <td className="pl-5 px-3 py-3">
-                      <span className="font-mono text-[11px] font-bold" style={{ color: '#4F46E5' }}>#{r.order?.orderId?.slice(-8) || '—'}</span>
+                      <span className="font-mono text-[11px] font-bold" style={{ color: 'var(--c-primary)' }}>#{r.order?.orderId?.slice(-8) || '—'}</span>
                     </td>
                     <td className="px-3 py-3">
                       <p className="text-[11px] font-semibold text-brand-text">{r.user?.name}</p>
@@ -110,9 +110,9 @@ export default function ReturnsPage() {
                     </td>
                     <td className="px-3 py-3 text-[10px] text-brand-muted">{formatDate(r.createdAt)}</td>
                     <td className="px-3 py-3 text-center">
-                      <button onClick={() => openUpdate(r)} className="w-8 h-8 rounded-lg flex items-center justify-center mx-auto transition-all" style={{ color: '#64748B' }}
-                        onMouseEnter={(e) => { e.currentTarget.style.background = '#EEF2FF'; e.currentTarget.style.color = '#4F46E5'; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#64748B'; }}>
+                      <button onClick={() => openUpdate(r)} className="w-8 h-8 rounded-lg flex items-center justify-center mx-auto transition-all" style={{ color: 'var(--c-muted)' }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--c-primary-soft)'; e.currentTarget.style.color = 'var(--c-primary)'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--c-muted)'; }}>
                         <Edit2 size={13} />
                       </button>
                     </td>
@@ -130,7 +130,7 @@ export default function ReturnsPage() {
                   const p = Math.max(1, Math.min(page - 2, pagination.pages - 4)) + i;
                   return (
                     <button key={p} onClick={() => setPage(p)} className="w-7 h-7 text-[10px] font-semibold rounded-lg transition-all"
-                      style={p === page ? { background: '#4F46E5', color: 'white' } : { background: 'var(--c-surface)', color: 'var(--c-muted)', border: '1px solid var(--c-border)' }}>
+                      style={p === page ? { background: 'var(--c-primary)', color: 'white' } : { background: 'var(--c-surface)', color: 'var(--c-muted)', border: '1px solid var(--c-border)' }}>
                       {p}
                     </button>
                   );
@@ -144,7 +144,7 @@ export default function ReturnsPage() {
       <Modal open={!!selected} onClose={() => setSelected(null)} title="Update Return Request" size="sm">
         {selected && (
           <form onSubmit={handleUpdate} className="space-y-4">
-            <div className="p-3 rounded-xl" style={{ background: '#F8FAFC', border: '1px solid var(--c-border)' }}>
+            <div className="p-3 rounded-xl" style={{ background: 'var(--c-th-bg)', border: '1px solid var(--c-border)' }}>
               <p className="text-[11px] font-semibold text-brand-text">Order #{selected.order?.orderId?.slice(-8)}</p>
               <p className="text-[10px] text-brand-muted">{selected.user?.name} · {selected.reason?.replace(/_/g, ' ')}</p>
             </div>
@@ -156,7 +156,7 @@ export default function ReturnsPage() {
                     <button key={s} type="button" onClick={() => setForm({ ...form, status: s })}
                       className="px-2 py-1.5 rounded-lg text-[10px] font-semibold capitalize transition-all text-left flex items-center gap-1"
                       style={form.status === s ? { background: ss.bg, color: ss.text, boxShadow: `0 0 0 1.5px ${ss.dot}` } : { background: 'var(--c-bg)', color: 'var(--c-muted)' }}>
-                      <Circle size={5} fill={form.status === s ? ss.dot : '#CBD5E1'} style={{ color: form.status === s ? ss.dot : '#CBD5E1' }} />
+                      <Circle size={5} fill={form.status === s ? ss.dot : 'var(--c-border)'} style={{ color: form.status === s ? ss.dot : 'var(--c-border)' }} />
                       {s}
                     </button>
                   );

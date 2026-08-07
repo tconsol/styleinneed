@@ -48,7 +48,7 @@ export default function Select({ value, onChange, options, placeholder = 'Select
           border: open ? '1.5px solid var(--c-primary)' : '1.5px solid var(--c-border)',
           color: selected ? 'var(--c-text)' : 'var(--c-muted)',
           minHeight: '36px',
-          boxShadow: open ? '0 0 0 3px rgba(79,70,229,0.1)' : 'none',
+          boxShadow: open ? '0 0 0 3px var(--c-primary-soft)' : 'none',
           cursor: disabled ? 'not-allowed' : 'pointer',
           opacity: disabled ? 0.6 : 1,
         }}
@@ -57,7 +57,7 @@ export default function Select({ value, onChange, options, placeholder = 'Select
         <ChevronDown
           size={14}
           className="flex-shrink-0 transition-transform duration-200"
-          style={{ color: '#94A3B8', transform: open ? 'rotate(180deg)' : 'rotate(0deg)' }}
+          style={{ color: 'var(--c-muted)', transform: open ? 'rotate(180deg)' : 'rotate(0deg)' }}
         />
       </button>
 
@@ -82,7 +82,7 @@ export default function Select({ value, onChange, options, placeholder = 'Select
                 onClick={() => { onChange(opt.value); setOpen(false); }}
                 className="w-full flex items-center justify-between gap-2 px-3 py-2.5 text-[12px] text-left transition-colors"
                 style={{
-                  background: isSelected ? 'rgba(79,70,229,0.12)' : 'transparent',
+                  background: isSelected ? 'var(--c-primary-soft)' : 'transparent',
                   color: isSelected ? 'var(--c-primary)' : 'var(--c-text)',
                   fontWeight: isSelected ? 600 : 400,
                 }}
@@ -94,7 +94,7 @@ export default function Select({ value, onChange, options, placeholder = 'Select
                 }}
               >
                 <span>{opt.label}</span>
-                {isSelected && <Check size={12} style={{ color: '#4F46E5', flexShrink: 0 }} />}
+                {isSelected && <Check size={12} style={{ color: 'var(--c-primary)', flexShrink: 0 }} />}
               </button>
             );
           })}

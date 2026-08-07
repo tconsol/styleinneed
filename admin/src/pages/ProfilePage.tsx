@@ -76,7 +76,7 @@ export default function ProfilePage() {
             <p className="text-[12px] text-white/70 truncate flex items-center gap-1.5 mt-0.5"><Mail size={12} /> {user?.email}</p>
             <div className="flex items-center gap-2 mt-2.5">
               <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold capitalize"
-                style={{ background: 'rgba(255,255,255,0.9)', color: '#4338CA' }}>
+                style={{ background: 'rgba(255,255,255,0.9)', color: 'var(--c-primary-dark)' }}>
                 <ShieldCheck size={11} /> {roleLabel}
               </span>
               {user?.isActive !== false && (
@@ -95,7 +95,7 @@ export default function ProfilePage() {
         {/* Account details */}
         <form onSubmit={submit} className="card space-y-4">
           <div className="flex items-center gap-2 pb-1">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: '#EEF2FF', color: '#4338CA' }}>
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: 'var(--c-primary-soft)', color: 'var(--c-primary-dark)' }}>
               <UserCircle size={16} />
             </div>
             <div>
@@ -125,7 +125,7 @@ export default function ProfilePage() {
         <div className="card space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: '#DCFCE7', color: '#166534' }}>
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: 'var(--c-success-soft)', color: 'var(--c-success)' }}>
                 <Mail size={15} />
               </div>
               <div>
@@ -182,7 +182,7 @@ export default function ProfilePage() {
       {/* Security */}
       <div className="card flex items-center justify-between">
         <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: '#FEF3C7', color: '#92400E' }}>
+          <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: 'var(--c-warning-soft)', color: 'var(--c-warning)' }}>
             <KeyRound size={16} />
           </div>
           <div>
@@ -249,7 +249,7 @@ function ProviderBusinessCard() {
   return (
     <form onSubmit={save} className="card space-y-4">
       <div className="flex items-center gap-2 pb-1">
-        <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: '#F3E8FF', color: '#6B21A8' }}>
+        <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: 'var(--c-purple-soft)', color: 'var(--c-purple)' }}>
           <Building2 size={15} />
         </div>
         <div>

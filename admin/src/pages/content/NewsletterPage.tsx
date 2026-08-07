@@ -28,7 +28,7 @@ export default function NewsletterPage() {
           <h1 className="text-[15px] font-bold text-brand-text">Newsletter</h1>
           <p className="text-[10px] text-brand-muted mt-0.5">Manage email subscribers</p>
         </div>
-        <div className="flex items-center gap-3 px-4 py-3 rounded-xl" style={{ background: 'linear-gradient(135deg, #4F46E5, #6366F1)' }}>
+        <div className="flex items-center gap-3 px-4 py-3 rounded-xl" style={{ background: 'linear-gradient(135deg, var(--c-primary), var(--c-info))' }}>
           <Mail size={16} className="text-white" />
           <div>
             <p className="text-[18px] font-black text-white leading-none">{pagination.total}</p>
@@ -52,11 +52,11 @@ export default function NewsletterPage() {
             {loading ? (
               Array.from({ length: 6 }).map((_, i) => (
                 <tr key={i} style={{ borderBottom: '1px solid var(--c-border)' }}>
-                  <td className="pl-5 py-3"><div className="h-3 w-4 bg-slate-100 rounded animate-pulse" /></td>
-                  <td className="px-3 py-3"><div className="h-3 w-48 bg-slate-100 rounded animate-pulse" /></td>
-                  <td className="px-3 py-3"><div className="h-3 w-16 bg-slate-100 rounded animate-pulse mx-auto" /></td>
-                  <td className="px-3 py-3"><div className="h-5 w-16 bg-slate-100 rounded-full animate-pulse mx-auto" /></td>
-                  <td className="px-3 py-3"><div className="h-3 w-24 bg-slate-100 rounded animate-pulse" /></td>
+                  <td className="pl-5 py-3"><div className="h-3 w-4 bg-brand-bg rounded animate-pulse" /></td>
+                  <td className="px-3 py-3"><div className="h-3 w-48 bg-brand-bg rounded animate-pulse" /></td>
+                  <td className="px-3 py-3"><div className="h-3 w-16 bg-brand-bg rounded animate-pulse mx-auto" /></td>
+                  <td className="px-3 py-3"><div className="h-5 w-16 bg-brand-bg rounded-full animate-pulse mx-auto" /></td>
+                  <td className="px-3 py-3"><div className="h-3 w-24 bg-brand-bg rounded animate-pulse" /></td>
                 </tr>
               ))
             ) : subs.length === 0 ? (
@@ -68,18 +68,18 @@ export default function NewsletterPage() {
                 <td className="pl-5 py-3 text-[10px] font-bold text-brand-muted/60">{(page - 1) * 20 + idx + 1}</td>
                 <td className="px-3 py-3">
                   <div className="flex items-center gap-2.5">
-                    <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: '#EEF2FF' }}>
-                      <Mail size={12} style={{ color: '#4F46E5' }} />
+                    <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: 'var(--c-primary-soft)' }}>
+                      <Mail size={12} style={{ color: 'var(--c-primary)' }} />
                     </div>
                     <span className="text-[11px] font-medium text-brand-text">{s.email}</span>
                   </div>
                 </td>
                 <td className="px-3 py-3 text-center">
-                  <span className="px-2 py-0.5 rounded-md text-[9px] font-semibold capitalize" style={{ background: '#EEF2FF', color: '#4F46E5' }}>{s.source || 'website'}</span>
+                  <span className="px-2 py-0.5 rounded-md text-[9px] font-semibold capitalize" style={{ background: 'var(--c-primary-soft)', color: 'var(--c-primary)' }}>{s.source || 'website'}</span>
                 </td>
                 <td className="px-3 py-3 text-center">
-                  <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-semibold ${s.isSubscribed ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-100 text-gray-500'}`}>
-                    <span className={`w-1.5 h-1.5 rounded-full ${s.isSubscribed ? 'bg-emerald-500' : 'bg-gray-400'}`} />
+                  <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-semibold ${s.isSubscribed ? 'bg-emerald-50 text-emerald-700' : 'bg-brand-bg text-brand-muted'}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${s.isSubscribed ? 'bg-emerald-500' : 'bg-brand-muted'}`} />
                     {s.isSubscribed ? 'Subscribed' : 'Unsubscribed'}
                   </span>
                 </td>
@@ -97,7 +97,7 @@ export default function NewsletterPage() {
                 const p = Math.max(1, Math.min(page - 2, pagination.pages - 4)) + i;
                 return (
                   <button key={p} onClick={() => setPage(p)} className="w-7 h-7 text-[10px] font-semibold rounded-lg transition-all"
-                    style={p === page ? { background: '#4F46E5', color: 'white' } : { background: 'var(--c-surface)', color: 'var(--c-muted)', border: '1px solid var(--c-border)' }}>
+                    style={p === page ? { background: 'var(--c-primary)', color: 'white' } : { background: 'var(--c-surface)', color: 'var(--c-muted)', border: '1px solid var(--c-border)' }}>
                     {p}
                   </button>
                 );

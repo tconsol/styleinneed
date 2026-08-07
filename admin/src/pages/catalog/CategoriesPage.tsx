@@ -1,6 +1,6 @@
 ﻿import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Plus, Edit2, Trash2, FolderOpen } from 'lucide-react';
+import { Plus, Edit2, Trash2, FolderOpen, ImagePlus, X } from 'lucide-react';
 import Modal from '../../components/common/Modal';
 import Select from '../../components/common/Select';
 import { useConfirm } from '../../components/common/ConfirmDialog';
@@ -10,21 +10,21 @@ import { categoryApi } from '../../api';
 import type { Category } from '../../types';
 import toast from 'react-hot-toast';
 
-const empty = { name: '', productType: '', description: '', isActive: true, sortOrder: 0 };
+const empty = { name: '', productType: '', description: '', image: '', isActive: true, sortOrder: 0 };
 
 // Distinct chip colour per product type (deterministic by slug).
 const TYPE_COLORS: { bg: string; text: string }[] = [
-  { bg: '#EEF2FF', text: '#4338CA' }, // indigo
-  { bg: '#FEF3C7', text: '#92400E' }, // amber
-  { bg: '#DCFCE7', text: '#166534' }, // green
-  { bg: '#FCE7F3', text: '#9D174D' }, // pink
-  { bg: '#E0F2FE', text: '#075985' }, // sky
-  { bg: '#F3E8FF', text: '#6B21A8' }, // purple
-  { bg: '#FFEDD5', text: '#9A3412' }, // orange
-  { bg: '#CCFBF1', text: '#115E59' }, // teal
+  { bg: 'var(--c-primary-soft)', text: 'var(--c-primary-dark)' }, // indigo
+  { bg: 'var(--c-warning-soft)', text: 'var(--c-warning)' }, // amber
+  { bg: 'var(--c-success-soft)', text: 'var(--c-success)' }, // green
+  { bg: 'var(--c-pink-soft)', text: 'var(--c-pink)' }, // pink
+  { bg: 'var(--c-sky-soft)', text: '#075985' }, // sky
+  { bg: 'var(--c-purple-soft)', text: 'var(--c-purple)' }, // purple
+  { bg: 'var(--c-orange-soft)', text: 'var(--c-orange)' }, // orange
+  { bg: 'var(--c-teal-soft)', text: 'var(--c-teal)' }, // teal
 ];
 const typeColor = (slug?: string) => {
-  if (!slug) return { bg: '#F1F5F9', text: '#64748B' };
+  if (!slug) return { bg: 'var(--c-th-bg)', text: 'var(--c-muted)' };
   let h = 0;
   for (let i = 0; i < slug.length; i++) h = (h * 31 + slug.charCodeAt(i)) >>> 0;
   return TYPE_COLORS[h % TYPE_COLORS.length];
@@ -41,17 +41,39 @@ export default function CategoriesPage() {
   const [editing, setEditing] = useState<Category | null>(null);
   const [form, setForm] = useState(empty);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const confirm = useConfirm();
 
   const openNew = () => { setEditing(null); setForm(empty); setModal(true); };
   const openEdit = (c: Category) => {
     setEditing(c);
-    setForm({ name: c.name, productType: c.productType || '', description: c.description || '', isActive: c.isActive, sortOrder: c.sortOrder });
+    setForm({ name: c.name, productType: c.productType || '', description: c.description || '', image: c.image || '', isActive: c.isActive, sortOrder: c.sortOrder });
     setModal(true);
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append('image', file);
+      const { data } = await categoryApi.uploadImage(fd);
+      setForm((f) => ({ ...f, image: data.data.url }));
+      toast.success('Image uploaded');
+    } catch { /* error toast shown by api interceptor */ } finally {
+      setUploading(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleImageRemove = () => {
+    if (form.image) categoryApi.deleteImage(form.image).catch(() => {});
+    setForm((f) => ({ ...f, image: '' }));
   };
   const handleDelete = async (id: string) => {
     if (!(await confirm({ title: 'Delete category?', message: 'This will permanently delete it from the database.', confirmText: 'Delete', danger: true }))) return;
-    await categoryApi.delete(id).then(() => { toast.success('Category deleted'); refresh(); }).catch(() => {});
+    await categoryApi.delete(id).then(() => { toast.success('Category deleted'); refresh(); }).catch(() => { /* error toast shown by api interceptor */ });
   };
 
   const handleToggleStatus = async (c: Category) => {
@@ -70,7 +92,7 @@ export default function CategoriesPage() {
       if (editing) { await categoryApi.update(editing._id, form); toast.success('Category updated'); }
       else { await categoryApi.create(form); toast.success('Category created'); }
       setModal(false); refresh();
-    } catch {} finally { setSaving(false); }
+    } catch { /* error toast shown by api interceptor */ } finally { setSaving(false); }
   };
 
   return (
@@ -128,10 +150,14 @@ export default function CategoriesPage() {
                 {/* Name */}
                 <td className="px-3 py-3">
                   <div className="flex items-center gap-2.5">
-                    <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
-                      style={{ background: 'linear-gradient(135deg, #EEF2FF, #E0E7FF)' }}>
-                      <FolderOpen size={13} style={{ color: '#4F46E5' }} />
-                    </div>
+                    {c.image ? (
+                      <img src={c.image} alt={c.name} className="w-7 h-7 rounded-lg object-cover flex-shrink-0 border" style={{ borderColor: 'var(--c-border)' }} loading="lazy" />
+                    ) : (
+                      <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
+                        style={{ background: 'linear-gradient(135deg, var(--c-primary-soft), var(--c-info-soft))' }}>
+                        <FolderOpen size={13} style={{ color: 'var(--c-primary)' }} />
+                      </div>
+                    )}
                     <span className="text-[12px] font-semibold text-brand-text">{c.name}</span>
                   </div>
                 </td>
@@ -167,9 +193,9 @@ export default function CategoriesPage() {
                       onClick={() => openEdit(c)}
                       title="Edit"
                       className="w-8 h-8 rounded-lg flex items-center justify-center transition-all"
-                      style={{ color: '#64748B' }}
-                      onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = '#EEF2FF'; (e.currentTarget as HTMLElement).style.color = '#4F46E5'; }}
-                      onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.color = '#64748B'; }}
+                      style={{ color: 'var(--c-muted)' }}
+                      onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--c-primary-soft)'; (e.currentTarget as HTMLElement).style.color = 'var(--c-primary)'; }}
+                      onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.color = 'var(--c-muted)'; }}
                     >
                       <Edit2 size={13} />
                     </button>
@@ -177,9 +203,9 @@ export default function CategoriesPage() {
                       onClick={() => handleDelete(c._id)}
                       title="Deactivate"
                       className="w-8 h-8 rounded-lg flex items-center justify-center transition-all"
-                      style={{ color: '#64748B' }}
-                      onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = '#FEE2E2'; (e.currentTarget as HTMLElement).style.color = '#EF4444'; }}
-                      onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.color = '#64748B'; }}
+                      style={{ color: 'var(--c-muted)' }}
+                      onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--c-danger-soft)'; (e.currentTarget as HTMLElement).style.color = 'var(--c-danger)'; }}
+                      onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.color = 'var(--c-muted)'; }}
                     >
                       <Trash2 size={13} />
                     </button>
@@ -198,6 +224,46 @@ export default function CategoriesPage() {
           <div>
             <label className="input-label">Name *</label>
             <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="input-field" placeholder="e.g. Silk Sarees" required />
+          </div>
+          <div>
+            <label className="input-label">Image</label>
+            <div className="flex items-center gap-4">
+              {form.image ? (
+                <div className="relative w-20 h-20 rounded-xl overflow-hidden flex-shrink-0" style={{ border: '1px solid var(--c-border)' }}>
+                  <img src={form.image} alt="Category" className="w-full h-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={handleImageRemove}
+                    title="Remove image"
+                    className="absolute top-1 right-1 w-5 h-5 rounded-full bg-brand-text/80 text-white flex items-center justify-center hover:bg-red-500 transition-colors"
+                  >
+                    <X size={10} />
+                  </button>
+                </div>
+              ) : (
+                <div className="w-20 h-20 rounded-xl border-2 border-dashed flex items-center justify-center flex-shrink-0 text-brand-border" style={{ borderColor: 'var(--c-border)' }}>
+                  <ImagePlus size={20} />
+                </div>
+              )}
+              <div className="flex flex-col gap-2">
+                <label
+                  className={`inline-flex items-center gap-2 text-[11px] font-semibold px-4 py-2 rounded-lg cursor-pointer border transition-colors ${
+                    uploading ? 'opacity-60 pointer-events-none' : 'hover:bg-brand-bg'
+                  }`}
+                  style={{ borderColor: 'var(--c-border)', color: 'var(--c-muted)' }}
+                >
+                  <ImagePlus size={13} />
+                  {uploading ? 'Uploading...' : form.image ? 'Replace' : 'Upload'}
+                  <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} disabled={uploading} />
+                </label>
+                {form.image && (
+                  <button type="button" onClick={handleImageRemove} className="text-[11px] font-medium text-red-500 hover:underline text-left">
+                    Remove image
+                  </button>
+                )}
+              </div>
+            </div>
+            <p className="text-[10px] mt-1.5" style={{ color: 'var(--c-muted)' }}>Shown as the category tile on the storefront. JPG, PNG or WebP, max 2MB.</p>
           </div>
           <div>
             <label className="input-label">Product Type *</label>

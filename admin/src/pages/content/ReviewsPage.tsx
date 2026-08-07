@@ -40,7 +40,7 @@ export default function ReviewsPage() {
           {(['pending', 'all'] as const).map((f) => (
             <button key={f} onClick={() => setFilter(f)}
               className="px-4 py-1.5 text-[11px] font-semibold rounded-lg transition-all capitalize"
-              style={filter === f ? { background: 'var(--c-surface)', color: 'var(--c-primary)', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' } : { color: '#64748B' }}>
+              style={filter === f ? { background: 'var(--c-surface)', color: 'var(--c-primary)', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' } : { color: 'var(--c-muted)' }}>
               {f === 'pending' ? 'Pending Approval' : 'All Reviews'}
             </button>
           ))}
@@ -82,7 +82,7 @@ export default function ReviewsPage() {
                 </td>
                 <td className="px-3 py-3 text-center">
                   <div className="flex items-center justify-center gap-0.5">
-                    {[1,2,3,4,5].map((s) => <Star key={s} size={10} className={s <= r.rating ? 'fill-amber-400 text-amber-400' : 'text-slate-200'} />)}
+                    {[1,2,3,4,5].map((s) => <Star key={s} size={10} className={s <= r.rating ? 'fill-amber-400 text-amber-400' : 'text-brand-border'} />)}
                   </div>
                   <p className="text-[9px] text-brand-muted mt-0.5">{r.rating}/5</p>
                 </td>
@@ -90,7 +90,7 @@ export default function ReviewsPage() {
                   <p className="text-[11px] text-brand-muted line-clamp-2 max-w-[220px]">{r.body}</p>
                 </td>
                 <td className="px-3 py-3 text-center">
-                  <span className={`text-[10px] font-semibold ${r.isVerifiedPurchase ? 'text-emerald-600' : 'text-slate-400'}`}>
+                  <span className={`text-[10px] font-semibold ${r.isVerifiedPurchase ? 'text-emerald-600' : 'text-brand-muted'}`}>
                     {r.isVerifiedPurchase ? '✓ Yes' : '—'}
                   </span>
                 </td>
@@ -104,15 +104,15 @@ export default function ReviewsPage() {
                 <td className="px-3 py-3 text-center">
                   <div className="flex items-center justify-center gap-1">
                     {!r.isApproved && (
-                      <button onClick={() => handleApprove(r._id)} title="Approve" className="w-8 h-8 rounded-lg flex items-center justify-center transition-all" style={{ color: '#64748B' }}
-                        onMouseEnter={(e) => { e.currentTarget.style.background = '#DCFCE7'; e.currentTarget.style.color = '#16A34A'; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#64748B'; }}>
+                      <button onClick={() => handleApprove(r._id)} title="Approve" className="w-8 h-8 rounded-lg flex items-center justify-center transition-all" style={{ color: 'var(--c-muted)' }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--c-success-soft)'; e.currentTarget.style.color = '#16A34A'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--c-muted)'; }}>
                         <CheckCircle2 size={13} />
                       </button>
                     )}
-                    <button onClick={() => handleDelete(r._id)} title="Delete" className="w-8 h-8 rounded-lg flex items-center justify-center transition-all" style={{ color: '#64748B' }}
-                      onMouseEnter={(e) => { e.currentTarget.style.background = '#FEE2E2'; e.currentTarget.style.color = '#EF4444'; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#64748B'; }}>
+                    <button onClick={() => handleDelete(r._id)} title="Delete" className="w-8 h-8 rounded-lg flex items-center justify-center transition-all" style={{ color: 'var(--c-muted)' }}
+                      onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--c-danger-soft)'; e.currentTarget.style.color = 'var(--c-danger)'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--c-muted)'; }}>
                       <Trash2 size={13} />
                     </button>
                   </div>

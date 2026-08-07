@@ -90,8 +90,8 @@ export default function ProductTypesPage() {
                 <td className="pl-5 py-3 text-[10px] font-bold text-brand-muted/60">{idx + 1}</td>
                 <td className="px-3 py-3">
                   <div className="flex items-center gap-2.5">
-                    <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: 'linear-gradient(135deg, #EEF2FF, #E0E7FF)' }}>
-                      <Shapes size={13} style={{ color: '#4F46E5' }} />
+                    <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: 'linear-gradient(135deg, var(--c-primary-soft), var(--c-info-soft))' }}>
+                      <Shapes size={13} style={{ color: 'var(--c-primary)' }} />
                     </div>
                     <span className="text-[12px] font-semibold text-brand-text">{t.name}</span>
                   </div>
@@ -105,8 +105,8 @@ export default function ProductTypesPage() {
                 </td>
                 <td className="px-3 py-3 text-center">
                   <div className="flex items-center justify-center gap-1">
-                    <button onClick={() => openEdit(t)} title="Edit" className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ color: '#64748B' }}><Edit2 size={13} /></button>
-                    <button onClick={() => handleDelete(t._id)} title="Deactivate" className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ color: '#64748B' }}><Trash2 size={13} /></button>
+                    <button onClick={() => openEdit(t)} title="Edit" className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ color: 'var(--c-muted)' }}><Edit2 size={13} /></button>
+                    <button onClick={() => handleDelete(t._id)} title="Deactivate" className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ color: 'var(--c-muted)' }}><Trash2 size={13} /></button>
                   </div>
                 </td>
               </tr>

@@ -1,10 +1,27 @@
-﻿import { useState } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Camera, Share2, Play, MessageCircle, Check } from 'lucide-react';
 import toast from 'react-hot-toast';
 import PaymentLogos from '../common/PaymentLogos';
 import CurvedInput from '../common/CurvedInput';
 import { newsletterApi } from '../../api/misc.api';
+import { socket, SOCKET_EVENTS } from '../../lib/socket';
+
+// SVG presentation attributes can't resolve CSS var(), so read the computed
+// theme primary and re-read whenever the admin pushes a new theme.
+function useThemePrimary(): string {
+  const [color, setColor] = useState('rgb(200 169 126)');
+  useEffect(() => {
+    const read = () => {
+      const v = getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim();
+      if (v) setColor(`rgb(${v})`);
+    };
+    read();
+    socket.on(SOCKET_EVENTS.themeChanged, read);
+    return () => { socket.off(SOCKET_EVENTS.themeChanged, read); };
+  }, []);
+  return color;
+}
 
 const LINKS = {
   Shop: [
@@ -37,6 +54,7 @@ const LINKS = {
 
 export default function Footer() {
   const [status, setStatus] = useState<'idle' | 'loading' | 'done'>('idle');
+  const accent = useThemePrimary();
 
   const handleSubscribe = async (raw: string) => {
     const email = raw.trim();
@@ -57,7 +75,7 @@ export default function Footer() {
   };
 
   return (
-    <footer className="bg-brand-text text-white/80">
+    <footer className="bg-brand-text text-white/80 pb-[calc(var(--bottomnav-height)+env(safe-area-inset-bottom))] lg:pb-0">
       <div className="container-custom py-16">
         {/* Newsletter */}
         <div className="mb-14 flex flex-col gap-8 border-b border-white/10 pb-14 lg:flex-row lg:items-center lg:justify-between">
@@ -86,11 +104,11 @@ export default function Footer() {
                 width="100%"
                 fontSize={15}
                 cornerRadius={16}
-                backgroundColor="#211C18"
-                borderColor="#453C33"
-                buttonColor="#C8A97E"
-                buttonTextColor="#1C1C1C"
-                placeholderColor="#9C948A"
+                backgroundColor="rgba(255,255,255,0.06)"
+                borderColor="rgba(255,255,255,0.16)"
+                buttonColor={accent}
+                buttonTextColor="#ffffff"
+                placeholderColor="rgba(255,255,255,0.45)"
                 shadowSize="none"
                 onSubmit={handleSubscribe}
               />

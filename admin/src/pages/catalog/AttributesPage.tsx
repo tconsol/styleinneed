@@ -136,15 +136,15 @@ export default function AttributesPage() {
                   {a.productTypes?.length ? a.productTypes.join(', ') : <span className="italic">All types</span>}
                 </td>
                 <td className="px-3 py-3 text-center">
-                  <span className={`inline-block w-2 h-2 rounded-full ${a.isFilterable ? 'bg-emerald-500' : 'bg-gray-300'}`} />
+                  <span className={`inline-block w-2 h-2 rounded-full ${a.isFilterable ? 'bg-emerald-500' : 'bg-brand-border'}`} />
                 </td>
                 <td className="px-3 py-3 text-center">
                   <StatusToggle isActive={a.isActive} onToggle={() => void handleToggleStatus(a)} />
                 </td>
                 <td className="px-3 py-3 text-center">
                   <div className="flex items-center justify-center gap-1">
-                    <button onClick={() => openEdit(a)} title="Edit" className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ color: '#64748B' }}><Edit2 size={13} /></button>
-                    <button onClick={() => handleDelete(a._id)} title="Delete" className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ color: '#64748B' }}><Trash2 size={13} /></button>
+                    <button onClick={() => openEdit(a)} title="Edit" className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ color: 'var(--c-muted)' }}><Edit2 size={13} /></button>
+                    <button onClick={() => handleDelete(a._id)} title="Delete" className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ color: 'var(--c-muted)' }}><Trash2 size={13} /></button>
                   </div>
                 </td>
               </tr>

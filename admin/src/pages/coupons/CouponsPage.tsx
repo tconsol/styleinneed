@@ -12,11 +12,11 @@ const COUPON_TYPES = ['percentage', 'flat', 'free_shipping', 'first_order', 'fes
 const empty = { code: '', type: 'percentage', value: 0, minOrderValue: 0, maxDiscount: '', usageLimit: '', perUserLimit: 1, startDate: '', expiryDate: '', isActive: true, description: '' };
 
 const TYPE_COLORS: Record<string, { bg: string; text: string }> = {
-  percentage:   { bg: '#EEF2FF', text: '#4F46E5' },
-  flat:         { bg: '#DCFCE7', text: '#166534' },
-  free_shipping:{ bg: '#E0F2FE', text: '#0369A1' },
-  first_order:  { bg: '#FEF9C3', text: '#854D0E' },
-  festival:     { bg: '#FFEDD5', text: '#9A3412' },
+  percentage:   { bg: 'var(--c-primary-soft)', text: 'var(--c-primary)' },
+  flat:         { bg: 'var(--c-success-soft)', text: 'var(--c-success)' },
+  free_shipping:{ bg: 'var(--c-sky-soft)', text: 'var(--c-sky)' },
+  first_order:  { bg: 'var(--c-warning-soft)', text: 'var(--c-warning)' },
+  festival:     { bg: 'var(--c-orange-soft)', text: 'var(--c-orange)' },
 };
 
 export default function CouponsPage() {
@@ -100,14 +100,14 @@ export default function CouponsPage() {
                 <tr><td colSpan={9} className="text-center py-16"><Ticket size={32} className="mx-auto mb-2 text-brand-border" /><p className="text-[11px] text-brand-muted">No coupons yet</p></td></tr>
               ) : coupons.map((c, idx) => {
                 const isValid = c.isActive && new Date(c.expiryDate) > new Date();
-                const tc = TYPE_COLORS[c.type] || { bg: '#F1F5F9', text: '#64748B' };
+                const tc = TYPE_COLORS[c.type] || { bg: 'var(--c-th-bg)', text: 'var(--c-muted)' };
                 return (
                   <tr key={c._id} className="group transition-colors" style={{ borderBottom: '1px solid var(--c-border)' }}
                     onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--c-tr-hover)')}
                     onMouseLeave={(e) => (e.currentTarget.style.background = 'var(--c-surface)')}>
                     <td className="pl-5 py-3 text-[10px] font-bold text-brand-muted/60">{idx + 1}</td>
                     <td className="px-3 py-3">
-                      <span className="font-mono text-[12px] font-black" style={{ color: '#4F46E5' }}>{c.code}</span>
+                      <span className="font-mono text-[12px] font-black" style={{ color: 'var(--c-primary)' }}>{c.code}</span>
                     </td>
                     <td className="px-3 py-3">
                       <span className="px-2 py-0.5 rounded-md text-[9px] font-semibold capitalize" style={{ background: tc.bg, color: tc.text }}>{c.type.replace(/_/g, ' ')}</span>
@@ -124,14 +124,14 @@ export default function CouponsPage() {
                     </td>
                     <td className="px-3 py-3 text-center">
                       <div className="flex items-center justify-center gap-1">
-                        <button onClick={() => openEdit(c)} className="w-8 h-8 rounded-lg flex items-center justify-center transition-all" style={{ color: '#64748B' }}
-                          onMouseEnter={(e) => { e.currentTarget.style.background = '#EEF2FF'; e.currentTarget.style.color = '#4F46E5'; }}
-                          onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#64748B'; }}>
+                        <button onClick={() => openEdit(c)} className="w-8 h-8 rounded-lg flex items-center justify-center transition-all" style={{ color: 'var(--c-muted)' }}
+                          onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--c-primary-soft)'; e.currentTarget.style.color = 'var(--c-primary)'; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--c-muted)'; }}>
                           <Edit2 size={13} />
                         </button>
-                        <button onClick={() => couponApi.delete(c._id).then(() => { toast.success('Deleted'); load(); })} className="w-8 h-8 rounded-lg flex items-center justify-center transition-all" style={{ color: '#64748B' }}
-                          onMouseEnter={(e) => { e.currentTarget.style.background = '#FEE2E2'; e.currentTarget.style.color = '#EF4444'; }}
-                          onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#64748B'; }}>
+                        <button onClick={() => couponApi.delete(c._id).then(() => { toast.success('Deleted'); load(); })} className="w-8 h-8 rounded-lg flex items-center justify-center transition-all" style={{ color: 'var(--c-muted)' }}
+                          onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--c-danger-soft)'; e.currentTarget.style.color = 'var(--c-danger)'; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--c-muted)'; }}>
                           <Trash2 size={13} />
                         </button>
                       </div>

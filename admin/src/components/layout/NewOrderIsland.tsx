@@ -114,7 +114,7 @@ export default function NewOrderIsland({ alert, onClose }: Props) {
                 {alert.customerName ? ` · ${alert.customerName}` : ''}
               </p>
               {alert.total != null && (
-                <p style={{ fontSize: 11, color: '#818CF8', marginTop: 2 }}>
+                <p style={{ fontSize: 11, color: 'var(--c-primary)', marginTop: 2 }}>
                   ₹{alert.total.toLocaleString('en-IN')}
                 </p>
               )}
@@ -126,7 +126,7 @@ export default function NewOrderIsland({ alert, onClose }: Props) {
                 <circle cx="16" cy="16" r="13" fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="2.5" />
                 <circle
                   cx="16" cy="16" r="13" fill="none"
-                  stroke="#818CF8" strokeWidth="2.5"
+                  stroke="var(--c-primary)" strokeWidth="2.5"
                   strokeDasharray={`${2 * Math.PI * 13}`}
                   strokeDashoffset={`${2 * Math.PI * 13 * (1 - remaining / 30)}`}
                   strokeLinecap="round"
@@ -161,7 +161,7 @@ export default function NewOrderIsland({ alert, onClose }: Props) {
               initial={{ width: '100%' }}
               animate={{ width: `${(remaining / 30) * 100}%` }}
               transition={{ duration: 1, ease: 'linear' }}
-              style={{ height: '100%', background: 'linear-gradient(90deg, #4F46E5, #818CF8)' }}
+              style={{ height: '100%', background: 'linear-gradient(90deg, var(--c-primary), var(--c-primary))' }}
             />
           </div>
         </motion.div>

@@ -28,14 +28,14 @@ function EditModal({ title, onClose, onSave, saving, children }: {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.5)' }}>
       <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col" style={{ border: '1px solid var(--c-border)' }}>
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 flex-shrink-0">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-brand-border flex-shrink-0">
           <h2 className="text-[14px] font-bold text-brand-text">{title}</h2>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-100 text-brand-muted transition-colors">
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-brand-bg text-brand-muted transition-colors">
             <X size={16} />
           </button>
         </div>
         <div className="flex-1 overflow-y-auto px-6 py-5">{children}</div>
-        <div className="px-6 py-4 border-t border-slate-100 flex justify-end gap-2 flex-shrink-0">
+        <div className="px-6 py-4 border-t border-brand-border flex justify-end gap-2 flex-shrink-0">
           <button onClick={onClose} className="btn-outline text-[12px]">Cancel</button>
           <button onClick={onSave} disabled={saving} className="btn-primary text-[12px] disabled:opacity-60">
             {saving ? 'Saving...' : 'Save Provider'}
@@ -55,7 +55,7 @@ function ViewModal({ provider, onClose, onEdit, onPrev, onNext, position }: {
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.5)' }}>
       <div className="bg-white rounded-2xl w-full max-w-xl max-h-[90vh] flex flex-col" style={{ border: '1px solid var(--c-border)' }}>
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 flex-shrink-0">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-brand-border flex-shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
               style={{ background: `${CAT_COLORS[provider.category] || '#94A3B8'}18` }}>
@@ -71,22 +71,22 @@ function ViewModal({ provider, onClose, onEdit, onPrev, onNext, position }: {
               style={{ background: CAT_COLORS[provider.category] || '#94A3B8' }}>
               {provider.category}
             </span>
-            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-semibold ${provider.isActive ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}>
+            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-semibold ${provider.isActive ? 'bg-green-100 text-green-700' : 'bg-brand-bg text-brand-muted'}`}>
               {provider.isActive ? 'Active' : 'Inactive'}
             </span>
             {/* Prev / next provider navigation */}
-            <div className="flex items-center gap-0.5 ml-1 border-l border-slate-100 pl-2">
+            <div className="flex items-center gap-0.5 ml-1 border-l border-brand-border pl-2">
               <button onClick={onPrev} disabled={!onPrev} title="Previous provider"
-                className="p-1.5 rounded-lg hover:bg-slate-100 text-brand-muted transition-colors disabled:opacity-30 disabled:hover:bg-transparent">
+                className="p-1.5 rounded-lg hover:bg-brand-bg text-brand-muted transition-colors disabled:opacity-30 disabled:hover:bg-transparent">
                 <ChevronLeft size={16} />
               </button>
               {position && <span className="text-[10px] text-brand-muted tabular-nums min-w-[34px] text-center">{position}</span>}
               <button onClick={onNext} disabled={!onNext} title="Next provider"
-                className="p-1.5 rounded-lg hover:bg-slate-100 text-brand-muted transition-colors disabled:opacity-30 disabled:hover:bg-transparent">
+                className="p-1.5 rounded-lg hover:bg-brand-bg text-brand-muted transition-colors disabled:opacity-30 disabled:hover:bg-transparent">
                 <ChevronRight size={16} />
               </button>
             </div>
-            <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-100 text-brand-muted transition-colors ml-1">
+            <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-brand-bg text-brand-muted transition-colors ml-1">
               <X size={16} />
             </button>
           </div>
@@ -99,13 +99,13 @@ function ViewModal({ provider, onClose, onEdit, onPrev, onNext, position }: {
             <p className="text-[9px] font-bold uppercase tracking-widest text-brand-muted mb-2">Contact</p>
             <div className="grid grid-cols-2 gap-3">
               {provider.phone && (
-                <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-slate-50">
+                <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-brand-bg">
                   <Phone size={12} className="text-brand-muted flex-shrink-0" />
                   <span className="text-[12px] text-brand-text">{provider.phone}</span>
                 </div>
               )}
               {provider.email && (
-                <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-slate-50">
+                <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-brand-bg">
                   <Mail size={12} className="text-brand-muted flex-shrink-0" />
                   <span className="text-[12px] text-brand-text truncate">{provider.email}</span>
                 </div>
@@ -128,7 +128,7 @@ function ViewModal({ provider, onClose, onEdit, onPrev, onNext, position }: {
                 </div>
                 <div className="flex items-center justify-between pt-1 border-t border-indigo-100">
                   <span className="text-[9px] font-bold uppercase text-brand-muted">Status</span>
-                  <span className={`text-[10px] font-semibold ${provider.login.active ? 'text-emerald-600' : 'text-slate-400'}`}>{provider.login.active ? 'Can sign in' : 'Disabled'}</span>
+                  <span className={`text-[10px] font-semibold ${provider.login.active ? 'text-emerald-600' : 'text-brand-muted'}`}>{provider.login.active ? 'Can sign in' : 'Disabled'}</span>
                 </div>
               </div>
             </div>
@@ -138,7 +138,7 @@ function ViewModal({ provider, onClose, onEdit, onPrev, onNext, position }: {
           {(provider.address || provider.city || provider.state || provider.gstin) && (
             <div>
               <p className="text-[9px] font-bold uppercase tracking-widest text-brand-muted mb-2">Address & Tax</p>
-              <div className="rounded-xl bg-slate-50 px-4 py-3 space-y-1.5">
+              <div className="rounded-xl bg-brand-bg px-4 py-3 space-y-1.5">
                 {provider.address && (
                   <div className="flex items-start gap-2">
                     <MapPin size={11} className="text-brand-muted mt-0.5 flex-shrink-0" />
@@ -149,7 +149,7 @@ function ViewModal({ provider, onClose, onEdit, onPrev, onNext, position }: {
                   <p className="text-[12px] text-brand-muted pl-[19px]">{[provider.city, provider.state].filter(Boolean).join(', ')}</p>
                 )}
                 {provider.gstin && (
-                  <div className="flex items-center gap-2 pt-1 border-t border-slate-200 mt-1">
+                  <div className="flex items-center gap-2 pt-1 border-t border-brand-border mt-1">
                     <span className="text-[9px] font-bold uppercase text-brand-muted">GSTIN</span>
                     <span className="text-[11px] font-mono text-brand-text">{provider.gstin}</span>
                   </div>
@@ -162,7 +162,7 @@ function ViewModal({ provider, onClose, onEdit, onPrev, onNext, position }: {
           {hasBank && (
             <div>
               <p className="text-[9px] font-bold uppercase tracking-widest text-brand-muted mb-2">Bank Details</p>
-              <div className="rounded-xl bg-slate-50 px-4 py-3 space-y-2">
+              <div className="rounded-xl bg-brand-bg px-4 py-3 space-y-2">
                 <div className="flex items-center gap-2">
                   <CreditCard size={12} className="text-brand-muted flex-shrink-0" />
                   <span className="text-[12px] font-medium text-brand-text">{provider.bankName || '—'}</span>
@@ -205,7 +205,7 @@ function ViewModal({ provider, onClose, onEdit, onPrev, onNext, position }: {
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-slate-100 flex justify-end gap-2 flex-shrink-0">
+        <div className="px-6 py-4 border-t border-brand-border flex justify-end gap-2 flex-shrink-0">
           <button onClick={onClose} className="btn-outline text-[12px]">Close</button>
           <button onClick={onEdit} className="btn-primary text-[12px] gap-1.5"><Pencil size={12} /> Edit Provider</button>
         </div>
@@ -369,7 +369,7 @@ export default function ProvidersPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-[12px]">
               <thead>
-                <tr className="border-b border-slate-100 bg-slate-50">
+                <tr className="border-b border-brand-border bg-brand-bg">
                   <th className="text-left px-5 py-3 text-[10px] font-semibold uppercase tracking-wider text-brand-muted">Provider</th>
                   <th className="text-left px-4 py-3 text-[10px] font-semibold uppercase tracking-wider text-brand-muted">Contact</th>
                   <th className="text-left px-4 py-3 text-[10px] font-semibold uppercase tracking-wider text-brand-muted">Location</th>
@@ -380,7 +380,7 @@ export default function ProvidersPage() {
               </thead>
               <tbody>
                 {providers.map((p) => (
-                  <tr key={p._id} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
+                  <tr key={p._id} className="border-b border-brand-border hover:bg-brand-bg transition-colors">
                     <td className="px-5 py-3.5">
                       <p className="font-semibold text-brand-text">{p.name}</p>
                       {p.contactPerson && <p className="text-[10px] text-brand-muted mt-0.5">{p.contactPerson}</p>}
@@ -414,7 +414,7 @@ export default function ProvidersPage() {
                           <Eye size={12} />
                         </button>
                         <button onClick={() => openEdit(p)} title="Edit"
-                          className="p-1.5 rounded-lg hover:bg-slate-100 text-brand-muted hover:text-primary transition-colors">
+                          className="p-1.5 rounded-lg hover:bg-brand-bg text-brand-muted hover:text-primary transition-colors">
                           <Pencil size={12} />
                         </button>
                         <button onClick={() => void handleDelete(p)} title="Delete"
@@ -437,9 +437,9 @@ export default function ProvidersPage() {
           <span>Page {page} of {totalPages}</span>
           <div className="flex gap-1">
             <button disabled={page <= 1} onClick={() => setPage((p) => p - 1)}
-              className="p-1.5 rounded hover:bg-slate-100 disabled:opacity-40"><ChevronLeft size={13} /></button>
+              className="p-1.5 rounded hover:bg-brand-bg disabled:opacity-40"><ChevronLeft size={13} /></button>
             <button disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}
-              className="p-1.5 rounded hover:bg-slate-100 disabled:opacity-40"><ChevronRight size={13} /></button>
+              className="p-1.5 rounded hover:bg-brand-bg disabled:opacity-40"><ChevronRight size={13} /></button>
           </div>
         </div>
       )}
@@ -489,7 +489,7 @@ export default function ProvidersPage() {
             </div>
 
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-brand-muted mb-3 pt-1 border-t border-slate-100">Address</p>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-brand-muted mb-3 pt-1 border-t border-brand-border">Address</p>
               <div className="grid grid-cols-3 gap-3">
                 <div className="col-span-3">
                   <Field label="Street Address">
@@ -509,7 +509,7 @@ export default function ProvidersPage() {
             </div>
 
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-brand-muted mb-3 pt-1 border-t border-slate-100">Bank Details</p>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-brand-muted mb-3 pt-1 border-t border-brand-border">Bank Details</p>
               <div className="grid grid-cols-2 gap-3">
                 <Field label="Account Name">
                   <input value={form.bankAccountName} onChange={(e) => set('bankAccountName', e.target.value)} className="input-field" />
@@ -527,14 +527,14 @@ export default function ProvidersPage() {
             </div>
 
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-brand-muted mb-3 pt-1 border-t border-slate-100">Login Access</p>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-brand-muted mb-3 pt-1 border-t border-brand-border">Login Access</p>
               <div className="space-y-3">
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input type="checkbox" checked={form.canLogin} onChange={(e) => set('canLogin', e.target.checked)} className="accent-primary w-4 h-4" />
                   <span className="text-[12px] text-brand-text">Allow this provider to sign in and add products</span>
                 </label>
                 {form.canLogin && (
-                  <div className="grid grid-cols-2 gap-3 rounded-xl bg-slate-50 p-3">
+                  <div className="grid grid-cols-2 gap-3 rounded-xl bg-brand-bg p-3">
                     <Field label="Login Email">
                       <input type="email" value={form.loginEmail} onChange={(e) => set('loginEmail', e.target.value)} className="input-field" placeholder="provider@example.com" />
                     </Field>
@@ -551,7 +551,7 @@ export default function ProvidersPage() {
             </div>
 
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-brand-muted mb-3 pt-1 border-t border-slate-100">Other</p>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-brand-muted mb-3 pt-1 border-t border-brand-border">Other</p>
               <div className="space-y-3">
                 <Field label="Notes">
                   <textarea value={form.notes} onChange={(e) => set('notes', e.target.value)} rows={3} className="input-field resize-none" placeholder="Payment terms, lead times, specialties..." />

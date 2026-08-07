@@ -80,6 +80,105 @@ function RadioRow({ label, active, onClick }: { label: string; active: boolean; 
   );
 }
 
+const PRICE_MAX = 100_000;
+
+function PriceFilter({ min, max, onApply }: { min: number; max: number; onApply: (min: number, max: number) => void }) {
+  const [draft, setDraft] = useState<{ min: number; max: number } | null>(null);
+  const [custom, setCustom] = useState({ min: '', max: '' });
+
+  const lo = Math.max(0, Math.min(draft?.min ?? min, PRICE_MAX));
+  const hi = Math.max(0, Math.min(draft?.max ?? max, PRICE_MAX));
+
+  const commit = (next: { min: number; max: number }) => {
+    setDraft(null);
+    onApply(next.min, next.max);
+  };
+
+  const applyCustom = () => {
+    const cmin = Number(custom.min || '0');
+    const cmax = Number(custom.max || String(PRICE_MAX));
+    if (Number.isNaN(cmin) || Number.isNaN(cmax) || cmin < 0 || cmax < 0) return;
+    const mn = Math.min(cmin, cmax);
+    const mx = Math.max(cmin, cmax);
+    onApply(mn, mx);
+  };
+
+  const numCls = 'w-full min-w-0 px-2.5 py-2 bg-brand-surface border border-brand-border rounded-lg text-brand-text text-[12px] font-body outline-none focus:border-primary transition-colors placeholder:text-brand-muted/60';
+
+  return (
+    <div>
+      {PRICE_RANGES.map((r) => (
+        <RadioRow key={r.label} label={r.label} active={min === r.min && max === r.max} onClick={() => onApply(r.min, r.max)} />
+      ))}
+
+      <div className="mt-4 pt-4 border-t border-brand-border">
+        <p className="font-body text-[10px] font-bold uppercase tracking-[0.18em] text-brand-muted mb-2">Custom Range</p>
+        <div className="relative h-6 mb-2" onPointerUp={() => draft && commit(draft)}>
+          <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-1 rounded-full bg-brand-border" />
+          <div
+            className="absolute top-1/2 -translate-y-1/2 h-1 rounded-full bg-primary"
+            style={{ left: `${(lo / PRICE_MAX) * 100}%`, right: `${100 - (hi / PRICE_MAX) * 100}%` }}
+          />
+          <input
+            type="range"
+            min={0}
+            max={PRICE_MAX}
+            step={100}
+            value={lo}
+            aria-label="Minimum price"
+            onChange={(e) => setDraft((d) => ({ min: Math.min(Number(e.target.value), (d?.max ?? hi) - 100), max: d?.max ?? hi }))}
+            className="range-track"
+          />
+          <input
+            type="range"
+            min={0}
+            max={PRICE_MAX}
+            step={100}
+            value={hi}
+            aria-label="Maximum price"
+            onChange={(e) => setDraft((d) => ({ min: d?.min ?? lo, max: Math.max(Number(e.target.value), (d?.min ?? lo) + 100) }))}
+            className="range-track"
+          />
+        </div>
+        <div className="flex justify-between font-body text-[11px] text-brand-muted mb-3">
+          <span>₹{lo.toLocaleString('en-IN')}</span>
+          <span>{hi >= PRICE_MAX ? '₹1L+' : `₹${hi.toLocaleString('en-IN')}`}</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <input
+            type="number"
+            min={0}
+            max={PRICE_MAX}
+            value={custom.min}
+            placeholder="Min"
+            aria-label="Custom minimum price"
+            onChange={(e) => setCustom((c) => ({ ...c, min: e.target.value }))}
+            className={numCls}
+          />
+          <span className="text-brand-muted text-xs flex-shrink-0">–</span>
+          <input
+            type="number"
+            min={0}
+            max={PRICE_MAX}
+            value={custom.max}
+            placeholder="Max"
+            aria-label="Custom maximum price"
+            onChange={(e) => setCustom((c) => ({ ...c, max: e.target.value }))}
+            className={numCls}
+          />
+          <button
+            type="button"
+            onClick={applyCustom}
+            className="flex-shrink-0 px-3 py-2 bg-brand-text text-white text-[10px] font-body font-semibold uppercase tracking-wider rounded-lg hover:opacity-90 transition-opacity"
+          >
+            Apply
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ═══════════════════════════════════════════════════════════ */
 export default function ProductListPage() {
   const [params, setParams] = useSearchParams();
@@ -140,7 +239,17 @@ export default function ProductListPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search$]);
 
-  useEffect(() => { fetchProducts(); }, [fetchProducts]);
+  // Initial load — defer so setState happens outside the effect body
+  useEffect(() => {
+    void Promise.resolve().then(fetchProducts);
+  }, [fetchProducts]);
+
+  // Smoothly scroll back to the top of the results whenever the page changes.
+  const firstPaint = useRef(true);
+  useEffect(() => {
+    if (firstPaint.current) { firstPaint.current = false; return; }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [page]);
 
   // Real-time: refetch the grid when products/stock change anywhere
   useEffect(() => {
@@ -173,7 +282,8 @@ export default function ProductListPage() {
   const setParam = (key: string, value: string) => {
     const next = new URLSearchParams(params);
     if (value) next.set(key, value); else next.delete(key);
-    next.delete('page');
+    // Changing a filter/sort resets to page 1; setting the page itself must not.
+    if (key !== 'page') next.delete('page');
     setParams(next);
   };
   const toggleMulti = (key: string, value: string) => {
@@ -185,7 +295,8 @@ export default function ProductListPage() {
   };
   const setPriceRange = (min: number, max: number) => {
     const next = new URLSearchParams(params);
-    if (minPrice === String(min) && maxPrice === String(max)) { next.delete('minPrice'); next.delete('maxPrice'); }
+    if (min <= 0 && max >= PRICE_MAX) { next.delete('minPrice'); next.delete('maxPrice'); }
+    else if (minPrice === String(min) && maxPrice === String(max)) { next.delete('minPrice'); next.delete('maxPrice'); }
     else { next.set('minPrice', String(min)); next.set('maxPrice', String(max)); }
     next.delete('page'); setParams(next);
   };
@@ -295,10 +406,22 @@ export default function ProductListPage() {
         <>
           {categories
             .filter((cat) => !productType || cat.productType === productType)
-            .map((cat) => (
-              <CheckRow key={cat._id} label={cat.name} active={category === cat.slug}
-                onClick={() => setParam('category', category === cat.slug ? '' : cat.slug)} />
-            ))}
+            .map((cat) => {
+              const active = category === cat.slug;
+              return (
+                <button
+                  key={cat._id}
+                  onClick={() => setParam('category', active ? '' : cat.slug)}
+                  className={`w-full flex items-center gap-2.5 py-1.5 font-body text-[13px] transition-colors text-left ${active ? 'text-brand-text font-medium' : 'text-brand-muted hover:text-brand-text'}`}
+                >
+                  <span className={`w-[16px] h-[16px] border flex-shrink-0 flex items-center justify-center transition-colors ${active ? 'bg-brand-text border-brand-text' : 'border-brand-border'}`}>
+                    {active && <Check size={10} className="text-white" strokeWidth={3} />}
+                  </span>
+                  <img src={cat.image} alt="" className="w-7 h-7 rounded-md object-cover border border-brand-border flex-shrink-0" loading="lazy" />
+                  {cat.name}
+                </button>
+              );
+            })}
         </>
       ),
     },
@@ -316,13 +439,11 @@ export default function ProductListPage() {
     {
       key: 'price', label: 'Price', count: minPrice ? 1 : 0, defaultOpen: true,
       content: (
-        <>
-          {PRICE_RANGES.map((r) => (
-            <RadioRow key={r.label} label={r.label}
-              active={minPrice === String(r.min) && maxPrice === String(r.max)}
-              onClick={() => setPriceRange(r.min, r.max)} />
-          ))}
-        </>
+        <PriceFilter
+          min={minPrice ? Number(minPrice) : 0}
+          max={maxPrice ? Number(maxPrice) : PRICE_MAX}
+          onApply={setPriceRange}
+        />
       ),
     },
     // Dynamic, admin-defined attribute filters (Size, Colour, Fabric, ...)
@@ -345,17 +466,6 @@ export default function ProductListPage() {
       ),
     },
   ].filter(Boolean) as FilterGroup[];
-
-  /* ─── Desktop accordion sidebar (unchanged UX) ─── */
-  const Filters = () => (
-    <>
-      {filterGroups.map((g) => (
-        <Section key={g.key} title={g.label} count={g.count} defaultOpen={g.defaultOpen}>
-          {g.content}
-        </Section>
-      ))}
-    </>
-  );
 
   return (
     <div className="bg-brand-bg min-h-screen pb-[calc(var(--bottomnav-height)+env(safe-area-inset-bottom))] lg:pb-0" style={{ paddingTop: 'var(--topbar-height)' }}>
@@ -388,7 +498,11 @@ export default function ProductListPage() {
               </div>
               {activeCount > 0 && <button onClick={clearAll} className="font-body text-[11px] text-primary hover:text-primary-dark transition-colors">Clear all</button>}
             </div>
-            <Filters />
+            {filterGroups.map((g) => (
+              <Section key={g.key} title={g.label} count={g.count} defaultOpen={g.defaultOpen}>
+                {g.content}
+              </Section>
+            ))}
           </div>
         </aside>
 
@@ -421,7 +535,7 @@ export default function ProductListPage() {
                       className="absolute right-0 top-full mt-1 bg-white border border-brand-border shadow-luxury z-40 min-w-[210px]">
                       {SORT_OPTIONS.map((o) => (
                         <button key={o.value} onClick={() => { setParam('sort', o.value); setSortOpen(false); }}
-                          className={`w-full text-left px-4 py-2.5 font-body text-[12px] flex items-center justify-between transition-colors ${sort === o.value ? 'text-primary bg-brand-surface font-semibold' : 'text-brand-text hover:bg-brand-surface'}`}>
+                          className={`w-full text-left px-4 py-2.5 font-body text-[12px] flex items-center justify-between transition-colors ${sort === o.value ? 'text-primary bg-primary/10 font-semibold' : 'text-brand-text hover:bg-primary/5'}`}>
                           {o.label}
                           {sort === o.value && <Check size={12} className="text-primary" />}
                         </button>
@@ -468,14 +582,17 @@ export default function ProductListPage() {
               </div>
             ) : (
               <>
-                <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
+                <motion.div key={page}
+                  initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.35, ease: [0.25, 0.46, 0.45, 0.94] }}
+                  className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
                   {products.map((p, i) => (
                     <motion.div key={p._id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.25, delay: Math.min(i, 7) * 0.04 }}>
                       <ProductCard product={p} />
                     </motion.div>
                   ))}
-                </div>
+                </motion.div>
 
                 {pages > 1 && (
                   <div className="flex items-center justify-center gap-1 mt-12">
@@ -535,7 +652,7 @@ export default function ProductListPage() {
               <div className="px-2 py-2" style={{ paddingBottom: 'calc(0.5rem + env(safe-area-inset-bottom))' }}>
                 {SORT_OPTIONS.map((o) => (
                   <button key={o.value} onClick={() => { setParam('sort', o.value); setMobileSortOpen(false); }}
-                    className={`w-full text-left px-4 py-3.5 font-body text-[13px] flex items-center justify-between transition-colors ${sort === o.value ? 'text-primary bg-brand-surface font-semibold' : 'text-brand-text'}`}>
+                    className={`w-full text-left px-4 py-3.5 font-body text-[13px] flex items-center justify-between transition-colors rounded-lg ${sort === o.value ? 'text-primary bg-primary/10 font-semibold' : 'text-brand-text active:bg-primary/5'}`}>
                     {o.label}
                     {sort === o.value && <Check size={14} className="text-primary" />}
                   </button>

@@ -38,11 +38,20 @@ function buildCss(t: ThemeTokens): string {
   --c-th-bg:${t.bg};
   --c-tr-hover:rgba(${rgb},0.05);
   --c-primary-soft:rgba(${rgb},0.12);
+  --c-primary-rgb:${rgb};
+  --c-primary-light-rgb:${hexToRgb(t.primaryLight)};
+  --c-primary-dark-rgb:${hexToRgb(t.primaryDark)};
+  --c-bg-rgb:${hexToRgb(t.bg)};
+  --c-surface-rgb:${hexToRgb(t.surface)};
+  --c-text-rgb:${hexToRgb(t.text)};
+  --c-muted-rgb:${hexToRgb(t.muted)};
+  --c-border-rgb:${hexToRgb(t.border)};
 }
 .dark{
   --c-primary:${t.primaryLight};
   --c-tr-hover:rgba(${hexToRgb(t.primaryLight)},0.06);
   --c-primary-soft:rgba(${hexToRgb(t.primaryLight)},0.16);
+  --c-primary-rgb:${hexToRgb(t.primaryLight)};
 }`;
 }
 

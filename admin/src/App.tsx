@@ -110,7 +110,7 @@ export default function App() {
           toastOptions={{
             style: { fontFamily: 'var(--font-body)', fontSize: '12px', borderRadius: '10px', background: 'var(--c-surface)', color: 'var(--c-text)', border: '1px solid var(--c-border)', boxShadow: '0 4px 16px rgba(0,0,0,0.12)' },
             success: { iconTheme: { primary: 'var(--c-primary)', secondary: 'var(--c-surface)' } },
-            error: { iconTheme: { primary: '#EF4444', secondary: 'var(--c-surface)' } },
+            error: { iconTheme: { primary: 'var(--c-danger)', secondary: 'var(--c-surface)' } },
           }}
         />
       </BrowserRouter>

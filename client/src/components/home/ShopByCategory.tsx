@@ -24,12 +24,6 @@ interface FeaturedBanner {
   span: string;
 }
 
-const DEFAULT_FEATURED: FeaturedBanner[] = [
-  { title: 'Wedding Collection', subtitle: 'Silks & Lehengas', image: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=800&q=80', href: '/products?collection=wedding-collection', span: 'col-span-2 row-span-2' },
-  { title: 'New Arrivals', subtitle: 'Fresh every week', image: 'https://images.unsplash.com/photo-1583391733956-6c78276477e1?w=600&q=80', href: '/products?isNewArrival=true', span: 'col-span-1 row-span-1' },
-  { title: 'Festive Wear', subtitle: 'Season specials', image: 'https://images.unsplash.com/photo-1614093302611-8efc4c438a87?w=600&q=80', href: '/products?collection=festive-collection', span: 'col-span-1 row-span-1' },
-];
-
 // First tile is the large hero cell; the rest are standard cells. Works for any count.
 const spanFor = (i: number) => (i === 0 ? 'col-span-2 row-span-2' : 'col-span-1 row-span-1');
 
@@ -43,7 +37,7 @@ const featuredCount = (c: Record<string, string>, max = 12): number => {
 
 export default function ShopByCategory({ header }: { header?: SectionHeaderCms }) {
   const [categories, setCategories] = useState<Category[]>([]);
-  const [featured, setFeatured] = useState<FeaturedBanner[]>(DEFAULT_FEATURED);
+  const [featured, setFeatured] = useState<FeaturedBanner[]>([]);
 
   useEffect(() => {
     const loadCategories = () => {
@@ -61,12 +55,12 @@ export default function ShopByCategory({ header }: { header?: SectionHeaderCms }
           banners.push({
             title,
             subtitle: c[`cat_featured_${n}_subtitle`] || '',
-            image: c[`cat_featured_${n}_image`] || DEFAULT_FEATURED[i]?.image || '',
+            image: c[`cat_featured_${n}_image`] || '',
             href: c[`cat_featured_${n}_href`] || '/',
             span: spanFor(i),
           });
         }
-        setFeatured(banners.length ? banners : DEFAULT_FEATURED);
+        setFeatured(banners);
       }).catch(() => {});
     };
     loadCategories();
@@ -107,15 +101,9 @@ export default function ShopByCategory({ header }: { header?: SectionHeaderCms }
               >
                 <Link to={`/products?category=${cat.slug}`} className="group block text-center">
                   <div className="relative overflow-hidden rounded-full aspect-square mx-auto mb-3 bg-brand-border" style={{ maxWidth: '100px' }}>
-                    {cat.image ? (
-                      <img src={cat.image} alt={cat.name}
-                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                        loading="lazy" />
-                    ) : (
-                      <div className="w-full h-full bg-brand-surface flex items-center justify-center">
-                        <span className="font-heading text-xs text-brand-muted">{cat.name.charAt(0)}</span>
-                      </div>
-                    )}
+                    <img src={cat.image} alt={cat.name}
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                      loading="lazy" />
                     <div className="absolute inset-0 rounded-full bg-primary/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                   </div>
                   <h3 className="font-body text-xs sm:text-sm font-semibold text-brand-text group-hover:text-primary transition-colors leading-tight">{cat.name}</h3>

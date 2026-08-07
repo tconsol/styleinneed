@@ -10,7 +10,7 @@ interface AuthState {
   refreshToken: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<boolean>;
+  login: (email: string, password: string) => Promise<LoginResult>;
   googleLogin: (credential: string) => Promise<boolean>;
   logout: () => Promise<void>;
   setUser: (user: User) => void;
@@ -18,6 +18,8 @@ interface AuthState {
   fetchMe: () => Promise<void>;
   clearAuth: () => void;
 }
+
+export type LoginResult = { success: boolean; message?: string };
 
 export const useAuthStore = create<AuthState>()(
   persist(
@@ -37,10 +39,11 @@ export const useAuthStore = create<AuthState>()(
           localStorage.setItem('refreshToken', refreshToken);
           set({ user, accessToken, refreshToken, isAuthenticated: true, isLoading: false });
           toast.success(`Welcome back, ${user.name}!`);
-          return true;
-        } catch {
+          return { success: true };
+        } catch (err) {
           set({ isLoading: false });
-          return false;
+          const message = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+          return { success: false, message };
         }
       },
 
@@ -64,7 +67,7 @@ export const useAuthStore = create<AuthState>()(
         const { refreshToken } = get();
         try {
           if (refreshToken) await authApi.logout(refreshToken);
-        } catch {}
+        } catch { /* token already invalid — still clear locally */ }
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
         set({ user: null, accessToken: null, refreshToken: null, isAuthenticated: false });

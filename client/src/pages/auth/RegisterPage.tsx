@@ -14,6 +14,27 @@ const BENEFITS = [
   'Personalised style recommendations',
 ];
 
+const STRENGTH_LEVELS = [
+  { label: 'Weak',   segments: 1, bar: 'bg-red-400',     text: 'text-red-500' },
+  { label: 'Fair',   segments: 2, bar: 'bg-amber-400',   text: 'text-amber-600' },
+  { label: 'Good',   segments: 3, bar: 'bg-primary',     text: 'text-primary' },
+  { label: 'Strong', segments: 4, bar: 'bg-emerald-600', text: 'text-emerald-600' },
+];
+
+function getStrengthLevel(pw: string) {
+  if (!pw) return -1;
+  let score = 0;
+  if (pw.length >= 8) score++;
+  if (pw.length >= 12) score++;
+  if (/[a-z]/.test(pw) && /[A-Z]/.test(pw)) score++;
+  if (/\d/.test(pw)) score++;
+  if (/[^A-Za-z0-9]/.test(pw)) score++;
+  if (score <= 1) return 0;
+  if (score === 2) return 1;
+  if (score === 3) return 2;
+  return 3;
+}
+
 function GoogleIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -41,6 +62,7 @@ function RegisterForm() {
   const [showPw, setShowPw] = useState(false);
   const [showConfirmPw, setShowConfirmPw] = useState(false);
   const [loading, setLoading] = useState(false);
+  const strengthLevel = getStrengthLevel(form.password);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,8 +73,7 @@ function RegisterForm() {
       await authApi.register({ name: form.name, email: form.email, password: form.password, phone: form.phone || undefined });
       toast.success('Account created! Check your email for the verification OTP.');
       navigate('/auth/verify-email', { state: { email: form.email } });
-    } catch {
-    } finally { setLoading(false); }
+    } catch { /* error toast shown by api interceptor */ } finally { setLoading(false); }
   };
 
   const handleGoogle = useGoogleLogin({
@@ -154,11 +175,22 @@ function RegisterForm() {
                       {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
                     </button>
                   </div>
-                  {form.password && (
-                    <div className="flex gap-1 mt-1.5">
-                      {[4, 6, 8, 10].map((len) => (
-                        <div key={len} className={`flex-1 h-1 rounded-full transition-colors ${form.password.length >= len ? 'bg-primary' : 'bg-brand-border'}`} />
-                      ))}
+                  {strengthLevel >= 0 && (
+                    <div className="mt-2">
+                      <div className="flex gap-1.5">
+                        {[1, 2, 3, 4].map((i) => (
+                          <div
+                            key={i}
+                            className={`flex-1 h-1 rounded-full transition-all duration-300 ${i <= STRENGTH_LEVELS[strengthLevel].segments ? STRENGTH_LEVELS[strengthLevel].bar : 'bg-brand-border'}`}
+                          />
+                        ))}
+                      </div>
+                      <div className="flex items-center justify-between mt-1.5">
+                        <span className={`font-body text-[11px] font-semibold ${STRENGTH_LEVELS[strengthLevel].text}`}>
+                          {STRENGTH_LEVELS[strengthLevel].label}
+                        </span>
+                        <span className="font-body text-[10px] text-brand-muted">Use 8+ chars, mixed case, numbers & symbols</span>
+                      </div>
                     </div>
                   )}
                 </div>

@@ -10,16 +10,16 @@ import toast from 'react-hot-toast';
 const STATUSES = ['open', 'pending', 'resolved', 'closed'];
 
 const STATUS_STYLE: Record<string, { bg: string; text: string; dot: string }> = {
-  open:     { bg: '#DBEAFE', text: '#1E40AF', dot: '#3B82F6' },
-  pending:  { bg: '#FEF9C3', text: '#854D0E', dot: '#EAB308' },
-  resolved: { bg: '#DCFCE7', text: '#166534', dot: '#22C55E' },
-  closed:   { bg: '#F1F5F9', text: '#475569', dot: '#94A3B8' },
+  open:     { bg: 'var(--c-info-soft)', text: 'var(--c-info)', dot: 'var(--c-info)' },
+  pending:  { bg: 'var(--c-warning-soft)', text: 'var(--c-warning)', dot: 'var(--c-warning)' },
+  resolved: { bg: 'var(--c-success-soft)', text: 'var(--c-success)', dot: 'var(--c-success)' },
+  closed:   { bg: 'var(--c-th-bg)', text: 'var(--c-muted)', dot: 'var(--c-muted)' },
 };
 
 const PRIORITY_STYLE: Record<string, { bg: string; text: string }> = {
-  high:   { bg: '#FEE2E2', text: '#991B1B' },
-  medium: { bg: '#FEF9C3', text: '#854D0E' },
-  low:    { bg: '#DCFCE7', text: '#166534' },
+  high:   { bg: 'var(--c-danger-soft)', text: 'var(--c-danger)' },
+  medium: { bg: 'var(--c-warning-soft)', text: 'var(--c-warning)' },
+  low:    { bg: 'var(--c-success-soft)', text: 'var(--c-success)' },
 };
 
 export default function SupportTicketDetailPage() {
@@ -88,7 +88,7 @@ export default function SupportTicketDetailPage() {
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <span className="font-mono text-[13px] font-black" style={{ color: '#4F46E5' }}>{ticket.ticketId}</span>
+              <span className="font-mono text-[13px] font-black" style={{ color: 'var(--c-primary)' }}>{ticket.ticketId}</span>
               <span className="px-2 py-0.5 rounded-md text-[9px] font-semibold capitalize" style={{ background: ps.bg, color: ps.text }}>{ticket.priority}</span>
             </div>
             <p className="text-[13px] font-semibold text-brand-text">{ticket.subject}</p>
@@ -101,7 +101,7 @@ export default function SupportTicketDetailPage() {
           </span>
         </div>
 
-        <div className="mt-4 pt-4 border-t border-slate-100">
+        <div className="mt-4 pt-4 border-t border-brand-border">
           <label className="input-label">Change Status</label>
           <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
             {STATUSES.map((s) => {
@@ -113,7 +113,7 @@ export default function SupportTicketDetailPage() {
                   <span style={isSelected
                     ? { background: sm.bg, color: sm.text, boxShadow: `0 0 0 1.5px ${sm.dot}`, borderRadius: 8, padding: '6px 10px', display: 'inline-flex', alignItems: 'center', gap: 4 }
                     : { background: 'var(--c-bg)', color: 'var(--c-muted)', borderRadius: 8, padding: '6px 10px', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                    <Circle size={5} fill={isSelected ? sm.dot : '#CBD5E1'} style={{ color: isSelected ? sm.dot : '#CBD5E1' }} />
+                    <Circle size={5} fill={isSelected ? sm.dot : 'var(--c-border)'} style={{ color: isSelected ? sm.dot : 'var(--c-border)' }} />
                     {s}
                   </span>
                 </button>
@@ -127,10 +127,10 @@ export default function SupportTicketDetailPage() {
         {/* LEFT: Message thread */}
         <div className="lg:col-span-2 space-y-5">
           <div className="bg-white rounded-2xl overflow-hidden" style={{ border: '1px solid var(--c-border)' }}>
-            <div className="px-5 py-4 border-b border-slate-100">
+            <div className="px-5 py-4 border-b border-brand-border">
               <h2 className="text-[13px] font-bold text-brand-text">Conversation</h2>
             </div>
-            <div className="divide-y divide-slate-100 max-h-[520px] overflow-y-auto">
+            <div className="divide-y divide-brand-border max-h-[520px] overflow-y-auto">
               {messages.length === 0 ? (
                 <p className="text-[11px] text-brand-muted text-center py-8">No messages yet</p>
               ) : messages.map((m, i) => {
@@ -141,7 +141,7 @@ export default function SupportTicketDetailPage() {
                     <div className="flex items-center gap-2 mb-1.5">
                       <span className="text-[11px] font-semibold text-brand-text">{senderObj?.name || (isCustomer ? ticket.user?.name : 'Staff')}</span>
                       <span className="text-[9px] px-1.5 py-0.5 rounded-full font-semibold capitalize"
-                        style={{ background: isCustomer ? '#F1F5F9' : '#EEF2FF', color: isCustomer ? '#475569' : '#4F46E5' }}>
+                        style={{ background: isCustomer ? 'var(--c-th-bg)' : 'var(--c-primary-soft)', color: isCustomer ? 'var(--c-muted)' : 'var(--c-primary)' }}>
                         {m.senderRole}
                       </span>
                       {m.isInternal && (
@@ -158,7 +158,7 @@ export default function SupportTicketDetailPage() {
             </div>
 
             {/* Reply box */}
-            <form onSubmit={handleReply} className="px-5 py-4 border-t border-slate-100 space-y-2" style={{ background: 'var(--c-th-bg)' }}>
+            <form onSubmit={handleReply} className="px-5 py-4 border-t border-brand-border space-y-2" style={{ background: 'var(--c-th-bg)' }}>
               <textarea value={reply} onChange={(e) => setReply(e.target.value)} rows={3}
                 placeholder="Type a reply to the customer..." className="input-field resize-none" />
               <div className="flex items-center justify-between">
@@ -178,8 +178,8 @@ export default function SupportTicketDetailPage() {
         <div className="space-y-4">
           <div className="bg-white rounded-2xl p-5" style={{ border: '1px solid var(--c-border)' }}>
             <div className="flex items-center gap-2 mb-4">
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: '#EEF2FF' }}>
-                <User size={14} style={{ color: '#4F46E5' }} />
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'var(--c-primary-soft)' }}>
+                <User size={14} style={{ color: 'var(--c-primary)' }} />
               </div>
               <h2 className="text-[13px] font-bold text-brand-text">Customer</h2>
             </div>
@@ -200,7 +200,7 @@ export default function SupportTicketDetailPage() {
             {ticket.images && ticket.images.length > 0 && (
               <div className="flex items-center gap-2 mt-3 flex-wrap">
                 {ticket.images.map((url, i) => (
-                  <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="w-14 h-14 rounded-lg overflow-hidden bg-slate-100 flex-shrink-0">
+                  <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="w-14 h-14 rounded-lg overflow-hidden bg-brand-bg flex-shrink-0">
                     <img src={url} alt="" className="w-full h-full object-cover" />
                   </a>
                 ))}

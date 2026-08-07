@@ -1,19 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Eye, EyeOff, ArrowRight, ArrowLeft, Home } from 'lucide-react';
+import { Eye, EyeOff, ArrowRight, ArrowLeft, Home, AlertCircle } from 'lucide-react';
 import { GoogleOAuthProvider, useGoogleLogin } from '@react-oauth/google';
 import { useAuthStore } from '../../stores/authStore';
 import { useCartStore } from '../../stores/cartStore';
 import { useWishlistStore } from '../../stores/wishlistStore';
 import { cmsApi } from '../../api/misc.api';
 import { socket, SOCKET_EVENTS } from '../../lib/socket';
-
-const FASHION_IMAGES = [
-  'https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=900&q=80',
-  'https://images.unsplash.com/photo-1583391733956-6c78276477e1?w=900&q=80',
-  'https://images.unsplash.com/photo-1614093302611-8efc4c438a87?w=900&q=80',
-];
 
 // Login side-panel content, admin-editable via the "Login Page" CMS.
 interface AuthCms {
@@ -24,7 +18,7 @@ const AUTH_DEFAULT: AuthCms = {
   eyebrow: 'STYLE IN NEED FASHIONS',
   heading: 'Where Heritage\nMeets Elegance',
   subtitle: "Discover 5000+ handpicked styles from India's finest weavers and designers.",
-  images: FASHION_IMAGES,
+  images: [],
   stats: [{ value: '5000+', label: 'Styles' }, { value: '50K+', label: 'Customers' }, { value: '4.8★', label: 'Rating' }],
 };
 
@@ -37,7 +31,7 @@ function parseAuthCms(c: Record<string, string>): AuthCms {
     eyebrow: c.login_eyebrow || AUTH_DEFAULT.eyebrow,
     heading: c.login_heading || AUTH_DEFAULT.heading,
     subtitle: c.login_subtitle || AUTH_DEFAULT.subtitle,
-    images: images.length ? images : AUTH_DEFAULT.images,
+    images,
     stats: stats.length ? stats : AUTH_DEFAULT.stats,
   };
 }
@@ -74,8 +68,9 @@ function LoginForm() {
 
   const [form, setForm] = useState({ email: '', password: '' });
   const [showPw, setShowPw] = useState(false);
+  const [loginError, setLoginError] = useState('');
   const [cms, setCms] = useState<AuthCms>(AUTH_DEFAULT);
-  const [imgSeed] = useState(Math.random());
+  const [imgSeed] = useState(() => Math.random());
 
   useEffect(() => {
     const load = (fresh = false) => {
@@ -91,7 +86,6 @@ function LoginForm() {
   }, []);
 
   const image = cms.images[Math.floor(imgSeed * cms.images.length)] || cms.images[0];
-
   const afterLogin = async () => {
     await Promise.all([fetchCart(), fetchWishlist()]);
     navigate(from, { replace: true });
@@ -99,9 +93,15 @@ function LoginForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const ok = await login(form.email, form.password);
-    if (ok) await afterLogin();
+    const res = await login(form.email, form.password);
+    if (res.success) await afterLogin();
+    else setLoginError(res.message || 'Invalid email or password');
   };
+
+  const inputCls = (invalid: boolean) =>
+    `w-full px-4 py-3 bg-brand-surface border text-brand-text text-sm outline-none transition-all duration-200 placeholder:text-brand-muted/60 rounded-lg ${
+      invalid ? 'border-red-300 focus:border-red-400' : 'border-brand-border focus:border-primary focus:bg-brand-bg'
+    }`;
 
   const handleGoogle = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
@@ -114,6 +114,7 @@ function LoginForm() {
   return (
     <div className="min-h-screen flex bg-brand-bg">
       {/* Left — Image (desktop only) */}
+      {image && (
       <div className="hidden lg:block relative w-[45%] xl:w-1/2 flex-shrink-0">
         <img src={image} alt="Fashion" className="absolute inset-0 w-full h-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-r from-brand-text/60 via-brand-text/30 to-transparent" />
@@ -139,6 +140,7 @@ function LoginForm() {
           </motion.div>
         </div>
       </div>
+      )}
 
       {/* Right — Form */}
       <div className="flex-1 flex flex-col overflow-y-auto">
@@ -194,13 +196,20 @@ function LoginForm() {
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
+              {loginError && (
+                <div className="flex items-center gap-2.5 px-4 py-3 bg-red-50 border border-red-200 rounded-lg">
+                  <AlertCircle size={16} className="text-red-500 flex-shrink-0" />
+                  <p className="font-body text-[13px] text-red-600">{loginError}</p>
+                </div>
+              )}
+
               <div>
                 <label className="font-body text-xs font-semibold text-brand-muted uppercase tracking-wider block mb-1.5">Email Address</label>
                 <input
                   type="email"
                   value={form.email}
-                  onChange={(e) => setForm({ ...form, email: e.target.value })}
-                  className="w-full px-4 py-3 bg-brand-surface border border-brand-border text-brand-text text-sm outline-none focus:border-primary focus:bg-brand-bg transition-all duration-200 placeholder:text-brand-muted/60 rounded-lg"
+                  onChange={(e) => { setForm({ ...form, email: e.target.value }); setLoginError(''); }}
+                  className={inputCls(!!loginError)}
                   placeholder="you@example.com"
                   required
                   autoComplete="email"
@@ -218,8 +227,8 @@ function LoginForm() {
                   <input
                     type={showPw ? 'text' : 'password'}
                     value={form.password}
-                    onChange={(e) => setForm({ ...form, password: e.target.value })}
-                    className="w-full px-4 py-3 bg-brand-surface border border-brand-border text-brand-text text-sm outline-none focus:border-primary focus:bg-brand-bg transition-all duration-200 placeholder:text-brand-muted/60 pr-12 rounded-lg"
+                    onChange={(e) => { setForm({ ...form, password: e.target.value }); setLoginError(''); }}
+                    className={`${inputCls(!!loginError)} pr-12`}
                     placeholder="Enter your password"
                     required
                     autoComplete="current-password"

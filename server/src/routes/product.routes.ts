@@ -5,12 +5,17 @@ import {
   uploadProductImages, deleteProductImage, searchProducts,
 } from '../controllers/product.controller';
 import { protect, isProviderOrAdmin } from '../middleware/auth';
-import { productUpload } from '../middleware/upload';
+import { productUpload, sheetUpload } from '../middleware/upload';
 import { cache, flushCache } from '../middleware/cache';
+import { downloadTemplate, bulkUpload } from '../controllers/productBulk.controller';
 
 const router = Router();
 
 const flushProducts = flushCache('/api/v1/products');
+
+// Bulk Excel import (before '/:slug' so these paths aren't captured as slugs)
+router.get('/bulk/template', protect, isProviderOrAdmin, downloadTemplate);
+router.post('/bulk/upload', protect, isProviderOrAdmin, flushProducts, sheetUpload.single('file'), bulkUpload);
 
 router.get('/', cache(60), getProducts);
 router.get('/search', searchProducts);

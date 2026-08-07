@@ -5,13 +5,19 @@ export default {
   theme: {
     extend: {
       colors: {
-        primary: { DEFAULT: '#4F46E5', light: '#818CF8', dark: '#3730A3' },
+        // Themeable — resolve from CSS vars so every brand/primary utility follows
+        // the active theme (with opacity support via <alpha-value>).
+        primary: {
+          DEFAULT: 'rgb(var(--c-primary-rgb) / <alpha-value>)',
+          light: 'rgb(var(--c-primary-light-rgb) / <alpha-value>)',
+          dark: 'rgb(var(--c-primary-dark-rgb) / <alpha-value>)',
+        },
         brand: {
-          bg: '#F1F5F9',
-          surface: '#FFFFFF',
-          border: '#E2E8F0',
-          text: '#1E293B',
-          muted: '#64748B',
+          bg: 'rgb(var(--c-bg-rgb) / <alpha-value>)',
+          surface: 'rgb(var(--c-surface-rgb) / <alpha-value>)',
+          border: 'rgb(var(--c-border-rgb) / <alpha-value>)',
+          text: 'rgb(var(--c-text-rgb) / <alpha-value>)',
+          muted: 'rgb(var(--c-muted-rgb) / <alpha-value>)',
           sidebar: '#0F0E2E',
           'sidebar-hover': '#1A1854',
           'sidebar-accent': '#818CF8',

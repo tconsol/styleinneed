@@ -12,12 +12,12 @@ import toast from 'react-hot-toast';
 const ROLES = ['customer', 'admin'];
 
 const ROLE_COLORS: Record<string, { bg: string; text: string }> = {
-  customer: { bg: '#F1F5F9', text: '#475569' },
-  admin:    { bg: '#EEF2FF', text: '#3730A3' },
+  customer: { bg: 'var(--c-th-bg)', text: 'var(--c-muted)' },
+  admin:    { bg: 'var(--c-primary-soft)', text: 'var(--c-primary-dark)' },
 };
 
 function Avatar({ name, email }: { name: string; email: string }) {
-  const colors = ['#4F46E5','#0EA5E9','#10B981','#F59E0B','#EF4444','#8B5CF6'];
+  const colors = ['var(--c-primary)','var(--c-sky)','var(--c-success)','var(--c-warning)','var(--c-danger)','var(--c-purple)'];
   const c = colors[(name.charCodeAt(0) + email.charCodeAt(0)) % colors.length];
   return (
     <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-[11px] font-bold flex-shrink-0" style={{ background: c }}>
@@ -105,7 +105,7 @@ export default function CustomersPage() {
                 Array.from({ length: 5 }).map((_, i) => (
                   <tr key={i} style={{ borderBottom: '1px solid var(--c-border)' }}>
                     {Array.from({ length: 7 }).map((__, j) => (
-                      <td key={j} className="px-3 py-3.5"><div className="h-3 rounded bg-slate-100 animate-pulse" style={{ width: j === 1 ? '140px' : '70px' }} /></td>
+                      <td key={j} className="px-3 py-3.5"><div className="h-3 rounded bg-brand-bg animate-pulse" style={{ width: j === 1 ? '140px' : '70px' }} /></td>
                     ))}
                   </tr>
                 ))
@@ -145,11 +145,11 @@ export default function CustomersPage() {
                     <td className="px-3 py-3">
                       <div className="flex items-center justify-center gap-1">
                         <button onClick={() => navigate(`/customers/${c._id}`)} title="View details"
-                          className="w-8 h-8 rounded-lg flex items-center justify-center transition-all text-slate-500 hover:bg-indigo-50 hover:text-indigo-600">
+                          className="w-8 h-8 rounded-lg flex items-center justify-center transition-all text-brand-muted hover:bg-indigo-50 hover:text-indigo-600">
                           <Eye size={13} />
                         </button>
                         <button onClick={() => openEdit(c)} title="Edit role / status"
-                          className="w-8 h-8 rounded-lg flex items-center justify-center transition-all text-slate-500 hover:bg-slate-100 hover:text-slate-700">
+                          className="w-8 h-8 rounded-lg flex items-center justify-center transition-all text-brand-muted hover:bg-brand-bg hover:text-brand-text">
                           <Edit2 size={13} />
                         </button>
                       </div>
@@ -168,7 +168,7 @@ export default function CustomersPage() {
                   const p = Math.max(1, Math.min(page - 2, pagination.pages - 4)) + i;
                   return (
                     <button key={p} onClick={() => setPage(p)} className="w-7 h-7 text-[10px] font-semibold rounded-lg transition-all"
-                      style={p === page ? { background: '#4F46E5', color: 'white' } : { background: 'var(--c-surface)', color: 'var(--c-muted)', border: '1px solid var(--c-border)' }}>
+                      style={p === page ? { background: 'var(--c-primary)', color: 'white' } : { background: 'var(--c-surface)', color: 'var(--c-muted)', border: '1px solid var(--c-border)' }}>
                       {p}
                     </button>
                   );

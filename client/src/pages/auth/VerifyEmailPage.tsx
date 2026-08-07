@@ -1,6 +1,7 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { Mail } from 'lucide-react';
 import { authApi } from '../../api/auth.api';
 import toast from 'react-hot-toast';
 
@@ -11,6 +12,10 @@ export default function VerifyEmailPage() {
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [loading, setLoading] = useState(false);
   const refs = useRef<(HTMLInputElement | null)[]>([]);
+
+  useEffect(() => {
+    refs.current[0]?.focus();
+  }, []);
 
   const handleChange = (i: number, val: string) => {
     if (!/^\d*$/.test(val)) return;
@@ -24,6 +29,16 @@ export default function VerifyEmailPage() {
     if (e.key === 'Backspace' && !otp[i] && i > 0) refs.current[i - 1]?.focus();
   };
 
+  const handlePaste = (e: React.ClipboardEvent) => {
+    const digits = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
+    if (!digits) return;
+    e.preventDefault();
+    const next = ['', '', '', '', '', ''];
+    digits.split('').forEach((c, i) => { next[i] = c; });
+    setOtp(next);
+    refs.current[Math.min(digits.length, 5)]?.focus();
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const code = otp.join('');
@@ -33,8 +48,7 @@ export default function VerifyEmailPage() {
       await authApi.verifyEmail({ email, otp: code });
       toast.success('Email verified! Please login.');
       navigate('/auth/login');
-    } catch {
-    } finally {
+    } catch { /* error toast shown by api interceptor */ } finally {
       setLoading(false);
     }
   };
@@ -43,7 +57,7 @@ export default function VerifyEmailPage() {
     try {
       await authApi.resendOtp(email);
       toast.success('OTP resent!');
-    } catch {}
+    } catch { /* error toast shown by api interceptor */ }
   };
 
   return (
@@ -53,23 +67,27 @@ export default function VerifyEmailPage() {
           <span className="font-heading text-2xl font-bold tracking-wider text-brand-text">STYLE IN NEED</span>
           <span className="block font-body text-[9px] tracking-[0.4em] uppercase text-primary mt-0.5">FASHIONS</span>
         </Link>
+        <div className="w-14 h-14 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center mx-auto mb-6">
+          <Mail size={22} className="text-primary" />
+        </div>
         <h1 className="heading-sm text-brand-text mb-3">Verify Your Email</h1>
         <p className="font-body text-brand-muted text-sm mb-8">
           We sent a 6-digit OTP to <strong>{email}</strong>
         </p>
         <form onSubmit={handleSubmit}>
-          <div className="flex justify-center gap-3 mb-8">
+          <div className="flex justify-center gap-2.5 sm:gap-3 mb-8" onPaste={handlePaste}>
             {otp.map((digit, i) => (
               <input
                 key={i}
                 ref={(el) => { refs.current[i] = el; }}
                 type="text"
                 inputMode="numeric"
+                autoComplete="one-time-code"
                 maxLength={1}
                 value={digit}
                 onChange={(e) => handleChange(i, e.target.value)}
                 onKeyDown={(e) => handleKeyDown(i, e)}
-                className="w-12 h-14 text-center text-xl font-heading font-bold border-2 border-brand-border focus:border-primary outline-none bg-transparent transition-colors"
+                className={`w-12 h-14 text-center text-xl font-heading font-bold text-brand-text caret-primary bg-brand-surface border rounded-lg outline-none transition-all duration-200 hover:border-primary/50 ${digit ? 'border-primary/60' : 'border-brand-border'} focus:bg-white focus:border-primary focus:ring-[3px] focus:ring-primary/20 focus:scale-105`}
               />
             ))}
           </div>

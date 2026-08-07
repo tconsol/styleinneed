@@ -66,7 +66,7 @@ export default function CartDrawer() {
                     <li key={`${item.product._id}-${item.variantSku}`} className="p-4 flex gap-4">
                       <Link to={`/products/${item.product.slug}`} onClick={closeCart}>
                         <img
-                          src={item.product.images?.[0] || '/placeholder.jpg'}
+                          src={item.product.images?.[0]}
                           alt={item.product.name}
                           className="w-20 h-24 object-cover bg-brand-surface flex-shrink-0"
                         />

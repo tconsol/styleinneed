@@ -9,16 +9,16 @@ import { formatDateTime } from '../../utils/format';
 const STATUSES = ['all', 'open', 'pending', 'resolved', 'closed'];
 
 const STATUS_STYLE: Record<string, { bg: string; text: string; dot: string }> = {
-  open:     { bg: '#DBEAFE', text: '#1E40AF', dot: '#3B82F6' },
-  pending:  { bg: '#FEF9C3', text: '#854D0E', dot: '#EAB308' },
-  resolved: { bg: '#DCFCE7', text: '#166534', dot: '#22C55E' },
-  closed:   { bg: '#F1F5F9', text: '#475569', dot: '#94A3B8' },
+  open:     { bg: 'var(--c-info-soft)', text: 'var(--c-info)', dot: 'var(--c-info)' },
+  pending:  { bg: 'var(--c-warning-soft)', text: 'var(--c-warning)', dot: 'var(--c-warning)' },
+  resolved: { bg: 'var(--c-success-soft)', text: 'var(--c-success)', dot: 'var(--c-success)' },
+  closed:   { bg: 'var(--c-th-bg)', text: 'var(--c-muted)', dot: 'var(--c-muted)' },
 };
 
 const PRIORITY_STYLE: Record<string, { bg: string; text: string }> = {
-  high:   { bg: '#FEE2E2', text: '#991B1B' },
-  medium: { bg: '#FEF9C3', text: '#854D0E' },
-  low:    { bg: '#DCFCE7', text: '#166534' },
+  high:   { bg: 'var(--c-danger-soft)', text: 'var(--c-danger)' },
+  medium: { bg: 'var(--c-warning-soft)', text: 'var(--c-warning)' },
+  low:    { bg: 'var(--c-success-soft)', text: 'var(--c-success)' },
 };
 
 export default function SupportPage() {
@@ -53,7 +53,7 @@ export default function SupportPage() {
         value={activeStatus}
         onChange={(v) => { setActiveStatus(v); setPage(1); }}
         tabs={STATUSES.map((s) => {
-          const st = STATUS_STYLE[s] || { bg: '#EEF2FF', text: '#4F46E5', dot: '#4F46E5' };
+          const st = STATUS_STYLE[s] || { bg: 'var(--c-primary-soft)', text: 'var(--c-primary)', dot: 'var(--c-primary)' };
           return { value: s, label: s === 'all' ? 'All Tickets' : s, text: st.text, dot: st.dot };
         })}
       />
@@ -86,7 +86,7 @@ export default function SupportPage() {
                   onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--c-tr-hover)')}
                   onMouseLeave={(e) => (e.currentTarget.style.background = 'var(--c-surface)')}>
                   <td className="pl-5 px-3 py-3">
-                    <span className="font-mono text-[11px] font-bold" style={{ color: '#4F46E5' }}>{t.ticketId}</span>
+                    <span className="font-mono text-[11px] font-bold" style={{ color: 'var(--c-primary)' }}>{t.ticketId}</span>
                   </td>
                   <td className="px-3 py-3">
                     <p className="text-[11px] font-semibold text-brand-text">{t.user?.name}</p>
@@ -106,9 +106,9 @@ export default function SupportPage() {
                   </td>
                   <td className="px-3 py-3 text-[10px] text-brand-muted whitespace-nowrap">{formatDateTime(t.createdAt)}</td>
                   <td className="px-3 py-3 text-center">
-                    <div className="w-8 h-8 rounded-lg mx-auto flex items-center justify-center transition-all" style={{ color: '#64748B' }}
-                      onMouseEnter={(e) => { e.currentTarget.style.background = '#EEF2FF'; e.currentTarget.style.color = '#4F46E5'; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#64748B'; }}>
+                    <div className="w-8 h-8 rounded-lg mx-auto flex items-center justify-center transition-all" style={{ color: 'var(--c-muted)' }}
+                      onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--c-primary-soft)'; e.currentTarget.style.color = 'var(--c-primary)'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--c-muted)'; }}>
                       <Eye size={13} />
                     </div>
                   </td>
@@ -126,7 +126,7 @@ export default function SupportPage() {
                 const p = Math.max(1, Math.min(page - 2, pagination.pages - 4)) + i;
                 return (
                   <button key={p} onClick={(e) => { e.stopPropagation(); setPage(p); }} className="w-7 h-7 text-[10px] font-semibold rounded-lg transition-all"
-                    style={p === page ? { background: '#4F46E5', color: 'white' } : { background: 'var(--c-surface)', color: 'var(--c-muted)', border: '1px solid var(--c-border)' }}>
+                    style={p === page ? { background: 'var(--c-primary)', color: 'white' } : { background: 'var(--c-surface)', color: 'var(--c-muted)', border: '1px solid var(--c-border)' }}>
                     {p}
                   </button>
                 );

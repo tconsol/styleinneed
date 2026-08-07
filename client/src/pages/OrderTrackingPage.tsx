@@ -154,7 +154,7 @@ export default function OrderTrackingPage() {
             {order.items.map((it, i) => (
               <li key={i} className="flex gap-4">
                 <Link to={`/products/${it.product.slug}`}>
-                  <img src={it.product.images?.[0] || '/placeholder.jpg'} alt={it.product.name} className="w-16 h-20 object-cover bg-brand-surface" />
+                  <img src={it.product.images?.[0]} alt={it.product.name} className="w-16 h-20 object-cover bg-brand-surface" />
                 </Link>
                 <div className="flex-1">
                   <Link to={`/products/${it.product.slug}`} className="font-body text-sm font-medium hover:text-primary line-clamp-2">{it.product.name}</Link>

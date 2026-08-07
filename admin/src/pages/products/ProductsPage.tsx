@@ -1,9 +1,10 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Search, Edit, Trash2, Eye, RotateCcw } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Eye, RotateCcw, Upload } from 'lucide-react';
 import DataTable from '../../components/common/DataTable';
 import StatusToggle from '../../components/common/StatusToggle';
 import { useConfirm } from '../../components/common/ConfirmDialog';
+import BulkUploadModal from './BulkUploadModal';
 import { productApi } from '../../api';
 import type { Product, Pagination } from '../../types';
 import { formatPrice, formatDate } from '../../utils/format';
@@ -15,6 +16,7 @@ export default function ProductsPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
+  const [bulkOpen, setBulkOpen] = useState(false);
   const confirm = useConfirm();
 
   const fetch = useCallback(async () => {
@@ -133,6 +135,7 @@ export default function ProductsPage() {
   ];
 
   return (
+    <>
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div className="relative">
@@ -144,9 +147,14 @@ export default function ProductsPage() {
             className="input-field pl-8 w-64 text-sm"
           />
         </div>
-        <Link to="/products/new" className="btn-primary">
-          <Plus size={16} /> Add Product
-        </Link>
+        <div className="flex items-center gap-2">
+          <button onClick={() => setBulkOpen(true)} className="btn-outline">
+            <Upload size={15} /> Bulk Import
+          </button>
+          <Link to="/products/new" className="btn-primary">
+            <Plus size={16} /> Add Product
+          </Link>
+        </div>
       </div>
 
       <div className="card p-0">
@@ -160,5 +168,8 @@ export default function ProductsPage() {
         />
       </div>
     </div>
+
+    <BulkUploadModal open={bulkOpen} onClose={() => setBulkOpen(false)} onDone={fetch} />
+    </>
   );
 }

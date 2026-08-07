@@ -16,3 +16,10 @@ export const productUpload = make(2);
 export const avatarUpload = make(2);
 export const blogUpload = make(2);
 export const bannerUpload = make(2);
+
+// Spreadsheet upload for bulk product import (.xlsx / .xls / .csv), memory-buffered.
+const sheetFilter: multer.Options['fileFilter'] = (_req, file, cb) => {
+  if (/spreadsheet|excel|csv|officedocument|octet-stream/i.test(file.mimetype) || /\.(xlsx|xls|csv)$/i.test(file.originalname)) cb(null, true);
+  else cb(new Error('Only Excel/CSV files are allowed'));
+};
+export const sheetUpload = multer({ storage, fileFilter: sheetFilter, limits: { fileSize: 8 * 1024 * 1024 } });
