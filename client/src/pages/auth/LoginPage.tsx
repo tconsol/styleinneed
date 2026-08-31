@@ -61,7 +61,11 @@ export default function LoginPage() {
 function LoginForm() {
   const navigate = useNavigate();
   const location = useLocation();
-  const from = (location.state as { from?: string })?.from || '/';
+  // Return path from navigation state, or the ?redirect= set by the api client on
+  // an expired-session bounce (e.g. mid-checkout), else home.
+  const from = (location.state as { from?: string })?.from
+    || new URLSearchParams(location.search).get('redirect')
+    || '/';
   const { login, googleLogin, isLoading } = useAuthStore();
   const { fetchCart } = useCartStore();
   const { fetchWishlist } = useWishlistStore();

@@ -8,6 +8,7 @@ import { generateOtp, generateSecureToken, hashToken } from '../utils/otp';
 import { sendOtpEmail, sendPasswordResetEmail } from '../services/email.service';
 import { sendSuccess, sendError } from '../utils/apiResponse';
 import { primaryClientUrl } from '../middleware/security';
+import { encryptSecret } from '../utils/secretCrypto';
 
 export const register = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
@@ -319,8 +320,9 @@ export const changePassword = async (req: AuthRequest, res: Response, next: Next
       return;
     }
     user.password = newPassword;
-    // Provider accounts are admin-managed, so keep the admin-viewable copy in sync.
-    if (user.role === 'provider') user.plainPassword = newPassword;
+    // Provider accounts are admin-managed, so keep the admin-viewable copy in
+    // sync — stored encrypted (AES-256-GCM), never as cleartext.
+    if (user.role === 'provider') user.plainPassword = encryptSecret(newPassword);
     user.refreshTokens = [];
     await user.save();
     sendSuccess(res, 'Password changed successfully. Please login again.');

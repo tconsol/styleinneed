@@ -3,6 +3,7 @@ import Provider, { IProvider } from '../models/Provider';
 import User from '../models/User';
 import { AuthRequest } from '../types';
 import { sendSuccess, sendError, getPagination } from '../utils/apiResponse';
+import { encryptSecret, decryptSecret } from '../utils/secretCrypto';
 
 // Business fields a provider may edit on their own record. Login/isActive/category
 // stay admin-controlled (category gates catalogue placement).
@@ -36,7 +37,7 @@ const syncProviderLogin = async (provider: IProvider, opts: LoginOpts): Promise<
       name: provider.name,
       email: String(loginEmail).toLowerCase().trim(),
       password: loginPassword,
-      plainPassword: loginPassword,
+      plainPassword: encryptSecret(loginPassword),
       role: 'provider',
       providerRef: provider._id,
       isEmailVerified: true,
@@ -47,7 +48,7 @@ const syncProviderLogin = async (provider: IProvider, opts: LoginOpts): Promise<
   }
 
   if (loginEmail) user.email = String(loginEmail).toLowerCase().trim();
-  if (loginPassword) { user.password = loginPassword; user.plainPassword = loginPassword; }
+  if (loginPassword) { user.password = loginPassword; user.plainPassword = encryptSecret(loginPassword); }
   if (canLogin === true) user.isActive = true;
   await user.save();
 };
@@ -63,7 +64,7 @@ const attachLogin = async <T extends { _id: unknown }>(providers: T[]) => {
     return {
       ...p,
       login: u
-        ? { email: u.email, password: u.plainPassword || '', active: u.isActive, hasLogin: true }
+        ? { email: u.email, password: decryptSecret(u.plainPassword), active: u.isActive, hasLogin: true }
         : { hasLogin: false, active: false },
     };
   });

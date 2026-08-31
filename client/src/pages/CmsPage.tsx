@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import DOMPurify from 'dompurify';
 import Spinner from '../components/common/Spinner';
 import Breadcrumb from '../components/common/Breadcrumb';
 import { cmsApi } from '../api/misc.api';
@@ -71,7 +72,7 @@ export default function CmsPage() {
           {isHtml ? (
             <div
               className="prose-cms font-body text-[15px] leading-relaxed text-brand-text/90 [&_h2]:font-heading [&_h2]:text-2xl [&_h2]:font-semibold [&_h2]:mt-8 [&_h2]:mb-3 [&_h3]:font-heading [&_h3]:text-lg [&_h3]:font-semibold [&_h3]:mt-6 [&_h3]:mb-2 [&_p]:mb-4 [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:mb-4 [&_ol]:list-decimal [&_ol]:pl-6 [&_ol]:mb-4 [&_li]:mb-1"
-              dangerouslySetInnerHTML={{ __html: page.content as string }}
+              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(page.content as string) }}
             />
           ) : (
             <>

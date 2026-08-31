@@ -1,6 +1,7 @@
 ﻿import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Calendar, Eye, ArrowLeft } from 'lucide-react';
+import DOMPurify from 'dompurify';
 import Spinner from '../components/common/Spinner';
 import NewsletterSection from '../components/home/NewsletterSection';
 import { blogApi } from '../api/misc.api';
@@ -53,7 +54,7 @@ export default function BlogDetailPage() {
 
         <div
           className="prose prose-sm md:prose-base max-w-none font-body text-brand-text prose-headings:font-heading prose-a:text-primary"
-          dangerouslySetInnerHTML={{ __html: blog.content || blog.excerpt }}
+          dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(blog.content || blog.excerpt || '') }}
         />
 
         {blog.tags?.length > 0 && (
