@@ -1,11 +1,18 @@
 import nodemailer from 'nodemailer';
 import logger from '../utils/logger';
 
+const smtpPort = Number(process.env.SMTP_PORT) || 587;
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST,
-  port: Number(process.env.SMTP_PORT) || 587,
-  secure: process.env.SMTP_SECURE === 'true', // true for 465, false for 587/STARTTLS
+  port: smtpPort,
+  // If SMTP_SECURE isn't set, derive it from the port (465 = implicit TLS).
+  // A 465 connection with secure:false handshakes wrong and times out (421).
+  secure: process.env.SMTP_SECURE ? process.env.SMTP_SECURE === 'true' : smtpPort === 465,
   auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+  // Fail fast instead of hanging the request if the SMTP host is unreachable.
+  connectionTimeout: 10_000,
+  greetingTimeout: 10_000,
+  socketTimeout: 15_000,
 });
 
 const from = process.env.EMAIL_FROM || 'Style In Need Fashions <no-reply@styleinneedfashions.com>';

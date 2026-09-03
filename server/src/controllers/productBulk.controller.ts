@@ -137,7 +137,14 @@ export const bulkUpload = async (req: AuthRequest, res: Response, next: NextFunc
 
     const cols = await columnsForType(type);
     const wb = new ExcelJS.Workbook();
-    await wb.xlsx.load(file.buffer as unknown as ArrayBuffer);
+    try {
+      await wb.xlsx.load(file.buffer as unknown as ArrayBuffer);
+    } catch {
+      // exceljs throws (e.g. "reading 'anchors'") on files with images/drawings/
+      // charts. Fail cleanly instead of a 500.
+      sendError(res, 'Could not read the Excel file. Remove any images, charts or comments and upload a plain data sheet (use the template).', 400);
+      return;
+    }
     const ws = wb.getWorksheet('Products') || wb.worksheets[0];
     if (!ws) { sendError(res, 'No worksheet found', 400); return; }
 

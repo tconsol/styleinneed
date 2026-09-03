@@ -29,6 +29,11 @@ import shippingRoutes from './routes/shipping.routes';
 
 const app = express();
 
+// Cloud Run (and any reverse proxy / load balancer) sets X-Forwarded-For.
+// Trust the first proxy hop so express-rate-limit reads the real client IP
+// instead of throwing a ValidationError.
+app.set('trust proxy', 1);
+
 applySecurityMiddleware(app);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
