@@ -75,6 +75,9 @@ export default function CheckoutPage() {
       .catch(() => setPayConfigError(true));
   }, []);
 
+  // Empty cart → back to cart (in an effect, not during render).
+  useEffect(() => { if (items.length === 0) navigate('/cart', { replace: true }); }, [items.length, navigate]);
+
   // Fetch the real shipping charge for the selected address + cart subtotal.
   useEffect(() => {
     if (!addr) { setShipping(null); return; }
@@ -145,10 +148,7 @@ export default function CheckoutPage() {
     } catch { /* interceptor */ } finally { setPlacing(false); }
   };
 
-  if (items.length === 0) {
-    navigate('/cart');
-    return null;
-  }
+  if (items.length === 0) return null;
 
   return (
     <div className="min-h-screen bg-brand-bg" style={{ paddingTop: 'var(--topbar-height)' }}>

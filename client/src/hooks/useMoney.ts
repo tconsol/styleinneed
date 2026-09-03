@@ -13,8 +13,13 @@ export function useMoney() {
   const rate = useCurrencyStore((s) => s.rate);
 
   const value = (inr: number, usdOverride?: number): number => {
-    if (currency === 'USD') return usdOverride != null ? usdOverride : Math.round((inr / rate) * 100) / 100;
-    return inr;
+    const amount = Number.isFinite(inr) ? inr : 0;
+    if (currency === 'USD') {
+      if (usdOverride != null) return usdOverride;
+      const r = rate > 0 ? rate : 83; // guard against an unloaded/zero rate
+      return Math.round((amount / r) * 100) / 100;
+    }
+    return amount;
   };
 
   const format = (inr: number, usdOverride?: number): string => formatPrice(value(inr, usdOverride), currency);

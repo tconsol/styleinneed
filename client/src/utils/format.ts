@@ -3,7 +3,7 @@ export const formatPrice = (amount: number, currency: 'INR' | 'USD' = 'INR'): st
     style: 'currency',
     currency,
     maximumFractionDigits: 0,
-  }).format(amount);
+  }).format(Number.isFinite(amount) ? amount : 0);
 
 export const formatDate = (date: string): string =>
   new Intl.DateTimeFormat('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(date));

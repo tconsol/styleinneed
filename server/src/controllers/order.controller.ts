@@ -54,15 +54,28 @@ const buildPricing = async (req: AuthRequest, res: Response, couponCode?: string
   if (!cart || !cart.items.length) { sendError(res, 'Cart is empty', 400); return null; }
 
   const lines: PricedLine[] = [];
+  const stale: typeof cart.items = [];
   for (const item of cart.items) {
     const product = await Product.findById(item.product);
-    if (!product || !product.isActive) { sendError(res, 'Product unavailable', 400); return null; }
-    const variant = product.variants.find((v) => v.sku === item.variantSku);
-    if (!variant || variant.stock < item.quantity) {
+    const variant = product?.variants.find((v) => v.sku === item.variantSku);
+    // Product deleted/inactive, or its variant no longer exists → drop it from the
+    // cart instead of blocking the whole checkout.
+    if (!product || !product.isActive || !variant) { stale.push(item); continue; }
+    if (variant.stock < item.quantity) {
       sendError(res, `Insufficient stock for ${product.name}`, 400);
       return null;
     }
     lines.push({ product, variantSku: item.variantSku, quantity: item.quantity });
+  }
+
+  // Self-heal: persist the cart without the dead items.
+  if (stale.length) {
+    cart.items = cart.items.filter((i) => !stale.includes(i));
+    await cart.save();
+  }
+  if (lines.length === 0) {
+    sendError(res, 'Your cart items are no longer available. Please refresh your cart and try again.', 400);
+    return null;
   }
 
   // Validate coupon (expiry / start / min / usage / restricted) before applying.
