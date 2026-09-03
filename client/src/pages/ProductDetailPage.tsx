@@ -96,7 +96,7 @@ export default function ProductDetailPage() {
   const wishlisted = isWishlisted(product._id);
   const returnDays = product.returnDays ?? 7;
   const cartItem = selectedVariant
-    ? cartItems.find((i) => i.product._id === product._id && i.variantSku === selectedVariant.sku)
+    ? cartItems.find((i) => i.product?._id === product._id && i.variantSku === selectedVariant.sku)
     : undefined;
 
   // Dynamic variant attributes — derived from the product's own variants

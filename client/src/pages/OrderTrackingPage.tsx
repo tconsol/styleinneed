@@ -151,18 +151,29 @@ export default function OrderTrackingPage() {
         <div className="bg-white border border-brand-border p-6 mb-6">
           <h2 className="font-heading text-lg font-semibold mb-5">Items</h2>
           <ul className="space-y-4">
-            {order.items.map((it, i) => (
-              <li key={i} className="flex gap-4">
-                <Link to={`/products/${it.product.slug}`}>
-                  <img src={it.product.images?.[0]} alt={it.product.name} className="w-16 h-20 object-cover bg-brand-surface" />
-                </Link>
-                <div className="flex-1">
-                  <Link to={`/products/${it.product.slug}`} className="font-body text-sm font-medium hover:text-primary line-clamp-2">{it.product.name}</Link>
-                  {it.variant?.attributes && <p className="font-body text-xs text-brand-muted mt-0.5">{Object.values(it.variant.attributes).join(' · ')}</p>}
-                  <p className="font-body text-xs text-brand-muted mt-0.5">Qty {it.quantity} · {formatPrice(it.price, order.currency)}</p>
-                </div>
-              </li>
-            ))}
+            {order.items.map((it, i) => {
+              const img = it.product?.images?.[0] || it.variant?.images?.[0];
+              const name = it.product?.name || 'Product no longer available';
+              const slug = it.product?.slug;
+              return (
+                <li key={i} className="flex gap-4">
+                  {slug ? (
+                    <Link to={`/products/${slug}`}>
+                      <img src={img} alt={name} className="w-16 h-20 object-cover bg-brand-surface" />
+                    </Link>
+                  ) : (
+                    <img src={img} alt={name} className="w-16 h-20 object-cover bg-brand-surface" />
+                  )}
+                  <div className="flex-1">
+                    {slug
+                      ? <Link to={`/products/${slug}`} className="font-body text-sm font-medium hover:text-primary line-clamp-2">{name}</Link>
+                      : <p className="font-body text-sm font-medium line-clamp-2 text-brand-muted">{name}</p>}
+                    {it.variant?.attributes && <p className="font-body text-xs text-brand-muted mt-0.5">{Object.values(it.variant.attributes).join(' · ')}</p>}
+                    <p className="font-body text-xs text-brand-muted mt-0.5">Qty {it.quantity} · {formatPrice(it.price, order.currency)}</p>
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         </div>
 

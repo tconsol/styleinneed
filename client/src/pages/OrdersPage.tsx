@@ -81,7 +81,7 @@ export default function OrdersPage() {
                       {order.items.slice(0, 4).map((item, i) => (
                         <img
                           key={i}
-                          src={item.product.images?.[0]}
+                          src={item.product?.images?.[0] || item.variant?.images?.[0]}
                           alt=""
                           className="w-14 h-[72px] md:w-16 md:h-20 object-cover rounded-xl bg-brand-surface border-2 border-white flex-shrink-0 shadow-sm"
                         />

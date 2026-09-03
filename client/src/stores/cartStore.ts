@@ -22,6 +22,11 @@ interface CartState {
   clearCoupon: () => void;
 }
 
+// Drop items whose product no longer exists (e.g. hard-deleted from the catalog)
+// so components never dereference a null product and crash.
+const cleanItems = (items?: CartItem[]): CartItem[] =>
+  (items || []).filter((i) => !!i && !!i.product && !!i.product._id);
+
 // Selectors — always derived fresh from items, never stored as state
 export const selectSubtotal = (state: CartState) =>
   state.items.reduce((sum, item) => sum + (item.price ?? 0) * (item.quantity ?? 1), 0);
@@ -40,7 +45,7 @@ export const useCartStore = create<CartState>()((set) => ({
   fetchCart: async () => {
     try {
       const { data } = await cartApi.getCart();
-      set({ items: data.data?.items || [] });
+      set({ items: cleanItems(data.data?.items) });
     } catch {}
   },
 
@@ -48,7 +53,7 @@ export const useCartStore = create<CartState>()((set) => ({
     set({ isLoading: true });
     try {
       const { data } = await cartApi.addToCart({ productId, variantSku, quantity });
-      set({ items: data.data?.items || [], isLoading: false, isOpen: true });
+      set({ items: cleanItems(data.data?.items), isLoading: false, isOpen: true });
       toast.success('Added to cart');
     } catch {
       set({ isLoading: false });
@@ -59,7 +64,7 @@ export const useCartStore = create<CartState>()((set) => ({
     set({ isLoading: true });
     try {
       const { data } = await cartApi.updateCartItem(productId, { variantSku, quantity });
-      set({ items: data.data?.items || [], isLoading: false });
+      set({ items: cleanItems(data.data?.items), isLoading: false });
     } catch {
       set({ isLoading: false });
     }
@@ -69,7 +74,7 @@ export const useCartStore = create<CartState>()((set) => ({
     set({ isLoading: true });
     try {
       const { data } = await cartApi.removeFromCart(productId, variantSku);
-      set({ items: data.data?.items || [], isLoading: false });
+      set({ items: cleanItems(data.data?.items), isLoading: false });
       toast.success('Item removed');
     } catch {
       set({ isLoading: false });

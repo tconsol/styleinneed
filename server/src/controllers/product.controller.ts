@@ -4,6 +4,8 @@ import Product from '../models/Product';
 import Category from '../models/Category';
 import Collection from '../models/Collection';
 import Attribute from '../models/Attribute';
+import Cart from '../models/Cart';
+import Wishlist from '../models/Wishlist';
 import { nextSeq } from '../models/Counter';
 import { AuthRequest } from '../types';
 import { uploadToGCS, deleteFromGCS } from '../config/gcs';
@@ -271,8 +273,13 @@ export const deleteProduct = async (req: AuthRequest, res: Response, next: NextF
     ]);
     await Promise.all([...urls].map((u) => deleteFromGCS(u)));
 
-    // Hard-delete the product from the database.
+    // Hard-delete the product, then remove it from every cart + wishlist so
+    // stale references don't break the storefront or block checkout.
     await product.deleteOne();
+    await Promise.all([
+      Cart.updateMany({}, { $pull: { items: { product: product._id } } }),
+      Wishlist.updateMany({}, { $pull: { products: product._id } }),
+    ]);
     emitEvent(SOCKET_EVENTS.productDeleted, { slug: product.slug });
     sendSuccess(res, 'Product deleted');
   } catch (err) {

@@ -29,12 +29,29 @@ const runRefresh = async (): Promise<string> => {
   return data.data.accessToken as string;
 };
 
+const forceReauth = () => {
+  localStorage.removeItem('accessToken');
+  localStorage.removeItem('refreshToken');
+  // Persisted zustand auth is stale now too — drop it so route guards re-evaluate.
+  try { localStorage.removeItem('styleinneed-auth'); } catch { /* ignore */ }
+  if (!window.location.pathname.startsWith('/auth/')) {
+    window.location.href = `/auth/login?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`;
+  }
+};
+
 client.interceptors.response.use(
   (res) => res,
   async (err) => {
     const original = err.config;
 
-    if (err.response?.status === 401 && original && !original._retry) {
+    if (err.response?.status === 401 && original) {
+      if (original._retry) {
+        // Already refreshed once and still unauthorized — the session is truly
+        // dead (e.g. rotated server secret). Re-authenticate instead of failing
+        // silently and leaving the pay button doing nothing.
+        forceReauth();
+        return Promise.reject(err);
+      }
       original._retry = true;
       try {
         // Reuse an in-progress refresh if one is already running.
@@ -44,13 +61,7 @@ client.interceptors.response.use(
         original.headers.Authorization = `Bearer ${newToken}`;
         return client(original); // retry the original request with the fresh token
       } catch {
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        // Persisted zustand auth is stale now too — drop it so guards re-evaluate.
-        try { localStorage.removeItem('styleinneed-auth'); } catch { /* ignore */ }
-        if (!window.location.pathname.startsWith('/auth/')) {
-          window.location.href = `/auth/login?redirect=${encodeURIComponent(window.location.pathname)}`;
-        }
+        forceReauth();
         return Promise.reject(err);
       }
     }

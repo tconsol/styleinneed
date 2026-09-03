@@ -35,6 +35,7 @@ export default function CheckoutPage() {
   const [couponLoading, setCouponLoading] = useState(false);
   const [placing, setPlacing] = useState(false);
   const [payConfig, setPayConfig] = useState<{ razorpayKeyId: string | null; stripePublishableKey: string | null }>({ razorpayKeyId: null, stripePublishableKey: null });
+  const [payConfigError, setPayConfigError] = useState(false);
   const [shipping, setShipping] = useState<{ charge: number; currency: 'INR' | 'USD'; freeShippingEligible: boolean } | null>(null);
 
   // Inline add-address form (no need to leave checkout).
@@ -69,7 +70,9 @@ export default function CheckoutPage() {
   const fmt = (inr: number) => formatPrice(toDisplay(inr), currency);
 
   useEffect(() => {
-    orderApi.getPaymentConfig().then(({ data }) => setPayConfig(data.data)).catch(() => {});
+    orderApi.getPaymentConfig()
+      .then(({ data }) => { setPayConfig(data.data); setPayConfigError(false); })
+      .catch(() => setPayConfigError(true));
   }, []);
 
   // Fetch the real shipping charge for the selected address + cart subtotal.
@@ -93,6 +96,8 @@ export default function CheckoutPage() {
     { id: 'razorpay', label: 'UPI / Cards / Net Banking', sub: 'Secure payment via Razorpay', enabled: !!payConfig.razorpayKeyId && !isUSA, hidden: isUSA },
     { id: 'stripe', label: 'International Cards', sub: 'Secure payment via Stripe', enabled: !!payConfig.stripePublishableKey && isUSA, hidden: !isUSA },
   ].filter((pm) => !pm.hidden);
+
+  const hasEnabledMethod = paymentMethods.some((pm) => pm.enabled);
 
   // Shipping charge is returned already in the checkout currency. Discount/subtotal are INR -> convert.
   const shippingDisplay = shipping ? shipping.charge : 0;
@@ -256,6 +261,18 @@ export default function CheckoutPage() {
                     )}
                   </label>
                 ))}
+
+                {/* No selectable method — tell the user why instead of a dead form. */}
+                {!hasEnabledMethod && (
+                  <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+                    <p className="font-body text-sm font-semibold text-amber-800">Payment is temporarily unavailable</p>
+                    <p className="font-body text-xs text-amber-700 mt-1">
+                      {payConfigError
+                        ? 'We couldn\'t load payment options. Please refresh, or sign out and sign back in.'
+                        : 'Online payment isn\'t configured for your region yet. Please try again later or contact support.'}
+                    </p>
+                  </div>
+                )}
               </div>
             </section>
           </div>
