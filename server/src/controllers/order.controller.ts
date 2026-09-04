@@ -15,6 +15,7 @@ import { sendOrderConfirmationEmail } from '../services/email.service';
 import { sendPushToUser } from '../services/push.service';
 import { primaryClientUrl } from '../middleware/security';
 import { computeOrderPricing, regionOf, PricedLine } from '../utils/pricing';
+import logger from '../utils/logger';
 import { IOrder } from '../types';
 
 const pushStatus = (order: IOrder, status: IOrder['status'], note?: string): void => {
@@ -228,28 +229,37 @@ export const createOrder = async (req: AuthRequest, res: Response, next: NextFun
     const cancelUrl = `${clientUrl}/payment-return?session=${session._id}&status=cancel`;
     const receipt = String(session._id);
 
-    if (paymentMethod === 'stripe') {
-      const checkout = await createStripeCheckoutSession(
-        pricing.total, receipt, successUrl, cancelUrl, pricing.currency.toLowerCase()
-      );
-      session.stripeSessionId = checkout.id;
-      await session.save();
-      sendSuccess(res, 'Payment session created', {
-        sessionId: session._id, provider: 'stripe', url: checkout.url,
-        amount: pricing.total, currency: pricing.currency,
-      }, 201);
-    } else {
-      const link = await createRazorpayPaymentLink(
-        pricing.total, receipt,
-        { name: address.fullName, email: user.email, contact: address.phone },
-        successUrl, 'INR'
-      );
-      session.razorpayLinkId = link.id;
-      await session.save();
-      sendSuccess(res, 'Payment session created', {
-        sessionId: session._id, provider: 'razorpay', url: link.short_url,
-        amount: pricing.total, currency: pricing.currency,
-      }, 201);
+    // Gateway calls can throw an upstream auth error (e.g. bad keys → HTTP 401).
+    // Trap it so the upstream status never propagates to the client — a bare 401
+    // would make the storefront think the user's session expired and log them out.
+    try {
+      if (paymentMethod === 'stripe') {
+        const checkout = await createStripeCheckoutSession(
+          pricing.total, receipt, successUrl, cancelUrl, pricing.currency.toLowerCase()
+        );
+        session.stripeSessionId = checkout.id;
+        await session.save();
+        sendSuccess(res, 'Payment session created', {
+          sessionId: session._id, provider: 'stripe', url: checkout.url,
+          amount: pricing.total, currency: pricing.currency,
+        }, 201);
+      } else {
+        const link = await createRazorpayPaymentLink(
+          pricing.total, receipt,
+          { name: address.fullName, email: user.email, contact: address.phone },
+          successUrl, 'INR'
+        );
+        session.razorpayLinkId = link.id;
+        await session.save();
+        sendSuccess(res, 'Payment session created', {
+          sessionId: session._id, provider: 'razorpay', url: link.short_url,
+          amount: pricing.total, currency: pricing.currency,
+        }, 201);
+      }
+    } catch (gwErr) {
+      await PaymentSession.deleteOne({ _id: session._id }).catch(() => {});
+      logger.error('Payment gateway error', gwErr);
+      sendError(res, 'Could not start payment. The payment gateway is misconfigured or unavailable — please try again or contact support.', 502);
     }
   } catch (err) {
     next(err);

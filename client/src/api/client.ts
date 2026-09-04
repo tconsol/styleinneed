@@ -15,55 +15,78 @@ client.interceptors.request.use((config) => {
   return config;
 });
 
-// Single-flight refresh: concurrent 401s share ONE refresh call, so the refresh
-// token is only rotated once. Without this, a second in-flight request refreshes
-// with the just-rotated (now invalid) token and gets logged out mid-checkout.
-let refreshPromise: Promise<string> | null = null;
+// ── 401 handling with a single-flight refresh + a queue ──────────────────────
+// Concurrent 401s wait on ONE refresh (so the refresh token rotates once), and
+// every retried request — GET or POST — is dispatched only AFTER the new token
+// is stored, with the header set explicitly so a POST retry can't send a stale
+// token.
+let isRefreshing = false;
+let queue: { resolve: (t: string) => void; reject: (e: unknown) => void }[] = [];
 
-const runRefresh = async (): Promise<string> => {
-  const refreshToken = localStorage.getItem('refreshToken');
-  if (!refreshToken) throw new Error('No refresh token');
-  const { data } = await axios.post(`${API_BASE}/auth/refresh-token`, { refreshToken });
-  localStorage.setItem('accessToken', data.data.accessToken);
-  localStorage.setItem('refreshToken', data.data.refreshToken);
-  return data.data.accessToken as string;
+const flushQueue = (error: unknown, token: string | null) => {
+  queue.forEach((p) => (error ? p.reject(error) : p.resolve(token as string)));
+  queue = [];
 };
 
 const forceReauth = () => {
   localStorage.removeItem('accessToken');
   localStorage.removeItem('refreshToken');
-  // Persisted zustand auth is stale now too — drop it so route guards re-evaluate.
   try { localStorage.removeItem('styleinneed-auth'); } catch { /* ignore */ }
   if (!window.location.pathname.startsWith('/auth/')) {
     window.location.href = `/auth/login?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`;
   }
 };
 
+const retryWithToken = (original: import('axios').InternalAxiosRequestConfig, token: string) => {
+  original.headers = original.headers || {};
+  (original.headers as Record<string, string>).Authorization = `Bearer ${token}`;
+  return client(original);
+};
+
 client.interceptors.response.use(
   (res) => res,
   async (err) => {
-    const original = err.config;
+    const original = err.config as (import('axios').InternalAxiosRequestConfig & { _retry?: boolean }) | undefined;
 
-    if (err.response?.status === 401 && original) {
-      if (original._retry) {
-        // Already refreshed once and still unauthorized — the session is truly
-        // dead (e.g. rotated server secret). Re-authenticate instead of failing
-        // silently and leaving the pay button doing nothing.
-        forceReauth();
-        return Promise.reject(err);
-      }
+    if (err.response?.status === 401 && original && !original._retry) {
       original._retry = true;
-      try {
-        // Reuse an in-progress refresh if one is already running.
-        refreshPromise = refreshPromise ?? runRefresh().finally(() => { refreshPromise = null; });
-        const newToken = await refreshPromise;
-        original.headers = original.headers || {};
-        original.headers.Authorization = `Bearer ${newToken}`;
-        return client(original); // retry the original request with the fresh token
-      } catch {
-        forceReauth();
-        return Promise.reject(err);
+
+      // A refresh is already running → queue this request until it resolves.
+      if (isRefreshing) {
+        return new Promise<string>((resolve, reject) => queue.push({ resolve, reject }))
+          .then((token) => retryWithToken(original, token))
+          .catch((e) => Promise.reject(e));
       }
+
+      isRefreshing = true;
+      try {
+        const refreshToken = localStorage.getItem('refreshToken');
+        if (!refreshToken) throw new Error('No refresh token');
+
+        const { data } = await axios.post(`${API_BASE}/auth/refresh-token`, { refreshToken });
+        const newToken: string | undefined = data?.data?.accessToken;
+        const newRefresh: string | undefined = data?.data?.refreshToken;
+        if (!newToken) throw new Error('Malformed refresh response');
+
+        localStorage.setItem('accessToken', newToken);
+        if (newRefresh) localStorage.setItem('refreshToken', newRefresh);
+        client.defaults.headers.common.Authorization = `Bearer ${newToken}`;
+
+        flushQueue(null, newToken);          // release any queued requests
+        return retryWithToken(original, newToken); // retry this one with the fresh token
+      } catch (refreshError) {
+        flushQueue(refreshError, null);
+        forceReauth();
+        return Promise.reject(refreshError);
+      } finally {
+        isRefreshing = false;
+      }
+    }
+
+    // A retried request that STILL 401s → the session is genuinely dead.
+    if (err.response?.status === 401 && original?._retry) {
+      forceReauth();
+      return Promise.reject(err);
     }
 
     const message = err.response?.data?.message || 'Something went wrong';
