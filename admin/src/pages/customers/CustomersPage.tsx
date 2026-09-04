@@ -1,9 +1,10 @@
 ﻿import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Edit2, Users, Eye } from 'lucide-react';
+import { Search, Edit2, Users, Eye, Trash2, X } from 'lucide-react';
 import Modal from '../../components/common/Modal';
 import Select from '../../components/common/Select';
 import StatusToggle from '../../components/common/StatusToggle';
+import { useConfirm } from '../../components/common/ConfirmDialog';
 import { customerApi } from '../../api';
 import type { Customer, Pagination } from '../../types';
 import { formatDate } from '../../utils/format';
@@ -36,6 +37,15 @@ export default function CustomersPage() {
   const [selected, setSelected] = useState<Customer | null>(null);
   const [roleForm, setRoleForm] = useState({ role: '', isActive: true });
   const [saving, setSaving] = useState(false);
+  const [checked, setChecked] = useState<Set<string>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const confirm = useConfirm();
+
+  // Only plain customer accounts are deletable (admin accounts are managed elsewhere).
+  const deletable = customers.filter((c) => c.role === 'customer');
+  const allChecked = deletable.length > 0 && deletable.every((c) => checked.has(c._id));
+  const toggleOne = (id: string) => setChecked((prev) => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const toggleAll = () => setChecked(allChecked ? new Set() : new Set(deletable.map((c) => c._id)));
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -46,7 +56,28 @@ export default function CustomersPage() {
     } catch {} finally { setLoading(false); }
   }, [page, search]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { load(); setChecked(new Set()); }, [load]);
+
+  const handleDelete = async (c: Customer) => {
+    if (!(await confirm({ title: 'Delete customer?', message: `"${c.name}" (${c.email}) will be permanently deleted along with their cart and wishlist. Their past orders are kept for records. This cannot be undone.`, confirmText: 'Delete', danger: true }))) return;
+    try {
+      await customerApi.delete(c._id);
+      toast.success('Customer deleted');
+      setChecked((prev) => { const n = new Set(prev); n.delete(c._id); return n; });
+      load();
+    } catch {}
+  };
+
+  const bulkDelete = async () => {
+    const ids = [...checked];
+    if (!(await confirm({ title: `Delete ${ids.length} customer(s)?`, message: 'They will be permanently deleted along with their carts and wishlists. Their past orders are kept for records. This cannot be undone.', confirmText: 'Delete', danger: true }))) return;
+    setBulkBusy(true);
+    try {
+      await Promise.all(ids.map((id) => customerApi.delete(id).catch(() => null)));
+      toast.success(`${ids.length} customer(s) deleted`);
+      setChecked(new Set()); load();
+    } finally { setBulkBusy(false); }
+  };
 
   const openEdit = (c: Customer) => { setSelected(c); setRoleForm({ role: c.role, isActive: c.isActive }); };
 
@@ -87,11 +118,28 @@ export default function CustomersPage() {
           </div>
         </div>
 
+        {/* Bulk action bar — appears when rows are selected */}
+        {checked.size > 0 && (
+          <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl" style={{ background: 'var(--c-primary-soft)', border: '1px solid var(--c-primary)' }}>
+            <span className="text-[12px] font-bold" style={{ color: 'var(--c-primary)' }}>{checked.size} selected</span>
+            <div className="flex items-center gap-2 ml-auto">
+              <button onClick={bulkDelete} disabled={bulkBusy} className="!py-1.5 px-3 text-[11px] font-semibold rounded-lg text-white disabled:opacity-70 inline-flex items-center gap-1.5" style={{ background: '#EF4444' }}>
+                {bulkBusy
+                  ? <><span className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Deleting…</>
+                  : <><Trash2 size={13} /> Delete</>}
+              </button>
+              <button onClick={() => setChecked(new Set())} disabled={bulkBusy} title="Clear" className="w-7 h-7 flex items-center justify-center rounded-lg disabled:opacity-50" style={{ color: 'var(--c-muted)' }}><X size={14} /></button>
+            </div>
+          </div>
+        )}
+
         <div className="bg-white rounded-2xl overflow-hidden" style={{ border: '1px solid var(--c-border)', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
           <table className="w-full">
             <thead>
               <tr style={{ background: 'var(--c-th-bg)', borderBottom: '2px solid var(--c-border)' }}>
-                <th className="th text-left pl-5" style={{ width: '44px' }}>#</th>
+                <th className="th text-center pl-5" style={{ width: '36px' }}>
+                  <input type="checkbox" checked={allChecked} onChange={toggleAll} className="w-4 h-4 accent-primary cursor-pointer" aria-label="Select all" />
+                </th>
                 <th className="th text-left">Customer</th>
                 <th className="th text-left" style={{ width: '140px' }}>Role</th>
                 <th className="th text-center" style={{ width: '90px' }}>Verified</th>
@@ -111,13 +159,17 @@ export default function CustomersPage() {
                 ))
               ) : customers.length === 0 ? (
                 <tr><td colSpan={7} className="text-center py-16"><Users size={32} className="mx-auto mb-2 text-brand-border" /><p className="text-[11px] text-brand-muted">No customers found</p></td></tr>
-              ) : customers.map((c, idx) => {
+              ) : customers.map((c) => {
                 const rc = ROLE_COLORS[c.role] || ROLE_COLORS.customer;
                 return (
-                  <tr key={c._id} className="group transition-colors" style={{ borderBottom: '1px solid var(--c-border)' }}
+                  <tr key={c._id} className={`group transition-colors ${bulkBusy && checked.has(c._id) ? 'opacity-40 animate-pulse' : ''}`} style={{ borderBottom: '1px solid var(--c-border)' }}
                     onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--c-tr-hover)')}
                     onMouseLeave={(e) => (e.currentTarget.style.background = 'var(--c-surface)')}>
-                    <td className="pl-5 py-3 text-[10px] font-bold text-brand-muted/60">{(page - 1) * 20 + idx + 1}</td>
+                    <td className="pl-5 py-3 text-center">
+                      {c.role === 'customer' && (
+                        <input type="checkbox" checked={checked.has(c._id)} onChange={() => toggleOne(c._id)} className="w-4 h-4 accent-primary cursor-pointer" aria-label="Select" />
+                      )}
+                    </td>
                     <td className="px-3 py-3">
                       <button onClick={() => navigate(`/customers/${c._id}`)} className="flex items-center gap-2.5 text-left group/cust">
                         <Avatar name={c.name} email={c.email} />
@@ -152,6 +204,12 @@ export default function CustomersPage() {
                           className="w-8 h-8 rounded-lg flex items-center justify-center transition-all text-brand-muted hover:bg-brand-bg hover:text-brand-text">
                           <Edit2 size={13} />
                         </button>
+                        {c.role === 'customer' && (
+                          <button onClick={() => handleDelete(c)} title="Delete customer"
+                            className="w-8 h-8 rounded-lg flex items-center justify-center transition-all text-brand-muted hover:bg-red-50 hover:text-red-500">
+                            <Trash2 size={13} />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

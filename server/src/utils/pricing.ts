@@ -2,6 +2,7 @@ import { IProduct, IAddress, IOrderItem } from '../types';
 import { ICoupon } from '../models/Coupon';
 import { ISettings } from '../models/Settings';
 import ShippingRate from '../models/ShippingRate';
+import { getActivePromotions, bestPromoPrice } from './promotions';
 
 export type Region = 'IN' | 'US' | 'CA';
 export type Currency = 'INR' | 'USD';
@@ -86,11 +87,15 @@ export const computeOrderPricing = async (
   const currency = currencyOf(region);
   const rate = settings.usdExchangeRate;
 
+  // Live promotions (flash/festival/etc.) discount the unit price at checkout.
+  const activePromos = await getActivePromotions();
+
   let subtotal = 0;
   const items: IOrderItem[] = [];
   for (const { product, variantSku, quantity } of lines) {
     const variant = product.variants.find((v) => v.sku === variantSku)!;
-    const price = unitPrice(product, currency, rate);
+    const base = unitPrice(product, currency, rate);
+    const { price } = bestPromoPrice(base, product, activePromos, currency, rate);
     subtotal += price * quantity;
     items.push({ product: product._id, variant, quantity, price });
   }

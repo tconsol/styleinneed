@@ -5,6 +5,7 @@ import connectDB from './config/db';
 import { initSocket } from './config/socket';
 import { verifyEmailConnection } from './services/email.service';
 import { startExchangeRateSync, stopExchangeRateSync } from './services/exchangeRate.service';
+import { ensureSystemCtaLinks } from './utils/ctaLinks';
 import logger from './utils/logger';
 
 const PORT = Number(process.env.PORT) || 5000;
@@ -25,6 +26,8 @@ connectDB()
   .then(() => {
     // Start syncing the live USD→INR rate once the DB is available.
     startExchangeRateSync();
+    // Ensure built-in CTA links exist (non-fatal).
+    ensureSystemCtaLinks().catch((err) => logger.warn('CTA link seed failed:', err));
   })
   .catch((err) => {
     logger.error('MongoDB connection failed:', err);

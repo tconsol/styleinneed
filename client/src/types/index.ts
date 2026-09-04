@@ -64,6 +64,14 @@ export interface Attribute {
   sortOrder: number;
 }
 
+export interface SizeChart {
+  _id: string;
+  name: string;
+  columns: string[];
+  unit: 'cm' | 'inches';
+  rows: { size: string; values: string[] }[];
+}
+
 export interface Product {
   _id: string;
   name: string;
@@ -72,6 +80,8 @@ export interface Product {
   shortDescription: string;
   productType: string;
   category: { _id: string; name: string; slug: string };
+  subcategory?: string;
+  sizeChartId?: SizeChart | string | null; // populated on the product detail endpoint
   collections: { _id: string; name: string; slug: string }[];
   attributes?: Record<string, string[]>; // product-level (slug -> values)
   weightGrams?: number;

@@ -278,12 +278,28 @@ export default function ProductListPage() {
 
   useBodyScrollLock(mobileOpen || mobileSortOpen);
 
+  // Self-heal a mismatched URL (e.g. ?category=sarees&productType=jewellery from
+  // a stale link/back-button): if the active category doesn't belong to the
+  // selected product type, drop it so the grid isn't silently empty.
+  useEffect(() => {
+    if (!productType || !category || categories.length === 0) return;
+    const cat = categories.find((c) => c.slug === category);
+    if (cat && cat.productType && cat.productType !== productType) {
+      const next = new URLSearchParams(params);
+      next.delete('category'); next.delete('page');
+      setParams(next, { replace: true });
+    }
+  }, [productType, category, categories, params, setParams]);
+
   /* ─── URL helpers ─── */
   const setParam = (key: string, value: string) => {
     const next = new URLSearchParams(params);
     if (value) next.set(key, value); else next.delete(key);
     // Changing a filter/sort resets to page 1; setting the page itself must not.
     if (key !== 'page') next.delete('page');
+    // Category is scoped to a product type — a stale category from another type
+    // yields zero results, so clear it whenever the type changes.
+    if (key === 'productType') next.delete('category');
     setParams(next);
   };
   const toggleMulti = (key: string, value: string) => {

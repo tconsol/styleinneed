@@ -16,6 +16,7 @@ interface Col {
   field?: string; // for base / vbase
   slug?: string;  // for attribute columns
   example?: string;
+  options?: string[]; // allowed values → become an Excel dropdown
 }
 
 const BASE_COLS: Col[] = [
@@ -55,10 +56,12 @@ const columnsForType = async (typeSlug: string): Promise<Col[]> => {
   const productAttrs: Col[] = attrs.filter((a) => a.level === 'product').map((a) => ({
     header: a.name, kind: 'pattr', slug: a.slug,
     example: a.options?.slice(0, 2).map((o) => o.value).join(', ') || '',
+    options: a.options?.map((o) => o.value) || [],
   }));
   const variantAttrs: Col[] = attrs.filter((a) => a.level === 'variant').map((a) => ({
     header: a.name, kind: 'vattr', slug: a.slug,
     example: a.options?.[0]?.value || '',
+    options: a.options?.map((o) => o.value) || [],
   }));
 
   return [...BASE_COLS, ...productAttrs, ...VARIANT_BASE, ...variantAttrs];
@@ -100,6 +103,22 @@ export const downloadTemplate = async (req: Request, res: Response, next: NextFu
     ws.addRow(ex1); ws.addRow(ex2);
     ws.getRow(2).font = { italic: true, color: { argb: 'FF64748B' } };
     ws.getRow(3).font = { italic: true, color: { argb: 'FF64748B' } };
+
+    // Dropdowns for attribute columns that have defined options — the admin picks
+    // from a list instead of typing free text. (Excel inline lists cap ~255 chars.)
+    cols.forEach((c, i) => {
+      if (!c.options || c.options.length === 0) return;
+      const joined = c.options.join(',');
+      if (joined.length > 250) return; // too long for an inline list
+      const letter = ws.getColumn(i + 1).letter;
+      for (let r = 2; r <= 500; r++) {
+        ws.getCell(`${letter}${r}`).dataValidation = {
+          type: 'list', allowBlank: true, formulae: [`"${joined}"`],
+          showErrorMessage: true, errorStyle: 'warning',
+          error: `Pick a valid ${c.header} from the list.`,
+        };
+      }
+    });
 
     // Instructions sheet
     const info = wb.addWorksheet('Instructions');

@@ -245,10 +245,12 @@ export const updateProduct = async (req: AuthRequest, res: Response, next: NextF
       req.body.provider = req.user.providerRef;
     }
     await prepareSkus(req.body, req.params.id);
-    const product = await Product.findByIdAndUpdate(req.params.id, req.body, {
-      new: true, runValidators: true,
-    });
+    const product = await Product.findById(req.params.id);
     if (!product) { sendError(res, 'Product not found', 404); return; }
+    // Assign then save() (not findByIdAndUpdate) so pre-save hooks run —
+    // discountPercentage is recomputed and the slug stays consistent.
+    Object.assign(product, req.body);
+    await product.save();
     emitEvent(SOCKET_EVENTS.productUpdated, { slug: product.slug });
     sendSuccess(res, 'Product updated', product);
   } catch (err) {

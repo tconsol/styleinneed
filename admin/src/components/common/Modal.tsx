@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 
@@ -12,7 +13,9 @@ interface Props {
 
 export default function Modal({ open, onClose, title, children, size = 'md' }: Props) {
   const widths = { sm: 'max-w-md', md: 'max-w-xl', lg: 'max-w-2xl', xl: 'max-w-4xl' };
-  return (
+  // Render into <body> so the overlay never inherits a parent's margin/transform
+  // (e.g. a space-y container pushing the fixed overlay down = top white-space).
+  return createPortal(
     <AnimatePresence>
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -36,6 +39,7 @@ export default function Modal({ open, onClose, title, children, size = 'md' }: P
           </motion.div>
         </div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body,
   );
 }

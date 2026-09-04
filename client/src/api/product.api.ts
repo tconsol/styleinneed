@@ -5,8 +5,10 @@ export const productApi = {
   getProducts: (filters: ProductFilters = {}) =>
     client.get('/products', { params: filters }),
 
-  getProductBySlug: (slug: string) =>
-    client.get(`/products/${slug}`),
+  // `fresh` bypasses the browser's cached copy (product responses carry max-age),
+  // used when a live socket event says the product just changed.
+  getProductBySlug: (slug: string, fresh = false) =>
+    client.get(`/products/${slug}`, fresh ? { params: { _: Date.now() } } : undefined),
 
   getRelatedProducts: (slug: string) =>
     client.get(`/products/${slug}/related`),
@@ -16,7 +18,10 @@ export const productApi = {
 
   getProductTypes: () => client.get('/catalog/product-types'),
 
-  getAttributes: () => client.get('/catalog/attributes', { params: { filterable: true } }),
+  // filterableOnly=true → just the filter facets (used by the listing sidebar);
+  // false → every active attribute, so the detail page can name all specs.
+  getAttributes: (filterableOnly = true) =>
+    client.get('/catalog/attributes', { params: filterableOnly ? { filterable: true } : {} }),
 
   getCategories: (withCount = true) => client.get('/catalog/categories', { params: withCount ? { withCount: 'true' } : {} }),
 

@@ -76,6 +76,65 @@ export const sendOrderConfirmationEmail = async (
   });
 };
 
+export interface PromotionEmailTheme {
+  primary: string;
+  primaryDark: string;
+  bg: string;
+  surface: string;
+  text: string;
+  muted: string;
+  border: string;
+}
+
+const DEFAULT_PROMO_THEME: PromotionEmailTheme = {
+  primary: '#C8A97E', primaryDark: '#A8864A',
+  bg: '#FFF9F5', surface: '#FFFFFF', text: '#1C1C1C', muted: '#6B6B6B', border: '#E8DDD4',
+};
+
+export interface PromotionEmail {
+  title: string;
+  description?: string;
+  discountLabel?: string; // e.g. "20% OFF" or "₹500 OFF"
+  badgeText?: string;
+  bannerImage?: string;
+  code?: string;
+  ctaUrl: string;
+  ctaText?: string;
+  unsubscribeUrl?: string;
+  theme?: PromotionEmailTheme;
+}
+
+// Renders + sends one promotional email. Used by the newsletter broadcast.
+// Colours follow the store's active theme (falls back to a neutral gold if
+// none is resolved) so the mail matches whatever look is live on the site.
+export const sendPromotionEmail = async (email: string, p: PromotionEmail): Promise<void> => {
+  const t = { ...DEFAULT_PROMO_THEME, ...p.theme };
+  await transporter.sendMail({
+    from,
+    to: email,
+    subject: p.title,
+    html: `
+      <div style="font-family: Inter, sans-serif; max-width: 560px; margin: auto; background: ${t.bg}; border: 1px solid ${t.border}; border-radius: 12px; overflow: hidden;">
+        ${p.bannerImage ? `<img src="${p.bannerImage}" alt="" style="width: 100%; display: block;" />` : ''}
+        <div style="padding: 32px; text-align: center;">
+          ${p.badgeText ? `<span style="display: inline-block; background: ${t.primary}; color: #fff; font-size: 12px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; padding: 6px 14px; border-radius: 999px; margin-bottom: 16px;">${p.badgeText}</span>` : ''}
+          <h1 style="font-family: 'Playfair Display', serif; color: ${t.text}; font-size: 28px; margin: 8px 0;">${p.title}</h1>
+          ${p.discountLabel ? `<div style="font-size: 40px; font-weight: 800; color: ${t.primary}; margin: 12px 0;">${p.discountLabel}</div>` : ''}
+          ${p.description ? `<p style="color: ${t.muted}; font-size: 15px; line-height: 1.6;">${p.description}</p>` : ''}
+          ${p.code ? `<div style="margin: 20px auto; display: inline-block; border: 2px dashed ${t.primary}; padding: 10px 24px; border-radius: 8px; font-size: 18px; font-weight: 700; letter-spacing: 2px; color: ${t.text};">${p.code}</div>` : ''}
+          <div>
+            <a href="${p.ctaUrl}" style="display: inline-block; margin: 24px 0 8px; padding: 14px 40px; background: ${t.primaryDark}; color: #fff; text-decoration: none; border-radius: 999px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; font-size: 14px;">${p.ctaText || 'Shop Now'}</a>
+          </div>
+        </div>
+        <div style="padding: 16px 32px; background: ${t.surface}; border-top: 1px solid ${t.border}; text-align: center;">
+          <p style="color: ${t.muted}; font-size: 11px; margin: 0;">Style In Need Fashions — Elegance Redefined</p>
+          ${p.unsubscribeUrl ? `<p style="color: ${t.muted}; font-size: 11px; margin: 6px 0 0;"><a href="${p.unsubscribeUrl}" style="color: ${t.muted};">Unsubscribe</a></p>` : ''}
+        </div>
+      </div>
+    `,
+  });
+};
+
 export const verifyEmailConnection = async (): Promise<void> => {
   try {
     await transporter.verify();

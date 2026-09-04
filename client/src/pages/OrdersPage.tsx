@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Package, ArrowRight } from 'lucide-react';
+import { Package, ArrowRight, Trash2 } from 'lucide-react';
+import toast from 'react-hot-toast';
 import type { Order } from '../types';
 import { orderApi } from '../api/order.api';
 import { formatDate, formatPrice } from '../utils/format';
 import AccountHeader from '../components/account/AccountHeader';
+
+const DELETABLE = ['delivered', 'cancelled', 'returned'];
 
 const STATUS_STYLES: Record<string, { dot: string; pill: string }> = {
   pending:    { dot: 'bg-amber-400',      pill: 'bg-amber-50 text-amber-700 border-amber-200' },
@@ -23,6 +26,15 @@ export default function OrdersPage() {
   useEffect(() => {
     orderApi.getMyOrders().then(({ data }) => setOrders(data.data || [])).catch(() => {}).finally(() => setLoading(false));
   }, []);
+
+  const handleDelete = async (id: string) => {
+    if (!window.confirm('Remove this order from your history? This cannot be undone.')) return;
+    try {
+      await orderApi.deleteOrder(id);
+      setOrders((prev) => prev.filter((o) => o._id !== id));
+      toast.success('Order removed');
+    } catch { /* interceptor toasts */ }
+  };
 
   return (
     <div className="min-h-screen bg-brand-bg" style={{ paddingTop: 'var(--topbar-height)' }}>
@@ -102,6 +114,14 @@ export default function OrdersPage() {
                       >
                         Track Order <ArrowRight size={13} className="transition-all" />
                       </Link>
+                      {DELETABLE.includes(order.status) && (
+                        <button
+                          onClick={() => handleDelete(order._id)}
+                          className="mt-2 ml-3 inline-flex items-center gap-1 font-body text-[11px] font-semibold uppercase tracking-wider text-red-500 hover:text-red-600 transition-colors"
+                        >
+                          <Trash2 size={12} /> Delete
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>

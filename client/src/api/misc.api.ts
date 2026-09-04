@@ -1,4 +1,10 @@
+import axios from 'axios';
 import client from './client';
+
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1';
+// Public, unauthenticated axios — used for storefront reads that must NEVER
+// trigger the auth interceptor's refresh/logout on a 4xx (e.g. promotions).
+const publicClient = axios.create({ baseURL: API_BASE });
 
 export const reviewApi = {
   getProductReviews: (productId: string, page = 1) =>
@@ -21,15 +27,18 @@ export const blogApi = {
 };
 
 export const announcementApi = {
+  // Public read via the non-auth client so it can never trigger a logout for guests.
   getActive: (type?: string) =>
-    client.get('/announcements/active', { params: type ? { type } : {} }),
+    publicClient.get('/announcements/active', { params: type ? { type } : {} }),
 
   trackClick: (id: string) => client.post(`/announcements/${id}/click`),
 };
 
 export const newsletterApi = {
-  subscribe: (email: string) => client.post('/newsletter/subscribe', { email }),
-  unsubscribe: (email: string) => client.post('/newsletter/unsubscribe', { email }),
+  // Raw (no auth interceptor) — a guest clicking an "Unsubscribe" link in an
+  // email must never trigger a refresh/logout redirect.
+  subscribe: (email: string) => publicClient.post('/newsletter/subscribe', { email }),
+  unsubscribe: (email: string) => publicClient.post('/newsletter/unsubscribe', { email }),
 };
 
 export const couponApi = {
@@ -46,6 +55,11 @@ export const cmsApi = {
 
 export const settingsApi = {
   get: () => client.get('/settings'),
+};
+
+export const promotionApi = {
+  // Raw (no auth interceptor) — a promo fetch must never affect the user's session.
+  getActive: () => publicClient.get('/promotions/active'),
 };
 
 export const shippingApi = {

@@ -5,6 +5,7 @@ import { Search, Heart, ShoppingBag, User, Menu, X, ChevronDown } from 'lucide-r
 import { useAuthStore } from '../../stores/authStore';
 import { useCartStore, selectItemCount } from '../../stores/cartStore';
 import { useWishlistStore } from '../../stores/wishlistStore';
+import { usePromotionStore } from '../../stores/promotionStore';
 import { useUiStore } from '../../stores/uiStore';
 import { useCategories, useCollections, useProductTypes } from '../../hooks/useCatalog';
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
@@ -20,6 +21,7 @@ export default function Header({ isCheckout = false }: { isCheckout?: boolean })
   const [searchQuery, setSearchQuery] = useState('');
   const location = useLocation();
   const navigate = useNavigate();
+  const hasActiveSale = usePromotionStore((s) => s.active.length > 0);
   const { isAuthenticated, user } = useAuthStore();
   const { toggleCart } = useCartStore();
   const itemCount = useCartStore(selectItemCount);
@@ -48,7 +50,7 @@ export default function Header({ isCheckout = false }: { isCheckout?: boolean })
       href: '/collections',
       sub: collections.map((c) => ({ label: c.name, href: `/products?collection=${c.slug}` })),
     },
-    { label: 'Sale', href: '/products?sort=-discountPercentage', badge: 'SALE' },
+    { label: 'Sale', href: '/sale', badge: 'SALE' },
     { label: 'Blog', href: '/blogs' },
   ];
 
@@ -144,7 +146,15 @@ export default function Header({ isCheckout = false }: { isCheckout?: boolean })
                         : 'text-brand-text hover:text-primary'
                     }`}
                   >
-                    {item.badge ? (
+                    {item.label === 'Sale' && hasActiveSale ? (
+                      <span className="relative inline-flex items-center gap-1 font-bold text-secondary animate-pulse">
+                        {item.label}
+                        <span className="relative flex h-2 w-2">
+                          <span className="absolute inline-flex h-full w-full rounded-full bg-secondary opacity-75 animate-ping" />
+                          <span className="relative inline-flex h-2 w-2 rounded-full bg-secondary" />
+                        </span>
+                      </span>
+                    ) : item.badge ? (
                       <span className="text-red-500 font-semibold">{item.label}</span>
                     ) : (
                       item.label

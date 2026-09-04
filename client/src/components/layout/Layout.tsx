@@ -8,6 +8,7 @@ import CartDrawer from '../cart/CartDrawer';
 import CustomCursor from '../common/CustomCursor';
 import ScrollToTop from '../common/ScrollToTop';
 import CookieConsent from '../common/CookieConsent';
+import AnnouncementPopup from '../common/AnnouncementPopup';
 import { useLenis } from '../../hooks/useLenis';
 import { useAuthStore } from '../../stores/authStore';
 import { useCartStore } from '../../stores/cartStore';
@@ -70,6 +71,7 @@ export default function Layout() {
       {showBottomNav && <BottomNav />}
       <CartDrawer />
       <CookieConsent />
+      {!isAuthPage && !isCheckout && <AnnouncementPopup />}
     </>
   );
 }

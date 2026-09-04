@@ -22,4 +22,6 @@ export const orderApi = {
 
   cancelOrder: (id: string, reason?: string) =>
     client.patch(`/orders/${id}/cancel`, { reason }),
+
+  deleteOrder: (id: string) => client.delete(`/orders/${id}`),
 };

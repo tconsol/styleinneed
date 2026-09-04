@@ -6,6 +6,7 @@ import { useMoney } from '../../hooks/useMoney';
 import { useAuthStore } from '../../stores/authStore';
 import { useCartStore } from '../../stores/cartStore';
 import { useWishlistStore } from '../../stores/wishlistStore';
+import { usePromotionStore, promoFor } from '../../stores/promotionStore';
 
 interface Props {
   product: Product;
@@ -20,6 +21,8 @@ export default function ProductCard({ product }: Props) {
   const { toggle, isWishlisted } = useWishlistStore();
   const { format } = useMoney();
   const wishlisted = isWishlisted(product._id);
+  const activePromos = usePromotionStore((s) => s.active);
+  const promo = promoFor(product, activePromos); // { promo, price, off } | null
 
   const defaultVariant = product.variants?.[0];
   const hasStock = product.variants?.some((v) => v.stock > 0) ?? false;
@@ -60,12 +63,17 @@ export default function ProductCard({ product }: Props) {
 
           {/* Badges */}
           <div className="absolute top-2.5 left-2.5 flex flex-col gap-1">
+            {promo && (
+              <span className="bg-secondary text-white font-body text-[9px] tracking-widest uppercase px-2 py-1 leading-none animate-pulse">
+                {promo.promo.badgeText || `Sale -${promo.off}%`}
+              </span>
+            )}
             {product.isNewArrival && (
               <span className="bg-brand-text text-white font-body text-[9px] tracking-widest uppercase px-2 py-1 leading-none">
                 New
               </span>
             )}
-            {product.discountPercentage > 0 && (
+            {!promo && product.discountPercentage > 0 && (
               <span className="bg-primary text-white font-body text-[9px] tracking-widest uppercase px-2 py-1 leading-none">
                 -{product.discountPercentage}%
               </span>
@@ -135,10 +143,14 @@ export default function ProductCard({ product }: Props) {
 
           {/* Price */}
           <div className="flex items-baseline gap-1.5 mt-1.5">
-            <span className="font-heading text-sm sm:text-base font-semibold text-brand-text">
-              {format(product.salePrice, product.usdSalePrice)}
+            <span className={`font-heading text-sm sm:text-base font-semibold ${promo ? 'text-secondary' : 'text-brand-text'}`}>
+              {format(promo ? promo.price : product.salePrice, promo ? undefined : product.usdSalePrice)}
             </span>
-            {product.mrp > product.salePrice && (
+            {promo ? (
+              <span className="font-body text-xs text-brand-muted line-through">
+                {format(product.salePrice, product.usdSalePrice)}
+              </span>
+            ) : product.mrp > product.salePrice && (
               <span className="font-body text-xs text-brand-muted line-through">
                 {format(product.mrp, product.usdMrp)}
               </span>

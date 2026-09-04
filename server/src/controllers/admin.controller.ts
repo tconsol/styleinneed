@@ -7,6 +7,8 @@ import AuditLog from '../models/AuditLog';
 import Newsletter from '../models/Newsletter';
 import SupportTicket from '../models/SupportTicket';
 import Return from '../models/Return';
+import Cart from '../models/Cart';
+import Wishlist from '../models/Wishlist';
 import { AuthRequest } from '../types';
 import { sendSuccess, sendError, getPagination } from '../utils/apiResponse';
 import { emitEvent, SOCKET_EVENTS } from '../config/socket';
@@ -180,6 +182,38 @@ export const updateUserRole = async (req: Request, res: Response, next: NextFunc
     const user = await User.findByIdAndUpdate(req.params.id, update, { new: true });
     if (!user) { sendError(res, 'User not found', 404); return; }
     sendSuccess(res, 'User updated', user);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Hard-deletes a customer account. Only 'customer' accounts are deletable
+// here (admin/provider accounts must be removed via their own management
+// flows) — prevents an admin from accidentally nuking a colleague or a
+// provider that still owns products. Orders/Reviews are left in place as
+// historical records (their `user` ref simply orphans; the UI already
+// renders those fields with a null-safe fallback).
+export const deleteUser = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) { sendError(res, 'Customer not found', 404); return; }
+    if (user.role !== 'customer') { sendError(res, 'Only customer accounts can be deleted here', 400); return; }
+
+    await Promise.all([
+      Cart.deleteOne({ user: user._id }),
+      Wishlist.deleteOne({ user: user._id }),
+    ]);
+    await user.deleteOne();
+
+    await AuditLog.create({
+      user: req.user!._id,
+      action: 'DELETE_USER',
+      resource: 'user',
+      resourceId: user._id.toString(),
+      changes: { name: user.name, email: user.email },
+    });
+
+    sendSuccess(res, 'Customer deleted');
   } catch (err) {
     next(err);
   }

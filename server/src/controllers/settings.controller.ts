@@ -6,7 +6,9 @@ import { emitEvent, SOCKET_EVENTS } from '../config/socket';
 import { sendSuccess, sendError } from '../utils/apiResponse';
 
 // The full appearance payload: active colours + fonts + the admin-apply flag.
-const getAppearance = async () => {
+// Exported so other modules (e.g. the newsletter broadcast) can theme
+// server-rendered HTML (emails) to match the storefront's active theme.
+export const getAppearance = async () => {
   const { themes, activeTheme } = await resolveThemes();
   const s = await getSettings();
   return {

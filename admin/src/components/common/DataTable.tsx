@@ -4,7 +4,7 @@ import Spinner from './Spinner';
 
 interface Column<T> {
   key: string;
-  header: string;
+  header: ReactNode;
   render?: (row: T) => ReactNode;
   width?: string;
 }
@@ -16,9 +16,10 @@ interface Props<T> {
   emptyMessage?: string;
   pagination?: { page: number; pages: number; total: number; onPageChange: (page: number) => void; };
   keyExtractor: (row: T) => string;
+  rowClassName?: (row: T) => string;
 }
 
-export default function DataTable<T>({ columns, data, isLoading, emptyMessage = 'No data found', pagination, keyExtractor }: Props<T>) {
+export default function DataTable<T>({ columns, data, isLoading, emptyMessage = 'No data found', pagination, keyExtractor, rowClassName }: Props<T>) {
   return (
     <div>
       <div className="overflow-x-auto">
@@ -39,7 +40,7 @@ export default function DataTable<T>({ columns, data, isLoading, emptyMessage = 
               </td></tr>
             ) : (
               data.map((row) => (
-                <tr key={keyExtractor(row)} className="border-b border-brand-border/40 hover:bg-brand-bg/50 transition-colors">
+                <tr key={keyExtractor(row)} className={`border-b border-brand-border/40 hover:bg-brand-bg/50 transition-all duration-300 ${rowClassName?.(row) || ''}`}>
                   {columns.map((col) => (
                     <td key={col.key} className="td">
                       {col.render ? col.render(row) : String((row as Record<string, unknown>)[col.key] ?? '')}

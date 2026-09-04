@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Search, Edit, Trash2, Eye, RotateCcw, Upload } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Eye, RotateCcw, Upload, CheckCircle2, XCircle, X } from 'lucide-react';
 import DataTable from '../../components/common/DataTable';
 import StatusToggle from '../../components/common/StatusToggle';
 import { useConfirm } from '../../components/common/ConfirmDialog';
@@ -17,7 +17,36 @@ export default function ProductsPage() {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [bulkOpen, setBulkOpen] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
   const confirm = useConfirm();
+
+  const toggleSel = (id: string) => setSelected((prev) => {
+    const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n;
+  });
+  const allSelected = products.length > 0 && products.every((p) => selected.has(p._id));
+  const toggleAll = () => setSelected(allSelected ? new Set() : new Set(products.map((p) => p._id)));
+
+  const bulkDelete = async () => {
+    const ids = [...selected];
+    if (!(await confirm({ title: `Delete ${ids.length} product(s)?`, message: 'They will be permanently deleted with their images. This cannot be undone.', confirmText: 'Delete', danger: true }))) return;
+    setBulkBusy(true);
+    try {
+      await Promise.all(ids.map((id) => productApi.delete(id).catch(() => null)));
+      toast.success(`${ids.length} product(s) deleted`);
+      setSelected(new Set()); fetch();
+    } finally { setBulkBusy(false); }
+  };
+
+  const bulkSetActive = async (isActive: boolean) => {
+    const ids = [...selected];
+    setBulkBusy(true);
+    try {
+      await Promise.all(ids.map((id) => productApi.update(id, { isActive }).catch(() => null)));
+      toast.success(`${ids.length} product(s) ${isActive ? 'activated' : 'deactivated'}`);
+      setSelected(new Set()); fetch();
+    } finally { setBulkBusy(false); }
+  };
 
   const fetch = useCallback(async () => {
     setLoading(true);
@@ -60,6 +89,16 @@ export default function ProductsPage() {
   };
 
   const columns = [
+    {
+      key: 'select',
+      header: (
+        <input type="checkbox" checked={allSelected} onChange={toggleAll} className="w-4 h-4 accent-primary cursor-pointer" aria-label="Select all" />
+      ),
+      width: 'w-10',
+      render: (p: Product) => (
+        <input type="checkbox" checked={selected.has(p._id)} onChange={() => toggleSel(p._id)} className="w-4 h-4 accent-primary cursor-pointer" aria-label="Select" />
+      ),
+    },
     {
       key: 'image',
       header: 'Product',
@@ -148,8 +187,9 @@ export default function ProductsPage() {
           />
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={() => setBulkOpen(true)} className="btn-outline">
+          <button disabled title="Coming soon" className="btn-outline opacity-50 cursor-not-allowed relative">
             <Upload size={15} /> Bulk Import
+            <span className="ml-1 px-1.5 py-0.5 rounded-full text-[8px] font-bold uppercase tracking-wide" style={{ background: 'var(--c-primary-soft)', color: 'var(--c-primary)' }}>Soon</span>
           </button>
           <Link to="/products/new" className="btn-primary">
             <Plus size={16} /> Add Product
@@ -157,12 +197,30 @@ export default function ProductsPage() {
         </div>
       </div>
 
+      {/* Bulk action bar — appears when rows are selected */}
+      {selected.size > 0 && (
+        <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl" style={{ background: 'var(--c-primary-soft)', border: '1px solid var(--c-primary)' }}>
+          <span className="text-[12px] font-bold" style={{ color: 'var(--c-primary)' }}>{selected.size} selected</span>
+          <div className="flex items-center gap-2 ml-auto">
+            <button onClick={() => bulkSetActive(true)} disabled={bulkBusy} className="btn-outline !py-1.5 text-[11px] disabled:opacity-50"><CheckCircle2 size={13} /> Activate</button>
+            <button onClick={() => bulkSetActive(false)} disabled={bulkBusy} className="btn-outline !py-1.5 text-[11px] disabled:opacity-50"><XCircle size={13} /> Deactivate</button>
+            <button onClick={bulkDelete} disabled={bulkBusy} className="!py-1.5 px-3 text-[11px] font-semibold rounded-lg text-white disabled:opacity-70 inline-flex items-center gap-1.5" style={{ background: '#EF4444' }}>
+              {bulkBusy
+                ? <><span className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Deleting…</>
+                : <><Trash2 size={13} /> Delete</>}
+            </button>
+            <button onClick={() => setSelected(new Set())} disabled={bulkBusy} title="Clear" className="w-7 h-7 flex items-center justify-center rounded-lg disabled:opacity-50" style={{ color: 'var(--c-muted)' }}><X size={14} /></button>
+          </div>
+        </div>
+      )}
+
       <div className="card p-0">
         <DataTable
           columns={columns}
           data={products}
           isLoading={loading}
           keyExtractor={(p) => p._id}
+          rowClassName={(p) => (bulkBusy && selected.has(p._id) ? 'opacity-40 animate-pulse' : '')}
           emptyMessage="No products found"
           pagination={{ ...pagination, onPageChange: setPage }}
         />

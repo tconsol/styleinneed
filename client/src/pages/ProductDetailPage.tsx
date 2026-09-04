@@ -1,13 +1,13 @@
 ﻿import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Heart, ShoppingBag, Truck, RotateCcw, Shield, Star, ChevronLeft, ChevronRight, ZoomIn, Minus, Plus } from 'lucide-react';
+import { Heart, ShoppingBag, Truck, RotateCcw, Shield, Star, ChevronLeft, ChevronRight, ZoomIn, Minus, Plus, Ruler, X } from 'lucide-react';
 import Breadcrumb from '../components/common/Breadcrumb';
 import ProductRow from '../components/home/ProductRow';
 import Spinner from '../components/common/Spinner';
 import { productApi } from '../api/product.api';
 import { reviewApi } from '../api/misc.api';
-import type { Product, ProductVariant, Review, Attribute } from '../types';
+import type { Product, ProductVariant, Review, Attribute, SizeChart } from '../types';
 import { formatDate } from '../utils/format';
 import { useMoney } from '../hooks/useMoney';
 import { useRegion } from '../hooks/useRegion';
@@ -17,6 +17,7 @@ import { useAuthStore } from '../stores/authStore';
 import { useCartStore } from '../stores/cartStore';
 import { useWishlistStore } from '../stores/wishlistStore';
 import { useCurrencyStore } from '../stores/currencyStore';
+import { usePromotionStore, promoFor } from '../stores/promotionStore';
 import toast from 'react-hot-toast';
 
 export default function ProductDetailPage() {
@@ -33,10 +34,12 @@ export default function ProductDetailPage() {
   const [qty, setQty] = useState(1);
   const [tab, setTab] = useState<'description' | 'reviews' | 'shipping'>('description');
   const [zoom, setZoom] = useState(false);
+  const [showSizeChart, setShowSizeChart] = useState(false);
 
   const { isAuthenticated } = useAuthStore();
   const { addItem, updateItem, removeItem, openCart, items: cartItems, isLoading: cartLoading } = useCartStore();
   const { toggle, isWishlisted } = useWishlistStore();
+  const activePromos = usePromotionStore((s) => s.active);
   const { format } = useMoney();
   const { isUSA } = useRegion();
   const freeShipThreshold = useCurrencyStore((s) => s.freeShipThreshold);
@@ -57,13 +60,17 @@ export default function ProductDetailPage() {
   }, [slug]);
 
   useEffect(() => {
-    productApi.getAttributes().then(({ data }) => setAttributes(data.data || [])).catch(() => {});
+    // Fetch ALL attributes (not only filterable) so every product spec name resolves.
+    productApi.getAttributes(false).then(({ data }) => setAttributes(data.data || [])).catch(() => {});
   }, []);
+
+  // Reset the gallery to the first image whenever the selected variant (colour) changes.
+  useEffect(() => { setImgIdx(0); }, [selectedVariant?.sku]);
 
   // Re-fetch product (preserving selected variant) on real-time changes
   const reload = useCallback(() => {
     if (!slug) return;
-    productApi.getProductBySlug(slug).then(({ data }) => {
+    productApi.getProductBySlug(slug, true).then(({ data }) => {
       const p: Product = data.data;
       setProduct(p);
       setSelectedVariant((prev) => p.variants.find((v) => v.sku === prev?.sku) || p.variants[0] || null);
@@ -91,6 +98,8 @@ export default function ProductDetailPage() {
   if (loading) return <div className="min-h-screen flex items-center justify-center"><Spinner size="lg" /></div>;
   if (!product) return null;
 
+  const promo = promoFor(product, activePromos); // active sale for this product, if any
+  const sizeChart = product.sizeChartId && typeof product.sizeChartId === 'object' ? (product.sizeChartId as SizeChart) : null;
   const images = selectedVariant?.images?.length ? selectedVariant.images : product.images;
   const hasStock = selectedVariant ? selectedVariant.stock > 0 : false;
   const wishlisted = isWishlisted(product._id);
@@ -223,17 +232,37 @@ export default function ProductDetailPage() {
             )}
 
             {/* Price */}
-            <div className="flex items-center gap-3 mb-6 pb-6 border-b border-brand-border">
-              <span className="font-heading text-3xl font-bold text-brand-text">{format(product.salePrice, product.usdSalePrice)}</span>
-              {product.mrp > product.salePrice && (
+            <div className="flex items-center flex-wrap gap-3 mb-6 pb-6 border-b border-brand-border">
+              {promo ? (
                 <>
-                  <span className="font-body text-lg text-brand-muted line-through">{format(product.mrp, product.usdMrp)}</span>
-                  <span className="font-body text-sm bg-green-100 text-green-700 px-2 py-0.5 font-medium">
-                    {product.discountPercentage}% off
+                  <span className="font-heading text-3xl font-bold text-secondary">{format(promo.price)}</span>
+                  <span className="font-body text-lg text-brand-muted line-through">{format(product.salePrice, product.usdSalePrice)}</span>
+                  <span className="font-body text-xs text-white px-2 py-1 rounded font-semibold animate-pulse" style={{ background: 'rgb(var(--color-secondary))' }}>
+                    {promo.promo.badgeText || `${promo.promo.name}`} · {promo.off}% off
                   </span>
+                </>
+              ) : (
+                <>
+                  <span className="font-heading text-3xl font-bold text-brand-text">{format(product.salePrice, product.usdSalePrice)}</span>
+                  {product.mrp > product.salePrice && (
+                    <>
+                      <span className="font-body text-lg text-brand-muted line-through">{format(product.mrp, product.usdMrp)}</span>
+                      <span className="font-body text-sm bg-green-100 text-green-700 px-2 py-0.5 font-medium">
+                        {product.discountPercentage}% off
+                      </span>
+                    </>
+                  )}
                 </>
               )}
             </div>
+
+            {/* Size chart — shown only when the product has one assigned */}
+            {sizeChart && (
+              <button onClick={() => setShowSizeChart(true)}
+                className="inline-flex items-center gap-1.5 mb-4 font-body text-sm font-medium text-primary hover:text-primary-dark transition-colors">
+                <Ruler size={15} /> Size Chart
+              </button>
+            )}
 
             {/* Dynamic variant attribute selectors (Size, Colour, etc.) */}
             {variantSlugs.map((slug) => {
@@ -364,15 +393,37 @@ export default function ProductDetailPage() {
               </div>
               <div className="pt-5">
                 {tab === 'description' && (
-                  <div className="font-body text-sm text-brand-muted leading-relaxed space-y-3">
-                    <p>{product.description}</p>
-                    {/* Product-level attribute specs (admin-defined) */}
-                    {Object.entries(product.attributes || {}).map(([slug, vals]) =>
-                      vals?.length ? (
-                        <p key={slug}><strong>{attrBySlug[slug]?.name || slug}:</strong> {vals.join(', ')}</p>
-                      ) : null
-                    )}
-                    {product.weightGrams != null && <p><strong>Weight:</strong> {product.weightGrams} g</p>}
+                  <div className="font-body text-sm text-brand-muted leading-relaxed space-y-5">
+                    {product.shortDescription && <p className="text-brand-text font-medium">{product.shortDescription}</p>}
+                    <p className="whitespace-pre-line">{product.description}</p>
+
+                    {/* Full specifications table */}
+                    {(() => {
+                      const specs: [string, string][] = [];
+                      if (product.category?.name) specs.push(['Category', product.category.name]);
+                      if (product.subcategory) specs.push(['Subcategory', product.subcategory]);
+                      if (product.productType) specs.push(['Type', product.productType]);
+                      Object.entries(product.attributes || {}).forEach(([slug, vals]) => {
+                        if (vals?.length) specs.push([attrBySlug[slug]?.name || slug, (vals as string[]).join(', ')]);
+                      });
+                      if (product.weightGrams != null) specs.push(['Weight', `${product.weightGrams} g`]);
+                      if (product.tags?.length) specs.push(['Tags', product.tags.join(', ')]);
+                      specs.push(['Return Policy', returnDays > 0 ? `${returnDays}-day returns` : 'Non-returnable']);
+                      if (!specs.length) return null;
+                      return (
+                        <div>
+                          <h3 className="font-heading text-base font-semibold text-brand-text mb-3">Specifications</h3>
+                          <div className="rounded-xl overflow-hidden border border-brand-border">
+                            {specs.map(([k, v], i) => (
+                              <div key={k} className={`grid grid-cols-3 gap-2 px-4 py-2.5 text-sm ${i % 2 ? 'bg-brand-surface' : 'bg-brand-bg'}`}>
+                                <span className="font-medium text-brand-text capitalize">{k}</span>
+                                <span className="col-span-2 text-brand-muted capitalize">{v}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </div>
                 )}
                 {tab === 'reviews' && (
@@ -477,6 +528,50 @@ export default function ProductDetailPage() {
             onClick={() => setZoom(false)}
           >
             <img src={images[imgIdx]} alt="" className="max-h-[90vh] max-w-[90vw] object-contain" />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Size chart modal */}
+      <AnimatePresence>
+        {showSizeChart && sizeChart && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-brand-text/60 z-[95] flex items-center justify-center p-4"
+            onClick={() => setShowSizeChart(false)}>
+            <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-brand-bg rounded-2xl w-full max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
+              <div className="flex items-center justify-between px-5 py-4 border-b border-brand-border">
+                <div className="flex items-center gap-2">
+                  <Ruler size={17} className="text-primary" />
+                  <h3 className="font-heading text-base font-semibold text-brand-text">{sizeChart.name}</h3>
+                  <span className="font-body text-xs text-brand-muted">({sizeChart.unit})</span>
+                </div>
+                <button onClick={() => setShowSizeChart(false)} className="text-brand-muted hover:text-brand-text"><X size={18} /></button>
+              </div>
+              <div className="overflow-auto p-5">
+                <table className="w-full text-sm border-collapse">
+                  <thead>
+                    <tr>
+                      <th className="text-left font-body font-semibold text-brand-text px-3 py-2 border-b border-brand-border">Size</th>
+                      {sizeChart.columns.map((c) => (
+                        <th key={c} className="text-left font-body font-semibold text-brand-text px-3 py-2 border-b border-brand-border whitespace-nowrap">{c}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sizeChart.rows.map((r, i) => (
+                      <tr key={r.size} className={i % 2 ? 'bg-brand-surface' : ''}>
+                        <td className="px-3 py-2 font-body font-medium text-brand-text whitespace-nowrap">{r.size}</td>
+                        {r.values.map((v, j) => (
+                          <td key={j} className="px-3 py-2 font-body text-brand-muted whitespace-nowrap">{v}</td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Plus, Trash2, Upload } from 'lucide-react';
+import { Plus, Trash2, Upload, ImageIcon, X } from 'lucide-react';
 import { productApi, providerApi, sizeChartApi } from '../../api';
 import { useAuthStore } from '../../stores/authStore';
 import { useCategories, useCollections, useProductTypes, useAttributes } from '../../hooks/useCatalog';
@@ -116,6 +116,29 @@ export default function ProductFormPage() {
     [attributes, form.productType]
   );
 
+  // Categories + size charts that belong to the selected product type (empty
+  // productType on the record = applies to all types).
+  const categoriesForType = useMemo(
+    () => categories.filter((c) => !(c as { productType?: string }).productType || (c as { productType?: string }).productType === form.productType),
+    [categories, form.productType]
+  );
+  const sizeChartsForType = useMemo(
+    () => sizeCharts.filter((sc) => !sc.productTypes?.length || sc.productTypes.includes(form.productType)),
+    [sizeCharts, form.productType]
+  );
+
+  // When the type changes, drop a selected category / size chart that no longer
+  // belongs to it (guarded so it doesn't clear before the lists have loaded).
+  useEffect(() => {
+    if (categories.length) {
+      setForm((prev) => (prev.category && !categoriesForType.some((c) => c._id === prev.category) ? { ...prev, category: '' } : prev));
+    }
+    if (sizeCharts.length) {
+      setForm((prev) => (prev.sizeChartId && !sizeChartsForType.some((sc) => sc._id === prev.sizeChartId) ? { ...prev, sizeChartId: '' } : prev));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.productType, categories.length, sizeCharts.length]);
+
   const removeImage = async (i: number, url: string) => {
     setForm((prev) => ({ ...prev, images: prev.images.filter((_, idx) => idx !== i) }));
     productApi.deleteImage(url).catch(() => {}); // purge from bucket, best-effort
@@ -207,6 +230,29 @@ export default function ProductFormPage() {
   const removeVariant = (i: number) =>
     setForm((prev) => ({ ...prev, variants: prev.variants.filter((_, idx) => idx !== i) }));
 
+  // ── Per-colour variant images ──
+  // Images live on each variant; a colour group shares one image set, so we
+  // apply changes to every variant that shares the group's colour value.
+  const [imgGroup, setImgGroup] = useState<string | null>(null); // colour currently uploading
+  const inGroup = (v: ProductVariant, colorVal: string) =>
+    (colorAttr ? (v.attributes?.[colorAttr.slug] || '') : '') === colorVal;
+
+  const appendGroupImages = (colorVal: string, urls: string[]) =>
+    setForm((prev) => ({ ...prev, variants: prev.variants.map((v) => inGroup(v, colorVal) ? { ...v, images: [...(v.images || []), ...urls] } : v) }));
+  const removeGroupImage = (colorVal: string, url: string) =>
+    setForm((prev) => ({ ...prev, variants: prev.variants.map((v) => inGroup(v, colorVal) ? { ...v, images: (v.images || []).filter((u) => u !== url) } : v) }));
+
+  const uploadGroupImages = async (colorVal: string, files: FileList | null) => {
+    if (!files?.length) return;
+    setImgGroup(colorVal);
+    try {
+      const fd = new FormData();
+      Array.from(files).forEach((f) => fd.append('images', f));
+      const { data } = await productApi.uploadImages(fd);
+      appendGroupImages(colorVal, data.data.urls);
+    } catch { /* interceptor toasts */ } finally { setImgGroup(null); }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.productType) { toast.error('Select a product type'); return; }
@@ -237,7 +283,7 @@ export default function ProductFormPage() {
   if (loading) return <PageSpinner />;
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 max-w-4xl">
+    <form onSubmit={handleSubmit} className="space-y-6 max-w-4xl pb-24">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main */}
         <div className="lg:col-span-2 space-y-5">
@@ -391,32 +437,44 @@ export default function ProductFormPage() {
             <h2 className="font-heading text-base font-semibold border-b border-brand-border pb-3">Variants & Inventory</h2>
 
             {/* ── Variant Builder ── */}
-            <div className="rounded-xl border border-brand-border bg-brand-bg p-4 space-y-4">
-              <p className="text-[11px] font-semibold text-brand-text uppercase tracking-wider">Add Variant Group</p>
+            <div className="rounded-2xl p-5 space-y-5" style={{ background: 'var(--c-primary-soft)', border: '1px solid var(--c-border)' }}>
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: 'var(--c-surface)', color: 'var(--c-primary)', border: '1px solid var(--c-border)' }}>
+                  <Plus size={15} />
+                </div>
+                <p className="text-[12px] font-bold text-brand-text uppercase tracking-wider">Add Variant Group</p>
+              </div>
 
               {/* Color picker */}
               {colorAttr && (
                 <div>
-                  <label className="input-label">
-                    {colorAttr.name}
-                    {isHex(builderColor) && <span className="ml-2 font-normal text-brand-muted">→ {colorNameFromHex(builderColor)}</span>}
+                  <label className="input-label flex items-center gap-2">
+                    <span>{colorAttr.name}</span>
+                    {builderColor && (
+                      <span className="inline-flex items-center gap-1 font-normal text-brand-muted">
+                        <span className="w-3.5 h-3.5 rounded-full border border-brand-border" style={{ background: isHex(builderColor) ? builderColor : (colorAttr.options.find((o) => o.value === builderColor)?.hex || builderColor) }} />
+                        {isHex(builderColor) ? colorNameFromHex(builderColor) : (colorAttr.options.find((o) => o.value === builderColor)?.label || builderColor)}
+                      </span>
+                    )}
                   </label>
-                  <div className="flex flex-wrap items-center gap-2 pt-1">
-                    {colorAttr.options.map((o) => (
-                      <button key={o.value} type="button" onClick={() => setBuilderColor(builderColor === o.value ? '' : o.value)}
-                        title={o.label}
-                        className={`w-7 h-7 rounded-full border-2 transition-all ${builderColor === o.value ? 'border-primary scale-110 shadow-md' : 'border-brand-border'}`}
-                        style={{ background: o.hex || '#ccc' }} />
-                    ))}
-                    <span className="w-px h-6 bg-brand-border mx-1" />
-                    <input type="color" value={isHex(builderColor) ? builderColor : '#000000'}
-                      onChange={(e) => setBuilderColor(e.target.value)}
-                      title="Pick a custom colour"
-                      className="w-9 h-9 p-0 border border-brand-border rounded cursor-pointer bg-transparent" />
-                    <input type="text" value={builderColor}
-                      onChange={(e) => setBuilderColor(e.target.value)}
-                      placeholder="#RRGGBB or name"
-                      className="input-field flex-1 min-w-[120px]" />
+                  <div className="flex flex-wrap items-center gap-2.5 mt-2">
+                    {colorAttr.options.map((o) => {
+                      const active = builderColor === o.value;
+                      return (
+                        <button key={o.value} type="button" onClick={() => setBuilderColor(active ? '' : o.value)} title={o.label}
+                          className="w-9 h-9 rounded-full transition-all flex items-center justify-center"
+                          style={{ background: o.hex || '#ccc', outline: active ? '2px solid var(--c-primary)' : '1px solid var(--c-border)', outlineOffset: 2, transform: active ? 'scale(1.08)' : 'none' }}>
+                          {active && <svg className="w-3.5 h-3.5" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg>}
+                        </button>
+                      );
+                    })}
+                    <span className="w-px h-7 mx-1" style={{ background: 'var(--c-border)' }} />
+                    <div className="flex items-center gap-2 flex-1 min-w-[180px] px-2 py-1.5 rounded-lg" style={{ background: 'var(--c-surface)', border: '1px solid var(--c-border)' }}>
+                      <input type="color" value={isHex(builderColor) ? builderColor : '#000000'} onChange={(e) => setBuilderColor(e.target.value)} title="Pick a custom colour"
+                        className="w-8 h-8 p-0 border-0 rounded cursor-pointer bg-transparent flex-shrink-0" />
+                      <input type="text" value={builderColor} onChange={(e) => setBuilderColor(e.target.value)} placeholder="Custom: #RRGGBB or name"
+                        className="flex-1 bg-transparent outline-none text-[12px] text-brand-text placeholder:text-brand-muted/70" />
+                    </div>
                   </div>
                 </div>
               )}
@@ -424,35 +482,28 @@ export default function ProductFormPage() {
               {/* Size + stock multi-picker */}
               {sizeAttr && (
                 <div>
-                  <label className="input-label">Sizes & Stock</label>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 mt-1">
+                  <label className="input-label">Sizes &amp; Stock <span className="font-normal text-brand-muted">— tick a size, then set qty + SKU</span></label>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 mt-2">
                     {sizeAttr.options.map((o) => {
                       const checked = o.value in builderSizes;
                       return (
-                        <div key={o.value}
-                          className={`flex items-start gap-2 p-2 rounded-lg border cursor-pointer select-none transition-colors ${checked ? 'border-primary bg-primary/5' : 'border-brand-border bg-white hover:border-primary/40'}`}
-                          onClick={() => toggleBuilderSize(o.value)}
-                        >
-                          <div className={`w-4 h-4 mt-0.5 rounded flex items-center justify-center flex-shrink-0 border transition-colors ${checked ? 'bg-primary border-primary' : 'border-brand-border'}`}>
-                            {checked && <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>}
+                        <div key={o.value} onClick={() => toggleBuilderSize(o.value)}
+                          className="rounded-xl p-2.5 cursor-pointer select-none transition-all"
+                          style={{ background: 'var(--c-surface)', border: `1.5px solid ${checked ? 'var(--c-primary)' : 'var(--c-border)'}` }}>
+                          <div className="flex items-center gap-2">
+                            <div className="w-4 h-4 rounded flex items-center justify-center flex-shrink-0 transition-colors" style={{ background: checked ? 'var(--c-primary)' : 'transparent', border: `1.5px solid ${checked ? 'var(--c-primary)' : 'var(--c-border)'}` }}>
+                              {checked && <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>}
+                            </div>
+                            <span className="text-[12px] font-semibold text-brand-text">{o.label}</span>
                           </div>
-                          <span className="text-[11px] font-medium text-brand-text flex-1">{o.label}</span>
                           {checked && (
-                            <div className="flex flex-col gap-1" onClick={(e) => e.stopPropagation()}>
-                              <input
-                                type="number" min="0" value={builderSizes[o.value].stock}
-                                onChange={(e) => { e.stopPropagation(); setBuilderSizeStock(o.value, Number(e.target.value)); }}
-                                onClick={(e) => e.stopPropagation()}
-                                placeholder="Qty"
-                                className="w-16 text-[11px] border border-brand-border rounded px-1.5 py-0.5 focus:outline-none focus:border-primary"
-                              />
-                              <input
-                                type="text" value={builderSizes[o.value].sku}
-                                onChange={(e) => { e.stopPropagation(); setBuilderSizeSku(o.value, e.target.value); }}
-                                onClick={(e) => e.stopPropagation()}
-                                placeholder="SKU"
-                                className="w-16 text-[11px] border border-brand-border rounded px-1.5 py-0.5 focus:outline-none focus:border-primary font-mono"
-                              />
+                            <div className="flex gap-1.5 mt-2" onClick={(e) => e.stopPropagation()}>
+                              <input type="number" min="0" value={builderSizes[o.value].stock}
+                                onChange={(e) => setBuilderSizeStock(o.value, Number(e.target.value))} placeholder="Qty"
+                                className="w-full input-field !py-1 text-[11px]" />
+                              <input type="text" value={builderSizes[o.value].sku}
+                                onChange={(e) => setBuilderSizeSku(o.value, e.target.value)} placeholder="SKU"
+                                className="w-full input-field !py-1 text-[11px] font-mono" />
                             </div>
                           )}
                         </div>
@@ -466,11 +517,9 @@ export default function ProductFormPage() {
                 <p className="text-[11px] text-brand-muted">No variant attributes defined for this product type. Add color/size attributes in the Attributes page first.</p>
               )}
 
-              <div className="flex justify-end">
-                <button type="button" onClick={addVariantGroup} className="btn-primary text-xs py-2 px-4 gap-1.5">
-                  <Plus size={13} /> Add to Variants
-                </button>
-              </div>
+              <button type="button" onClick={addVariantGroup} className="btn-primary w-full justify-center gap-1.5">
+                <Plus size={15} /> Add to Variants
+              </button>
             </div>
 
             {/* ── Existing Variants Grouped by Color ── */}
@@ -484,32 +533,56 @@ export default function ProductFormPage() {
               return (
                 <div className="space-y-3">
                   <p className="text-[11px] font-semibold text-brand-text uppercase tracking-wider">Added Variants ({form.variants.filter((v) => v.sku?.trim()).length})</p>
-                  {Object.entries(groups).map(([colorVal, groupVariants]) => (
-                    <div key={colorVal} className="rounded-xl border border-brand-border overflow-hidden">
+                  {Object.entries(groups).map(([colorVal, groupVariants]) => {
+                    const groupImages = groupVariants[0]?.images || [];
+                    const colorLabel = colorVal
+                      ? (isHex(colorVal) ? colorNameFromHex(colorVal) : (colorAttr?.options.find((o) => o.value === colorVal)?.label || colorVal))
+                      : 'No Color';
+                    return (
+                    <div key={colorVal} className="rounded-2xl overflow-hidden" style={{ border: '1px solid var(--c-border)' }}>
                       {/* Color header */}
-                      <div className="flex items-center gap-2 px-4 py-2.5 bg-brand-bg border-b border-brand-border">
+                      <div className="flex items-center gap-2 px-4 py-3" style={{ background: 'var(--c-bg)', borderBottom: '1px solid var(--c-border)' }}>
                         {colorVal && (
-                          <span className="w-4 h-4 rounded-full border border-white/40 shadow-sm flex-shrink-0"
+                          <span className="w-5 h-5 rounded-full border-2 border-white shadow flex-shrink-0"
                             style={{ background: isHex(colorVal) ? colorVal : (colorAttr?.options.find((o) => o.value === colorVal)?.hex || colorVal) }} />
                         )}
-                        <span className="text-[11px] font-semibold text-brand-text">
-                          {colorVal
-                            ? (isHex(colorVal) ? colorNameFromHex(colorVal) : (colorAttr?.options.find((o) => o.value === colorVal)?.label || colorVal))
-                            : 'No Color'}
-                        </span>
-                        <span className="text-[10px] text-brand-muted ml-1">({groupVariants.length} size{groupVariants.length !== 1 ? 's' : ''})</span>
+                        <span className="text-[12px] font-bold text-brand-text">{colorLabel}</span>
+                        <span className="text-[10px] text-brand-muted ml-1">{groupVariants.length} size{groupVariants.length !== 1 ? 's' : ''} · {groupImages.length} image{groupImages.length !== 1 ? 's' : ''}</span>
                       </div>
+
+                      {/* Per-colour images */}
+                      <div className="px-4 py-3 flex flex-wrap items-center gap-2" style={{ background: 'var(--c-surface)', borderBottom: '1px solid var(--c-border)' }}>
+                        {groupImages.map((img) => (
+                          <div key={img} className="relative w-14 h-16 rounded-lg overflow-hidden group" style={{ border: '1px solid var(--c-border)' }}>
+                            <img src={img} alt="" className="w-full h-full object-cover" />
+                            <button type="button" onClick={() => removeGroupImage(colorVal, img)}
+                              className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-black/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                              <X size={9} />
+                            </button>
+                          </div>
+                        ))}
+                        <label className="w-14 h-16 rounded-lg flex flex-col items-center justify-center cursor-pointer text-brand-muted hover:text-primary transition-colors"
+                          style={{ border: '1.5px dashed var(--c-border)' }}>
+                          <input type="file" accept="image/*" multiple className="hidden"
+                            onChange={(e) => { uploadGroupImages(colorVal, e.target.files); e.currentTarget.value = ''; }} />
+                          {imgGroup === colorVal
+                            ? <span className="w-4 h-4 border-2 border-brand-border border-t-primary rounded-full animate-spin" />
+                            : <><ImageIcon size={15} /><span className="text-[8px] mt-0.5">Add</span></>}
+                        </label>
+                        <span className="text-[10px] text-brand-muted ml-1">Images for <b>{colorLabel}</b> — shown when this colour is selected</span>
+                      </div>
+
                       {/* Size rows */}
                       {groupVariants.map((v) => {
                         const vi = form.variants.indexOf(v);
                         const sizeVal = sizeAttr ? (v.attributes?.[sizeAttr.slug] || '') : '';
                         const sizeLabel = sizeAttr?.options.find((o) => o.value === sizeVal)?.label || sizeVal || '—';
                         return (
-                          <div key={vi} className="grid grid-cols-12 gap-3 items-center px-4 py-2.5 border-b border-brand-border last:border-0 bg-white hover:bg-brand-bg/50 transition-colors">
+                          <div key={vi} className="grid grid-cols-12 gap-3 items-center px-4 py-2.5 last:border-0 hover:bg-brand-bg/50 transition-colors" style={{ borderBottom: '1px solid var(--c-border)', background: 'var(--c-surface)' }}>
                             <div className="col-span-2">
-                              <span className="inline-flex items-center px-2 py-0.5 rounded bg-brand-bg border border-brand-border text-[11px] font-semibold text-brand-text">{sizeLabel}</span>
+                              <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold text-brand-text" style={{ background: 'var(--c-bg)', border: '1px solid var(--c-border)' }}>{sizeLabel}</span>
                             </div>
-                            <div className="col-span-2">
+                            <div className="col-span-3">
                               <label className="input-label text-[9px]">Stock</label>
                               <input type="number" min="0" value={v.stock}
                                 onChange={(e) => updateVariant(vi, 'stock', Number(e.target.value))}
@@ -521,7 +594,7 @@ export default function ProductFormPage() {
                                 onChange={(e) => updateVariant(vi, 'sku', e.target.value)}
                                 className="input-field py-1 text-[11px] font-mono" />
                             </div>
-                            <div className="col-span-2 flex justify-end">
+                            <div className="col-span-1 flex justify-end">
                               <button type="button" onClick={() => removeVariant(vi)}
                                 className="p-1.5 rounded hover:bg-red-50 text-brand-muted hover:text-red-500 transition-colors">
                                 <Trash2 size={13} />
@@ -531,7 +604,8 @@ export default function ProductFormPage() {
                         );
                       })}
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               );
             })()}
@@ -565,8 +639,8 @@ export default function ProductFormPage() {
             <div>
               <label className="input-label">Category *</label>
               <Select value={form.category} onChange={(v) => setForm({ ...form, category: v })}
-                placeholder="— Select category —"
-                options={categories.map((c) => ({ value: c._id, label: c.name }))} />
+                placeholder={categoriesForType.length ? '— Select category —' : 'No categories for this type'}
+                options={categoriesForType.map((c) => ({ value: c._id, label: c.name }))} />
             </div>
             <div>
               <label className="input-label">Size Chart</label>
@@ -576,7 +650,7 @@ export default function ProductFormPage() {
                 placeholder="— No size chart —"
                 options={[
                   { value: '', label: '— None —' },
-                  ...sizeCharts.map((sc) => ({ value: sc._id, label: sc.name })),
+                  ...sizeChartsForType.map((sc) => ({ value: sc._id, label: sc.name })),
                 ]}
               />
             </div>
@@ -617,13 +691,16 @@ export default function ProductFormPage() {
             ))}
           </div>
 
-          <div className="flex flex-col gap-3">
-            <button type="submit" disabled={saving} className="btn-primary w-full justify-center">
-              {saving ? 'Saving...' : isEdit ? 'Update Product' : 'Create Product'}
-            </button>
-            <button type="button" onClick={() => navigate('/products')} className="btn-outline w-full justify-center">Cancel</button>
-          </div>
         </div>
+      </div>
+
+      {/* Floating action buttons — bottom-right, no full-width bar */}
+      <div className="fixed bottom-6 right-6 z-40 flex items-center gap-2.5 rounded-full p-1.5"
+        style={{ background: 'var(--c-surface)', border: '1px solid var(--c-border)', boxShadow: '0 8px 28px rgba(0,0,0,0.16)' }}>
+        <button type="button" onClick={() => navigate('/products')} className="btn-outline !rounded-full">Cancel</button>
+        <button type="submit" disabled={saving} className="btn-primary !rounded-full min-w-[150px] justify-center">
+          {saving ? 'Saving…' : isEdit ? 'Update Product' : 'Create Product'}
+        </button>
       </div>
     </form>
   );

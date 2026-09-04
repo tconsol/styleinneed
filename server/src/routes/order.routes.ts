@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { createOrder, verifyPayment, verifyStripePayment, getPaymentConfig, getMyOrders, getOrderById, cancelOrder } from '../controllers/order.controller';
+import { createOrder, verifyPayment, verifyStripePayment, getPaymentConfig, getMyOrders, getOrderById, cancelOrder, deleteMyOrder } from '../controllers/order.controller';
 import { protect } from '../middleware/auth';
 
 const router = Router();
@@ -12,6 +12,7 @@ router.post('/verify-stripe-payment', verifyStripePayment);
 router.get('/my', getMyOrders);            // must be before /:id
 router.get('/:id', getOrderById);
 router.patch('/:id/cancel', cancelOrder);
+router.delete('/:id', deleteMyOrder);
 router.get('/verify-payment', (_, res) => res.status(405).json({ success: false, message: 'Use POST for payment verification' }));
 
 export default router;

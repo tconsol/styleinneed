@@ -1,15 +1,17 @@
 import { useEffect, useState } from 'react';
-import { Plus, Edit, Trash2, BellRing } from 'lucide-react';
+import { Plus, Edit, Trash2, BellRing, ImageIcon, Upload, X } from 'lucide-react';
 import Modal from '../../components/common/Modal';
 import Select from '../../components/common/Select';
 import Badge from '../../components/common/Badge';
 import StatusToggle from '../../components/common/StatusToggle';
-import { announcementApi, notificationApi } from '../../api';
+import { announcementApi, notificationApi, ctaLinkApi, cmsApi } from '../../api';
 import type { Announcement } from '../../types';
 import { formatDate } from '../../utils/format';
 import toast from 'react-hot-toast';
 
-const empty = { title: '', content: '', type: 'top_bar', ctaText: '', ctaLink: '', startDate: '', expiryDate: '', isActive: true, bgColor: '#C8A97E', textColor: '#FFFFFF' };
+interface CtaLink { _id: string; label: string; url: string; group: string }
+
+const empty = { title: '', content: '', type: 'top_bar', image: '', ctaText: '', ctaLink: '', startDate: '', expiryDate: '', isActive: true };
 const TYPES = ['top_bar', 'popup', 'promotional_banner', 'flash_sale', 'festival'];
 
 export default function AnnouncementsPage() {
@@ -20,6 +22,22 @@ export default function AnnouncementsPage() {
   const [form, setForm] = useState(empty);
   const [saving, setSaving] = useState(false);
   const [pushing, setPushing] = useState<string | null>(null);
+  const [ctaLinks, setCtaLinks] = useState<CtaLink[]>([]);
+  const [bannerUploading, setBannerUploading] = useState(false);
+
+  const uploadBanner = async (files: FileList | null) => {
+    if (!files?.[0]) return;
+    setBannerUploading(true);
+    try {
+      const fd = new FormData(); fd.append('image', files[0]);
+      const { data } = await cmsApi.uploadImage(fd);
+      setForm((f) => ({ ...f, image: data.data.url }));
+    } catch { /* interceptor */ } finally { setBannerUploading(false); }
+  };
+
+  useEffect(() => {
+    ctaLinkApi.getAll().then(({ data }) => setCtaLinks(data.data || [])).catch(() => {});
+  }, []);
 
   const sendPush = async (a: Announcement) => {
     setPushing(a._id);
@@ -49,7 +67,7 @@ export default function AnnouncementsPage() {
 
   const openEdit = (a: Announcement) => {
     setEditing(a);
-    setForm({ title: a.title, content: a.content, type: a.type, ctaText: a.ctaText || '', ctaLink: a.ctaLink || '', startDate: a.startDate?.slice(0, 10) || '', expiryDate: a.expiryDate?.slice(0, 10) || '', isActive: a.isActive, bgColor: a.bgColor || '#C8A97E', textColor: a.textColor || '#FFFFFF' });
+    setForm({ title: a.title, content: a.content, type: a.type, image: a.image || '', ctaText: a.ctaText || '', ctaLink: a.ctaLink || '', startDate: a.startDate?.slice(0, 10) || '', expiryDate: a.expiryDate?.slice(0, 10) || '', isActive: a.isActive });
     setModal(true);
   };
 
@@ -57,8 +75,15 @@ export default function AnnouncementsPage() {
     e.preventDefault();
     setSaving(true);
     try {
-      if (editing) { await announcementApi.update(editing._id, form); toast.success('Updated'); }
-      else { await announcementApi.create(form); toast.success('Created'); }
+      // Normalise the window: start at 00:00, expire at end-of-day. A bare date is
+      // midnight, so a same-day expiry would be "already passed" and never show.
+      const payload = {
+        ...form,
+        startDate: form.startDate ? new Date(`${form.startDate}T00:00:00`).toISOString() : form.startDate,
+        expiryDate: form.expiryDate ? new Date(`${form.expiryDate}T23:59:59`).toISOString() : form.expiryDate,
+      };
+      if (editing) { await announcementApi.update(editing._id, payload); toast.success('Updated'); }
+      else { await announcementApi.create(payload); toast.success('Created'); }
       setModal(false); fetch();
     } catch {} finally { setSaving(false); }
   };
@@ -109,11 +134,39 @@ export default function AnnouncementsPage() {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div><label className="input-label">Title *</label><input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} className="input-field" required /></div>
           <div><label className="input-label">Content *</label><textarea value={form.content} onChange={(e) => setForm({ ...form, content: e.target.value })} rows={2} className="input-field resize-none" required /></div>
-          <div className="grid grid-cols-2 gap-4">
-            <div><label className="input-label">Type</label>
-              <Select value={form.type} onChange={(v) => setForm({ ...form, type: v })} options={TYPES} />
+          <div><label className="input-label">Type</label>
+            <Select value={form.type} onChange={(v) => setForm({ ...form, type: v })} options={TYPES} />
+          </div>
+
+          {/* Banner — every type except the thin top bar */}
+          {form.type !== 'top_bar' && (
+            <div>
+              <label className="input-label">Banner Image</label>
+              <div className="flex items-center gap-3">
+                <div className="w-32 h-20 rounded-lg overflow-hidden flex items-center justify-center flex-shrink-0" style={{ background: 'var(--c-bg)', border: '1px solid var(--c-border)' }}>
+                  {form.image ? <img src={form.image} alt="" className="w-full h-full object-cover" /> : <ImageIcon size={20} className="text-brand-border" />}
+                </div>
+                <label className="btn-outline text-[12px] cursor-pointer">
+                  <input type="file" accept="image/*" className="hidden" onChange={(e) => { uploadBanner(e.target.files); e.currentTarget.value = ''; }} />
+                  {bannerUploading ? 'Uploading…' : <><Upload size={13} /> {form.image ? 'Replace' : 'Upload'}</>}
+                </label>
+                {form.image && <button type="button" onClick={() => setForm({ ...form, image: '' })} className="text-brand-muted hover:text-red-500"><X size={16} /></button>}
+              </div>
+              <p className="text-[10px] text-brand-muted mt-1">Shown at the top of the popup / banner. Wide landscape image works best.</p>
             </div>
-            <div><label className="input-label">BG Color</label><input type="color" value={form.bgColor} onChange={(e) => setForm({ ...form, bgColor: e.target.value })} className="input-field h-10 p-1 cursor-pointer" /></div>
+          )}
+          <div>
+            <label className="input-label">CTA Preset (pick a destination)</label>
+            <Select
+              value={ctaLinks.some((l) => l.url === form.ctaLink) ? form.ctaLink : ''}
+              onChange={(url) => {
+                const l = ctaLinks.find((x) => x.url === url);
+                setForm((f) => ({ ...f, ctaLink: url, ctaText: f.ctaText || (l ? l.label : '') }));
+              }}
+              placeholder="Choose a link…"
+              options={ctaLinks.map((l) => ({ value: l.url, label: `${l.group} · ${l.label}` }))}
+            />
+            <p className="text-[10px] text-brand-muted mt-1">Product types auto-appear here. Or type a custom link below.</p>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div><label className="input-label">CTA Text</label><input value={form.ctaText} onChange={(e) => setForm({ ...form, ctaText: e.target.value })} className="input-field" placeholder="Shop Now" /></div>

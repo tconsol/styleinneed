@@ -414,3 +414,19 @@ export const cancelOrder = async (req: AuthRequest, res: Response, next: NextFun
     next(err);
   }
 };
+
+// Customer removes their own order from their history — only once it's a final
+// state (delivered / cancelled / returned). Active orders can't be deleted.
+export const deleteMyOrder = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const order = await Order.findOne({ _id: req.params.id, user: req.user!._id });
+    if (!order) { sendError(res, 'Order not found', 404); return; }
+    if (!['delivered', 'cancelled', 'returned'].includes(order.status)) {
+      sendError(res, 'Only delivered, cancelled or returned orders can be deleted', 400); return;
+    }
+    await order.deleteOne();
+    sendSuccess(res, 'Order removed from your history');
+  } catch (err) {
+    next(err);
+  }
+};

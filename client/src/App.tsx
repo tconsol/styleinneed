@@ -7,6 +7,7 @@ import { PageLoader } from './components/common/Spinner';
 import { useAuthStore } from './stores/authStore';
 import { refreshTheme, applyAppearance, type Appearance } from './lib/theme';
 import { socket, SOCKET_EVENTS } from './lib/socket';
+import { usePromotionStore } from './stores/promotionStore';
 
 const HomePage = lazy(() => import('./pages/HomePage'));
 const ProductListPage = lazy(() => import('./pages/ProductListPage'));
@@ -15,6 +16,7 @@ const CheckoutPage = lazy(() => import('./pages/CheckoutPage'));
 const BlogListPage = lazy(() => import('./pages/BlogListPage'));
 const BlogDetailPage = lazy(() => import('./pages/BlogDetailPage'));
 const SearchPage = lazy(() => import('./pages/SearchPage'));
+const SalePage = lazy(() => import('./pages/SalePage'));
 const CmsPage = lazy(() => import('./pages/CmsPage'));
 const AccountPage = lazy(() => import('./pages/account/AccountPage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
@@ -30,6 +32,7 @@ const ForgotPasswordPage = lazy(() => import('./pages/auth/ForgotPasswordPage'))
 const ResetPasswordPage = lazy(() => import('./pages/auth/ResetPasswordPage'));
 const OrderTrackingPage = lazy(() => import('./pages/OrderTrackingPage'));
 const PaymentReturnPage = lazy(() => import('./pages/PaymentReturnPage'));
+const UnsubscribePage = lazy(() => import('./pages/UnsubscribePage'));
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 60_000, retry: 1 } },
@@ -43,6 +46,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 export default function App() {
   useEffect(() => {
     void refreshTheme();
+    void usePromotionStore.getState().fetchActive();
     // Live theme updates pushed from the admin panel — recolour without refresh.
     const onTheme = (a: Appearance) => applyAppearance(a);
     socket.on(SOCKET_EVENTS.themeChanged, onTheme);
@@ -59,6 +63,8 @@ export default function App() {
               <Route path="/products/:slug" element={<ProductDetailPage />} />
               <Route path="/collections" element={<ProductListPage />} />
               <Route path="/search" element={<SearchPage />} />
+              <Route path="/sale" element={<SalePage />} />
+              <Route path="/unsubscribe" element={<UnsubscribePage />} />
               <Route path="/cms/:key" element={<CmsPage />} />
               <Route path="/blogs" element={<BlogListPage />} />
               <Route path="/blogs/:slug" element={<BlogDetailPage />} />

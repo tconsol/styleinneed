@@ -59,6 +59,13 @@ export const attributeApi = {
   delete: (id: string) => client.delete(`/catalog/attributes/${id}`),
 };
 
+export const ctaLinkApi = {
+  getAll: () => client.get('/catalog/cta-links', { params: { includeInactive: true } }),
+  create: (data: object) => client.post('/catalog/cta-links', data),
+  update: (id: string, data: object) => client.patch(`/catalog/cta-links/${id}`, data),
+  delete: (id: string) => client.delete(`/catalog/cta-links/${id}`),
+};
+
 export const orderApi = {
   getAll: (params?: object) => client.get('/admin/orders', { params }),
   getById: (id: string) => client.get(`/admin/orders/${id}`),
@@ -70,6 +77,7 @@ export const customerApi = {
   getAll: (params?: object) => client.get('/admin/users', { params }),
   getById: (id: string) => client.get(`/admin/users/${id}`),
   updateRole: (id: string, data: object) => client.patch(`/admin/users/${id}`, data),
+  delete: (id: string) => client.delete(`/admin/users/${id}`),
 };
 
 export const couponApi = {
@@ -111,6 +119,8 @@ export const reviewApi = {
 
 export const newsletterApi = {
   getSubscribers: (params?: object) => client.get('/newsletter/subscribers', { params }),
+  broadcastPromotion: (data: object) => client.post('/newsletter/broadcast-promotion', data),
+  delete: (id: string) => client.delete(`/newsletter/subscribers/${id}`),
 };
 
 export const supportApi = {

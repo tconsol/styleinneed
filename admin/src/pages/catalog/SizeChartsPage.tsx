@@ -4,6 +4,7 @@ import { Plus, Edit2, Trash2, Ruler, X } from 'lucide-react';
 import { sizeChartApi } from '../../api';
 import type { SizeChart, SizeChartRow } from '../../types';
 import Modal from '../../components/common/Modal';
+import Select from '../../components/common/Select';
 import { useConfirm } from '../../components/common/ConfirmDialog';
 import toast from 'react-hot-toast';
 
@@ -228,16 +229,14 @@ export default function SizeChartsPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="input-label">Chart Name *</label>
-              <input className="input" placeholder="e.g., Kurtis Standard" value={form.name}
+              <input className="input-field" placeholder="e.g., Kurtis Standard" value={form.name}
                 onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} required />
             </div>
             <div>
               <label className="input-label">Unit</label>
-              <select className="input" value={form.unit}
-                onChange={(e) => setForm((f) => ({ ...f, unit: e.target.value as 'cm' | 'inches' }))}>
-                <option value="cm">cm</option>
-                <option value="inches">inches</option>
-              </select>
+              <Select value={form.unit}
+                onChange={(v) => setForm((f) => ({ ...f, unit: v as 'cm' | 'inches' }))}
+                options={[{ value: 'cm', label: 'cm' }, { value: 'inches', label: 'inches' }]} />
             </div>
           </div>
 

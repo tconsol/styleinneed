@@ -7,6 +7,7 @@ import CollectionBanner from '../components/home/CollectionBanner';
 import Testimonials from '../components/home/Testimonials';
 import NewsletterSection from '../components/home/NewsletterSection';
 import InfiniteMarquee from '../components/home/InfiniteMarquee';
+import SaleSection from '../components/home/SaleSection';
 import { productApi } from '../api/product.api';
 import { useHomepageCms } from '../hooks/useHomepageCms';
 import { socket, SOCKET_EVENTS } from '../lib/socket';
@@ -54,6 +55,9 @@ export default function HomePage() {
       <HeroSection slides={cms.hero} />
 
       <InfiniteMarquee items={cms.marquee} />
+
+      {/* Special sale — only renders when a promotion is live */}
+      <SaleSection />
 
       <ProductRow
         label={cms.rowNew.label}

@@ -185,12 +185,10 @@ function RegisterForm() {
                           />
                         ))}
                       </div>
-                      <div className="flex items-center justify-between mt-1.5">
-                        <span className={`font-body text-[11px] font-semibold ${STRENGTH_LEVELS[strengthLevel].text}`}>
-                          {STRENGTH_LEVELS[strengthLevel].label}
-                        </span>
-                        <span className="font-body text-[10px] text-brand-muted">Use 8+ chars, mixed case, numbers & symbols</span>
-                      </div>
+                      <p className="font-body text-[11px] mt-1.5 leading-snug">
+                        <span className={`font-semibold ${STRENGTH_LEVELS[strengthLevel].text}`}>{STRENGTH_LEVELS[strengthLevel].label}</span>
+                        <span className="text-brand-muted"> · use 8+ chars, mixed case, numbers &amp; symbols</span>
+                      </p>
                     </div>
                   )}
                 </div>

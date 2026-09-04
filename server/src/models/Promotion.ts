@@ -14,6 +14,8 @@ export interface IPromotion extends Document {
   expiryDate: Date;
   isActive: boolean;
   description?: string;
+  bannerImage?: string;
+  badgeText?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -36,6 +38,8 @@ const promotionSchema = new Schema<IPromotion>(
     expiryDate: { type: Date, required: true },
     isActive: { type: Boolean, default: true },
     description: String,
+    bannerImage: String,
+    badgeText: String,
   },
   { timestamps: true }
 );

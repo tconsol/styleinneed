@@ -1,5 +1,5 @@
-import { Menu } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Menu, ArrowLeft } from 'lucide-react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import ThemeSwitcher from './ThemeSwitcher';
 import { useAuthStore } from '../../stores/authStore';
 
@@ -7,6 +7,9 @@ interface Props { onMenuClick: () => void; title: string; }
 
 export default function Topbar({ onMenuClick, title }: Props) {
   const { user } = useAuthStore();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const isRoot = location.pathname === '/'; // no back button on the dashboard
 
   return (
     <header className="h-14 flex items-center justify-between px-5"
@@ -21,6 +24,15 @@ export default function Topbar({ onMenuClick, title }: Props) {
           style={{ color: 'var(--c-muted)' }}>
           <Menu size={18} />
         </button>
+        {!isRoot && (
+          <button onClick={() => navigate(-1)} title="Go back"
+            className="w-8 h-8 flex items-center justify-center rounded-lg transition-colors"
+            style={{ color: 'var(--c-muted)', border: '1px solid var(--c-border)' }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--c-primary-soft)'; (e.currentTarget as HTMLElement).style.color = 'var(--c-primary)'; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.color = 'var(--c-muted)'; }}>
+            <ArrowLeft size={16} />
+          </button>
+        )}
         <h1 className="text-[15px] font-semibold" style={{ color: 'var(--c-text)' }}>{title}</h1>
       </div>
 

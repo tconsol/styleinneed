@@ -99,11 +99,26 @@ export default function OrderDetailPage() {
     const cw = W - M * 2;
     let y = 0;
 
-    const rgb = (hex: string): [number, number, number] => [
-      parseInt(hex.slice(1, 3), 16),
-      parseInt(hex.slice(3, 5), 16),
-      parseInt(hex.slice(5, 7), 16),
-    ];
+    // Resolve any colour (hex, rgb(), or a `var(--token)`) to an [r,g,b] triple.
+    // jsPDF can't parse CSS vars, so we read the computed value first. Never
+    // returns NaN (that throws inside jsPDF).
+    const rgb = (color: string): [number, number, number] => {
+      let c = (color || '').trim();
+      if (c.startsWith('var(')) {
+        const name = c.slice(4, -1).trim();
+        c = getComputedStyle(document.documentElement).getPropertyValue(name).trim() || '#111111';
+      }
+      if (c.startsWith('#')) {
+        const h = c.slice(1);
+        const n = h.length === 3 ? h.split('').map((x) => x + x).join('') : h;
+        const int = parseInt(n, 16);
+        if (Number.isNaN(int)) return [17, 17, 17];
+        return [(int >> 16) & 255, (int >> 8) & 255, int & 255];
+      }
+      const m = c.match(/\d+/g);
+      if (m && m.length >= 3) return [Number(m[0]), Number(m[1]), Number(m[2])];
+      return [17, 17, 17];
+    };
     const setTxt = (hex: string) => doc.setTextColor(...rgb(hex));
     const setDrw = (hex: string) => { doc.setDrawColor(...rgb(hex)); };
     const setFll = (hex: string) => { doc.setFillColor(...rgb(hex)); };
