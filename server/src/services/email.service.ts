@@ -164,6 +164,58 @@ export const sendLowStockEmail = async (
   });
 };
 
+export interface AbandonedCartEmail {
+  name: string;
+  cartUrl: string;
+  unsubscribeUrl?: string;
+  items: { name: string; image?: string; quantity: number; price: number }[];
+  currencySymbol: string;
+  total: number;
+}
+
+/** Nudge a shopper who left items in their cart. */
+export const sendAbandonedCartEmail = async (email: string, c: AbandonedCartEmail): Promise<void> => {
+  const rows = c.items.map((i) => `
+    <tr>
+      <td style="padding:10px 0;width:64px;">
+        ${i.image ? `<img src="${i.image}" width="56" height="72" style="display:block;object-fit:cover;border-radius:4px;" alt="" />` : ''}
+      </td>
+      <td style="padding:10px 12px;color:#1C1C1C;font-size:14px;">
+        ${i.name}<br /><span style="color:#888;font-size:12px;">Qty ${i.quantity}</span>
+      </td>
+      <td style="padding:10px 0;text-align:right;color:#1C1C1C;font-size:14px;font-weight:600;white-space:nowrap;">
+        ${c.currencySymbol}${(i.price * i.quantity).toLocaleString('en-IN')}
+      </td>
+    </tr>`).join('');
+
+  await transporter.sendMail({
+    from,
+    to: email,
+    subject: 'You left something behind',
+    html: `
+      <div style="font-family: Inter, sans-serif; max-width: 540px; margin: auto; padding: 32px; background: #FFF9F5;">
+        <h2 style="font-family: 'Playfair Display', serif; color: #1C1C1C; margin: 0 0 6px;">Still thinking it over, ${c.name}?</h2>
+        <p style="color: #555; margin: 0 0 20px;">Your picks are still in your bag — we&rsquo;ve saved them for you.</p>
+        <table style="width:100%;border-collapse:collapse;">${rows}</table>
+        <table style="width:100%;border-top:1px solid #E8DDD4;margin-top:12px;">
+          <tr>
+            <td style="padding-top:12px;color:#888;font-size:14px;">Total</td>
+            <td style="padding-top:12px;text-align:right;color:#1C1C1C;font-size:16px;font-weight:700;">
+              ${c.currencySymbol}${c.total.toLocaleString('en-IN')}
+            </td>
+          </tr>
+        </table>
+        <div style="text-align:center;">
+          <a href="${c.cartUrl}" style="display:inline-block;margin:26px 0 8px;padding:14px 40px;background:#1C1C1C;color:#fff;text-decoration:none;border-radius:999px;font-weight:600;text-transform:uppercase;letter-spacing:1px;font-size:14px;">Complete your order</a>
+        </div>
+        <hr style="border:none;border-top:1px solid #F5EFE8;margin:24px 0;" />
+        <p style="color:#bbb;font-size:12px;text-align:center;margin:0;">Style In Need Fashions — Elegance Redefined</p>
+        ${c.unsubscribeUrl ? `<p style="color:#bbb;font-size:11px;text-align:center;margin:6px 0 0;"><a href="${c.unsubscribeUrl}" style="color:#bbb;">Unsubscribe</a></p>` : ''}
+      </div>
+    `,
+  });
+};
+
 export const verifyEmailConnection = async (): Promise<void> => {
   try {
     await transporter.verify();

@@ -5,6 +5,7 @@ import connectDB from './config/db';
 import { initSocket } from './config/socket';
 import { verifyEmailConnection } from './services/email.service';
 import { startExchangeRateSync, stopExchangeRateSync } from './services/exchangeRate.service';
+import { startAbandonedCartSweep, stopAbandonedCartSweep } from './services/abandonedCart.service';
 import { ensureSystemCtaLinks } from './utils/ctaLinks';
 import logger from './utils/logger';
 
@@ -26,6 +27,8 @@ connectDB()
   .then(() => {
     // Start syncing the live USD→INR rate once the DB is available.
     startExchangeRateSync();
+    // Hourly sweep that emails shoppers who left items in their cart.
+    startAbandonedCartSweep();
     // Ensure built-in CTA links exist (non-fatal).
     ensureSystemCtaLinks().catch((err) => logger.warn('CTA link seed failed:', err));
   })
@@ -42,6 +45,7 @@ verifyEmailConnection().catch((err) => {
 const shutdown = (signal: string) => {
   logger.info(`${signal} received. Shutting down gracefully...`);
   stopExchangeRateSync();
+  stopAbandonedCartSweep();
   server.close(() => {
     logger.info('HTTP server closed');
     process.exit(0);

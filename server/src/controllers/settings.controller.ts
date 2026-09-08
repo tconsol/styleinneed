@@ -84,6 +84,7 @@ export const updateSettings = async (req: Request, res: Response, next: NextFunc
     const {
       usdExchangeRate, indiaFreeShipThreshold, indiaFlatShipping, usaFreeShipThreshold,
       lowStockThreshold, lowStockAlerts,
+      abandonedCartEmails, abandonedCartDelayHours, abandonedCartMaxReminders,
     } = req.body;
     const update: Record<string, number | boolean> = {};
     if (usdExchangeRate != null) update.usdExchangeRate = Number(usdExchangeRate);
@@ -92,6 +93,9 @@ export const updateSettings = async (req: Request, res: Response, next: NextFunc
     if (usaFreeShipThreshold != null) update.usaFreeShipThreshold = Number(usaFreeShipThreshold);
     if (lowStockThreshold != null) update.lowStockThreshold = Number(lowStockThreshold);
     if (lowStockAlerts != null) update.lowStockAlerts = !!lowStockAlerts;
+    if (abandonedCartEmails != null) update.abandonedCartEmails = !!abandonedCartEmails;
+    if (abandonedCartDelayHours != null) update.abandonedCartDelayHours = Number(abandonedCartDelayHours);
+    if (abandonedCartMaxReminders != null) update.abandonedCartMaxReminders = Number(abandonedCartMaxReminders);
 
     const doc = await Settings.findOneAndUpdate({ key: 'global' }, update, { new: true, upsert: true });
     sendSuccess(res, 'Settings updated', doc);

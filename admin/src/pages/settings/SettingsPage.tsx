@@ -12,16 +12,19 @@ interface Form {
   usaFreeShipThreshold: string;
   lowStockThreshold: string;
   lowStockAlerts: boolean;
+  abandonedCartEmails: boolean;
+  abandonedCartDelayHours: string;
+  abandonedCartMaxReminders: string;
 }
 
 export default function SettingsPage() {
-  const [form, setForm] = useState<Form>({ usdExchangeRate: '', indiaFreeShipThreshold: '', indiaFlatShipping: '', usaFreeShipThreshold: '', lowStockThreshold: '5', lowStockAlerts: true });
+  const [form, setForm] = useState<Form>({ usdExchangeRate: '', indiaFreeShipThreshold: '', indiaFlatShipping: '', usaFreeShipThreshold: '', lowStockThreshold: '5', lowStockAlerts: true, abandonedCartEmails: true, abandonedCartDelayHours: '6', abandonedCartMaxReminders: '2' });
   const [rateUpdatedAt, setRateUpdatedAt] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
-  const apply = (s: { usdExchangeRate?: number; indiaFreeShipThreshold?: number; indiaFlatShipping?: number; usaFreeShipThreshold?: number; lowStockThreshold?: number; lowStockAlerts?: boolean; rateUpdatedAt?: string }) => {
+  const apply = (s: { usdExchangeRate?: number; indiaFreeShipThreshold?: number; indiaFlatShipping?: number; usaFreeShipThreshold?: number; lowStockThreshold?: number; lowStockAlerts?: boolean; abandonedCartEmails?: boolean; abandonedCartDelayHours?: number; abandonedCartMaxReminders?: number; rateUpdatedAt?: string }) => {
     setForm({
       usdExchangeRate: String(s.usdExchangeRate ?? 83),
       indiaFreeShipThreshold: String(s.indiaFreeShipThreshold ?? 999),
@@ -29,6 +32,9 @@ export default function SettingsPage() {
       usaFreeShipThreshold: String(s.usaFreeShipThreshold ?? 0),
       lowStockThreshold: String(s.lowStockThreshold ?? 5),
       lowStockAlerts: s.lowStockAlerts ?? true,
+      abandonedCartEmails: s.abandonedCartEmails ?? true,
+      abandonedCartDelayHours: String(s.abandonedCartDelayHours ?? 6),
+      abandonedCartMaxReminders: String(s.abandonedCartMaxReminders ?? 2),
     });
     setRateUpdatedAt(s.rateUpdatedAt ?? null);
   };
@@ -57,6 +63,9 @@ export default function SettingsPage() {
         usaFreeShipThreshold: Number(form.usaFreeShipThreshold),
         lowStockThreshold: Number(form.lowStockThreshold),
         lowStockAlerts: form.lowStockAlerts,
+        abandonedCartEmails: form.abandonedCartEmails,
+        abandonedCartDelayHours: Number(form.abandonedCartDelayHours),
+        abandonedCartMaxReminders: Number(form.abandonedCartMaxReminders),
       });
       toast.success('Settings saved');
     } catch { /* toast handled by interceptor */ } finally { setSaving(false); }
@@ -158,6 +167,34 @@ export default function SettingsPage() {
               subsequent order, so restocking resets it.
             </p>
           </div>
+        </div>
+
+        <div>
+          <h2 className="font-heading text-base font-semibold border-b border-brand-border pb-3 mb-4">Abandoned Cart Recovery</h2>
+          <label className="flex items-center gap-2.5 cursor-pointer select-none mb-3">
+            <input type="checkbox" checked={form.abandonedCartEmails}
+              onChange={(e) => setForm({ ...form, abandonedCartEmails: e.target.checked })}
+              className="accent-primary w-4 h-4" />
+            <span className="text-[12px] font-medium">Email shoppers who leave items in their cart</span>
+          </label>
+          <div className="grid grid-cols-2 gap-4 max-w-md">
+            <div>
+              <label className="input-label">Wait before first email (hours)</label>
+              <input type="number" min="1" value={form.abandonedCartDelayHours}
+                onChange={(e) => setForm({ ...form, abandonedCartDelayHours: e.target.value })}
+                className="input-field" disabled={!form.abandonedCartEmails} />
+            </div>
+            <div>
+              <label className="input-label">Max reminders per cart</label>
+              <input type="number" min="0" max="3" value={form.abandonedCartMaxReminders}
+                onChange={(e) => setForm({ ...form, abandonedCartMaxReminders: e.target.value })}
+                className="input-field" disabled={!form.abandonedCartEmails} />
+            </div>
+          </div>
+          <p className="text-[11px] text-brand-muted mt-2">
+            Reminders are spaced at least 24 hours apart, stop once the shopper orders, and every email carries an
+            unsubscribe link.
+          </p>
         </div>
 
         <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Saving…' : 'Save Settings'}</button>

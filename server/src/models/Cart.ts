@@ -12,6 +12,9 @@ export interface ICart extends Document {
   user: Types.ObjectId;
   items: ICartItem[];
   coupon?: Types.ObjectId;
+  // Abandoned-cart recovery bookkeeping.
+  remindedAt?: Date;
+  reminderCount: number;
   updatedAt: Date;
 }
 
@@ -30,9 +33,14 @@ const cartSchema = new Schema<ICart>(
     user: { type: Schema.Types.ObjectId, ref: 'User', required: true, unique: true },
     items: [cartItemSchema],
     coupon: { type: Schema.Types.ObjectId, ref: 'Coupon' },
+    remindedAt: Date,
+    reminderCount: { type: Number, default: 0 },
   },
   { timestamps: true }
 );
+
+// Drives the abandoned-cart sweep.
+cartSchema.index({ updatedAt: 1, reminderCount: 1 });
 
 
 export default mongoose.model<ICart>('Cart', cartSchema);

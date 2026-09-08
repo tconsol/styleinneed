@@ -12,6 +12,9 @@ export interface ISettings extends Document {
   usaFreeShipThreshold: number;   // USD subtotal at/above which US/CA shipping is free (0 = never)
   lowStockThreshold: number;      // alert admins when a variant falls to/below this
   lowStockAlerts: boolean;        // master switch for those alerts
+  abandonedCartEmails: boolean;   // send cart-recovery emails
+  abandonedCartDelayHours: number;// idle hours before the first reminder
+  abandonedCartMaxReminders: number;
   activeTheme: string;           // key of the currently applied theme
   themes: ThemeTokens[];         // editable themes (seeded from presets on first read)
   fontHeading: string;           // heading font family (Google font name)
@@ -41,6 +44,9 @@ const settingsSchema = new Schema<ISettings>(
     usaFreeShipThreshold: { type: Number, default: 0, min: 0 },
     lowStockThreshold: { type: Number, default: 5, min: 0 },
     lowStockAlerts: { type: Boolean, default: true },
+    abandonedCartEmails: { type: Boolean, default: true },
+    abandonedCartDelayHours: { type: Number, default: 6, min: 1 },
+    abandonedCartMaxReminders: { type: Number, default: 2, min: 0, max: 3 },
     activeTheme: { type: String, default: 'indigo' },
     themes: { type: [themeSchema], default: [] },
     fontHeading: { type: String, default: 'Poppins' },
