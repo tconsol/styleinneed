@@ -11,9 +11,15 @@ import { useCategories, useCollections, useProductTypes } from '../../hooks/useC
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 import AnnouncementBar from '../common/AnnouncementBar';
 import SearchSuggestions from '../common/SearchSuggestions';
+import MegaMenu, { categoryLinks, collectionLinks, type MegaMenuLink } from './MegaMenu';
 
-interface NavSub { label: string; href: string }
-interface NavItem { label: string; href: string; sub?: NavSub[]; badge?: string }
+interface NavItem {
+  label: string;
+  href: string;
+  badge?: string;
+  /** Present => hovering opens the full-width mega menu. */
+  mega?: { heading: string; links: MegaMenuLink[]; productType?: string; viewAllLabel: string };
+}
 
 export default function Header({ isCheckout = false }: { isCheckout?: boolean }) {
   const [scrolled, setScrolled] = useState(false);
@@ -41,15 +47,22 @@ export default function Header({ isCheckout = false }: { isCheckout?: boolean })
     ...productTypes.map((t) => ({
       label: t.name,
       href: `/products?productType=${t.slug}`,
-      sub: categories
-        .filter((c) => c.productType === t.slug)
-        .map((c) => ({ label: c.name, href: `/products?productType=${t.slug}&category=${c.slug}` })),
+      mega: {
+        heading: `Shop ${t.name} by category`,
+        links: categoryLinks(categories, t.slug),
+        productType: t.slug,
+        viewAllLabel: `View all ${t.name}`,
+      },
     })),
     { label: 'New Arrivals', href: '/products?isNewArrival=true' },
     {
       label: 'Collections',
       href: '/collections',
-      sub: collections.map((c) => ({ label: c.name, href: `/products?collection=${c.slug}` })),
+      mega: {
+        heading: 'Browse collections',
+        links: collectionLinks(collections),
+        viewAllLabel: 'View all collections',
+      },
     },
     { label: 'Sale', href: '/sale', badge: 'SALE' },
     { label: 'Blog', href: '/blogs' },
@@ -86,6 +99,9 @@ export default function Header({ isCheckout = false }: { isCheckout?: boolean })
     }
   };
 
+  // The nav item whose mega menu is currently open, if any.
+  const activeMega = NAV.find((n) => n.label === hoveredNav && n.mega);
+
   const isHome = location.pathname === '/';
   const transparent = isHome && !scrolled;
 
@@ -111,7 +127,8 @@ export default function Header({ isCheckout = false }: { isCheckout?: boolean })
       <div ref={topbarRef} className="fixed top-0 left-0 right-0 z-50">
         {!isCheckout && <AnnouncementBar />}
       <header
-        className={`transition-all duration-500 ${
+        onMouseLeave={() => setHoveredNav(null)}
+        className={`relative transition-all duration-500 ${
           transparent
             ? 'bg-transparent'
             : 'bg-brand-bg/95 backdrop-blur-md shadow-[0_1px_0_rgba(200,169,126,0.15)]'
@@ -137,64 +154,46 @@ export default function Header({ isCheckout = false }: { isCheckout?: boolean })
               </span>
             </Link>
 
-            {/* Desktop Nav */}
+            {/* Desktop Nav — hovering a tab opens the full-width mega menu below */}
             <nav className="hidden lg:flex items-center gap-8">
-              {NAV.map((item) => (
-                <div
-                  key={item.label}
-                  className="relative group"
-                  onMouseEnter={() => item.sub?.length && setHoveredNav(item.label)}
-                  onMouseLeave={() => setHoveredNav(null)}
-                >
-                  <Link
-                    to={item.href}
-                    className={`flex items-center gap-1 font-body text-sm tracking-wider transition-colors duration-200 ${
-                      transparent
-                        ? 'text-white/90 hover:text-white'
-                        : 'text-brand-text hover:text-primary'
-                    }`}
-                  >
-                    {item.label === 'Sale' && hasActiveSale ? (
-                      <span className="relative inline-flex items-center gap-1 font-bold text-secondary animate-pulse">
-                        {item.label}
-                        <span className="relative flex h-2 w-2">
-                          <span className="absolute inline-flex h-full w-full rounded-full bg-secondary opacity-75 animate-ping" />
-                          <span className="relative inline-flex h-2 w-2 rounded-full bg-secondary" />
+              {NAV.map((item) => {
+                const isOpen = hoveredNav === item.label;
+                return (
+                  <div key={item.label} onMouseEnter={() => setHoveredNav(item.mega ? item.label : null)}>
+                    <Link
+                      to={item.href}
+                      className={`flex items-center gap-1 font-body text-sm tracking-wider transition-colors duration-200 ${
+                        transparent
+                          ? 'text-white/90 hover:text-white'
+                          : `text-brand-text hover:text-primary ${isOpen ? 'text-primary' : ''}`
+                      }`}
+                    >
+                      {item.label === 'Sale' && hasActiveSale ? (
+                        <span className="relative inline-flex items-center gap-1 font-bold text-secondary animate-pulse">
+                          {item.label}
+                          <span className="relative flex h-2 w-2">
+                            <span className="absolute inline-flex h-full w-full rounded-full bg-secondary opacity-75 animate-ping" />
+                            <span className="relative inline-flex h-2 w-2 rounded-full bg-secondary" />
+                          </span>
                         </span>
-                      </span>
-                    ) : item.badge ? (
-                      <span className="text-red-500 font-semibold">{item.label}</span>
-                    ) : (
-                      item.label
-                    )}
-                    {!!item.sub?.length && <ChevronDown size={14} />}
-                  </Link>
-
-                  {!!item.sub?.length && (
-                    <AnimatePresence>
-                      {hoveredNav === item.label && (
-                        <motion.div
-                          initial={{ opacity: 0, y: 8 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: 8 }}
-                          transition={{ duration: 0.2 }}
-                          className="absolute top-full left-0 mt-2 w-48 bg-brand-bg border border-brand-border shadow-xl py-2 z-50"
-                        >
-                          {item.sub?.map((sub) => (
-                            <Link
-                              key={typeof sub === 'string' ? sub : sub.label}
-                              to={typeof sub === 'string' ? `/products?search=${sub}` : sub.href}
-                              className="block px-4 py-2.5 font-body text-sm text-brand-text hover:text-primary hover:bg-brand-surface transition-colors duration-150"
-                            >
-                              {typeof sub === 'string' ? sub : sub.label}
-                            </Link>
-                          ))}
-                        </motion.div>
+                      ) : item.badge ? (
+                        <span className="text-red-500 font-semibold">{item.label}</span>
+                      ) : (
+                        item.label
                       )}
-                    </AnimatePresence>
-                  )}
-                </div>
-              ))}
+                      {!!item.mega && (
+                        <ChevronDown size={14} className={`transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+                      )}
+                    </Link>
+                    {/* Underline that grows in while this tab is open */}
+                    <span
+                      className={`mt-1 block h-[2px] rounded-full bg-primary transition-all duration-200 ${
+                        isOpen ? 'w-full opacity-100' : 'w-0 opacity-0'
+                      }`}
+                    />
+                  </div>
+                );
+              })}
             </nav>
 
             {/* Actions */}
@@ -261,6 +260,22 @@ export default function Header({ isCheckout = false }: { isCheckout?: boolean })
             </div>
           </div>
         </div>
+
+        {/* Mega menu — rendered here (not inside a nav item) so it can span the
+            full header width; the header's onMouseLeave closes it. */}
+        <AnimatePresence>
+          {activeMega && (
+            <MegaMenu
+              key={activeMega.label}
+              heading={activeMega.mega!.heading}
+              links={activeMega.mega!.links}
+              productType={activeMega.mega!.productType}
+              viewAllHref={activeMega.href}
+              viewAllLabel={activeMega.mega!.viewAllLabel}
+              onNavigate={() => setHoveredNav(null)}
+            />
+          )}
+        </AnimatePresence>
       </header>
       </div>{/* end fixed top container */}
 
@@ -320,8 +335,8 @@ export default function Header({ isCheckout = false }: { isCheckout?: boolean })
             <nav className="p-5">
               {NAV.map((item) => {
                 const expanded = expandedNav === item.label;
-                // Items with a submenu: tap to expand the accordion (no navigation).
-                if (item.sub?.length) {
+                // Items with a mega menu: tap to expand the accordion (no navigation).
+                if (item.mega?.links.length) {
                   return (
                     <div key={item.label} className="border-b border-brand-border/50">
                       <button
@@ -343,17 +358,32 @@ export default function Header({ isCheckout = false }: { isCheckout?: boolean })
                             transition={{ duration: 0.22, ease: 'easeInOut' }}
                             className="overflow-hidden"
                           >
-                            <div className="pl-4 pb-2 space-y-0.5">
-                              {item.sub?.map((sub) => (
+                            <div className="pl-1 pb-2 space-y-0.5">
+                              {item.mega?.links.map((link) => (
                                 <Link
-                                  key={typeof sub === 'string' ? sub : sub.label}
-                                  to={typeof sub === 'string' ? `/products?search=${sub}` : sub.href}
-                                  className="block py-2 font-body text-sm text-brand-muted hover:text-primary transition-colors"
+                                  key={link._id}
+                                  to={link.href}
+                                  className="flex items-center gap-3 py-2 font-body text-sm text-brand-muted hover:text-primary transition-colors"
                                   onClick={closeMobileMenu}
                                 >
-                                  {typeof sub === 'string' ? sub : sub.label}
+                                  {link.image ? (
+                                    <img src={link.image} alt="" loading="lazy"
+                                      className="h-8 w-8 flex-shrink-0 rounded-full object-cover ring-1 ring-brand-border" />
+                                  ) : (
+                                    <span className="grid h-8 w-8 flex-shrink-0 place-items-center rounded-full bg-primary/10 font-heading text-xs font-semibold text-primary">
+                                      {link.name.charAt(0)}
+                                    </span>
+                                  )}
+                                  {link.name}
                                 </Link>
                               ))}
+                              <Link
+                                to={item.href}
+                                onClick={closeMobileMenu}
+                                className="block py-2 font-body text-sm font-semibold text-primary"
+                              >
+                                {item.mega?.viewAllLabel} →
+                              </Link>
                             </div>
                           </motion.div>
                         )}

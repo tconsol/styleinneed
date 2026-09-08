@@ -608,7 +608,10 @@ export default function ProductFormPage() {
                             ? <span className="w-4 h-4 border-2 border-brand-border border-t-primary rounded-full animate-spin" />
                             : <><ImageIcon size={15} /><span className="text-[8px] mt-0.5">Add</span></>}
                         </label>
-                        <span className="text-[10px] text-brand-muted ml-1">Images for <b>{colorLabel}</b> — shown when this colour is selected</span>
+                        <span className="text-[10px] text-brand-muted ml-1">
+                          Images for <b>{colorLabel}</b> — shown when this colour is selected.
+                          Same {IMAGE_SPECS.product.width}×{IMAGE_SPECS.product.height}px ({IMAGE_SPECS.product.ratio}) frame as the main gallery.
+                        </span>
                       </div>
 
                       {/* Size rows */}

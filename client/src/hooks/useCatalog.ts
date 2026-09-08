@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { productApi } from '../api/product.api';
-import type { Category, Collection, ProductType, Attribute } from '../types';
+import type { Category, Collection, ProductType, Attribute, Product } from '../types';
 
 // Shared, cached catalog queries. React Query dedupes across components
 // (Header + listing page) so these endpoints are fetched once, not per-mount.
@@ -17,3 +17,19 @@ export const useProductTypes = () =>
 
 export const useAttributes = () =>
   useQuery({ queryKey: ['attributes'], staleTime, queryFn: () => productApi.getAttributes().then((r) => (r.data.data || []) as Attribute[]) });
+
+/**
+ * A few popular products for a product type, used by the navbar mega menu.
+ * `enabled` keeps it from firing until the menu is actually opened, and the
+ * cache means re-hovering the same tab is instant.
+ */
+export const useMegaMenuProducts = (productType: string, enabled: boolean) =>
+  useQuery({
+    queryKey: ['mega-menu-products', productType],
+    staleTime,
+    enabled: enabled && !!productType,
+    queryFn: () =>
+      productApi
+        .getProducts({ productType, limit: 4, sort: '-ratings.count' })
+        .then((r) => (r.data.data || []) as Product[]),
+  });

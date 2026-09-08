@@ -31,7 +31,7 @@ export const IMAGE_SPECS = {
   story:      { width: 1000, height: 1250, ratio: '4:5',   usedFor: 'Fashion story section' },
   banner:     { width: 1200, height: 675,  ratio: '16:9',  usedFor: 'Announcement popup & sale banners' },
   blog:       { width: 1600, height: 900,  ratio: '16:9',  usedFor: 'Blog cover image' },
-  feature:    { width: 1200, height: 1500, ratio: '4:5',   usedFor: 'Featured category tiles' },
+  feature:    { width: 1200, height: 800,  ratio: '3:2',   usedFor: 'Featured category tiles (landscape, crops to fit)' },
 } as const satisfies Record<string, ImageSpec>;
 
 export type ImageSpecKey = keyof typeof IMAGE_SPECS;

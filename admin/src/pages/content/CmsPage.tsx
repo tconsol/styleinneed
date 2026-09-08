@@ -160,7 +160,7 @@ const PAGES: PageDef[] = [
         fields: [
           { suffix: 'title', label: 'Title', type: 'text', placeholder: 'Silk Sarees' },
           { suffix: 'subtitle', label: 'Subtitle', type: 'text', placeholder: 'Timeless elegance' },
-          { suffix: 'image', label: 'Image', type: 'image' },
+          { suffix: 'image', label: 'Image', type: 'image', spec: 'feature' },
           { suffix: 'href', label: 'Link', type: 'link', placeholder: '/products?category=sarees' },
         ],
       } },

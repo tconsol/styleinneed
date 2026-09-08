@@ -19,7 +19,9 @@ export const applyCoupon = async (req: AuthRequest, res: Response, next: NextFun
       sendError(res, `Minimum order value is ₹${coupon.minOrderValue}`, 400);
       return;
     }
-    if (coupon.restrictedUsers.some((u) => u.toString() === req.user!._id.toString())) {
+    // Guests have no account to check against; the same restriction is
+    // re-validated at checkout once their account is resolved.
+    if (req.user && coupon.restrictedUsers.some((u) => u.toString() === req.user!._id.toString())) {
       sendError(res, 'Coupon not applicable for your account', 400);
       return;
     }
