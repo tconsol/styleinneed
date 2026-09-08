@@ -15,7 +15,6 @@ import { emitEvent, SOCKET_EVENTS } from '../config/socket';
 import { invalidateCache } from '../middleware/cache';
 import { sendPushToUser, getStatusPushContent } from '../services/push.service';
 import { toCsv, sendCsv, dateStamp } from '../utils/csv';
-import { sanitizeFeatures } from '../config/providerFeatures';
 import { createShiprocketOrder, generateAWB, trackShipment } from '../services/shiprocket.service';
 import logger from '../utils/logger';
 
@@ -109,11 +108,12 @@ export const getTopProducts = async (_req: Request, res: Response, next: NextFun
 
 export const getUsers = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { page, limit, role, search, isActive } = req.query as Record<string, string>;
+    const { page, limit, search, isActive } = req.query as Record<string, string>;
     const { page: p, limit: l, skip } = getPagination(page, limit);
 
-    const filter: Record<string, unknown> = {};
-    if (role) filter.role = role;
+    // Customers only. Staff and supplier logins are managed on their own pages,
+    // so they must never appear in (or be editable from) the customer list.
+    const filter: Record<string, unknown> = { role: 'customer' };
     if (isActive !== undefined) filter.isActive = isActive === 'true';
     if (search) filter.$or = [
       { name: { $regex: search, $options: 'i' } },
@@ -136,7 +136,7 @@ export const getUsers = async (req: Request, res: Response, next: NextFunction):
 // Full customer profile + their entire order history + aggregate stats.
 export const getUserById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const user = await User.findById(req.params.id).select(
+    const user = await User.findOne({ _id: req.params.id, role: 'customer' }).select(
       '-password -refreshTokens -otp -otpExpiry -passwordResetToken -passwordResetExpiry -googleId'
     );
     if (!user) { sendError(res, 'Customer not found', 404); return; }
@@ -178,18 +178,15 @@ export const getUserById = async (req: Request, res: Response, next: NextFunctio
 
 export const updateUserRole = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { role, isActive, permissions } = req.body;
-    const update: Record<string, unknown> = {};
-    if (role) update.role = role;
-    if (isActive !== undefined) update.isActive = isActive;
-    // Feature grants for a manager account. Whitelisted, and cleared entirely
-    // if the account is moved back to a plain customer.
-    if (permissions !== undefined) update.permissions = sanitizeFeatures(permissions);
-    if (role && role !== 'manager' && role !== 'provider') update.permissions = [];
+    // Customer records only carry an active flag here — promoting someone to
+    // staff happens on the Staff page, which is admin-only and audited.
+    const { isActive } = req.body;
+    const user = await User.findOne({ _id: req.params.id, role: 'customer' });
+    if (!user) { sendError(res, 'Customer not found', 404); return; }
 
-    const user = await User.findByIdAndUpdate(req.params.id, update, { new: true });
-    if (!user) { sendError(res, 'User not found', 404); return; }
-    sendSuccess(res, 'User updated', user);
+    if (isActive !== undefined) user.isActive = !!isActive;
+    await user.save();
+    sendSuccess(res, 'Customer updated', user);
   } catch (err) {
     next(err);
   }
@@ -281,9 +278,8 @@ export const exportOrders = async (req: Request, res: Response, next: NextFuncti
 /** Customers as CSV (no credentials — profile + lifetime order stats only). */
 export const exportCustomers = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { role, isActive } = req.query as Record<string, string>;
-    const filter: Record<string, unknown> = {};
-    filter.role = role || 'customer';
+    const { isActive } = req.query as Record<string, string>;
+    const filter: Record<string, unknown> = { role: 'customer' };
     if (isActive !== undefined) filter.isActive = isActive === 'true';
 
     const users = await User.find(filter)

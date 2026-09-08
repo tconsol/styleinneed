@@ -10,6 +10,7 @@ import { sendSuccess, sendError } from '../utils/apiResponse';
 import { primaryClientUrl } from '../middleware/security';
 import { encryptSecret } from '../utils/secretCrypto';
 import { findReferrer } from '../utils/referrals';
+import { effectivePermissions } from '../middleware/auth';
 
 export const register = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
@@ -122,7 +123,9 @@ export const login = async (req: Request, res: Response, next: NextFunction): Pr
   try {
     const { email, password } = req.body;
 
-    const user = await User.findOne({ email }).select('+password +refreshTokens');
+    const user = await User.findOne({ email })
+      .select('+password +refreshTokens')
+      .populate('roleRef', 'permissions isActive name');
     if (!user || !(await user.comparePassword(password))) {
       sendError(res, 'Invalid email or password', 401);
       return;
@@ -159,8 +162,10 @@ export const login = async (req: Request, res: Response, next: NextFunction): Pr
       user: {
         _id: user._id, name: user.name, email: user.email, role: user.role,
         avatar: user.avatar, providerRef: user.providerRef,
-        // Drives which admin pages a provider login can open.
-        permissions: user.role === 'provider' ? user.permissions || [] : [],
+        // Drives which admin pages a scoped staff/provider login can open —
+        // resolved from their role plus any direct grants.
+        permissions: user.role === 'admin' ? [] : effectivePermissions(user),
+        roleName: (user.roleRef as unknown as { name?: string } | undefined)?.name,
       },
     });
   } catch (err) {
@@ -266,7 +271,14 @@ export const resetPassword = async (req: Request, res: Response, next: NextFunct
 };
 
 export const getMe = async (req: AuthRequest, res: Response): Promise<void> => {
-  sendSuccess(res, 'User profile', req.user);
+  const user = req.user!;
+  // Flatten the role into `permissions` so the client has one place to look,
+  // whether the grants came from a role or directly.
+  sendSuccess(res, 'User profile', {
+    ...user.toObject(),
+    permissions: user.role === 'admin' ? [] : effectivePermissions(user),
+    roleName: (user.roleRef as unknown as { name?: string } | undefined)?.name,
+  });
 };
 
 export const updateProfile = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {

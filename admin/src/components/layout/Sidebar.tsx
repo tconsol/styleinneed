@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Package, Tag, Layers, ShoppingCart, Users,
   Ticket, Megaphone, Zap, FileText, Mail, Headphones,
   RotateCcw, FileEdit, BarChart2, ScrollText,
-  Star, LogOut, Settings, X, Shapes, SlidersHorizontal, Truck, BellRing, Ruler, Globe, UserCircle, KeyRound, Palette, Gift,
+  Star, LogOut, Settings, X, Shapes, SlidersHorizontal, Truck, BellRing, Ruler, Globe, UserCircle, KeyRound, Palette, Gift, UserCog, ShieldCheck,
 } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
 import { useThemeStore } from '../../stores/themeStore';
@@ -43,6 +43,10 @@ export const NAV_ITEMS = [
     { label: 'Reviews', href: '/reviews', icon: Star },
     { label: 'CMS Pages', href: '/cms', icon: FileEdit },
   ]},
+  { section: 'Team', items: [
+    { label: 'Staff', href: '/staff', icon: UserCog },
+    { label: 'Roles & Permissions', href: '/roles', icon: ShieldCheck },
+  ]},
   { section: 'System', items: [
     { label: 'Support', href: '/support', icon: Headphones },
     { label: 'Themes', href: '/themes', icon: Palette },
@@ -79,7 +83,7 @@ export const FEATURE_NAV: Record<string, { label: string; href: string; icon: ty
   'support':       { label: 'Support',       href: '/support',       icon: Headphones,        section: 'System' },
 };
 
-const SECTION_ORDER = ['Overview', 'Catalog', 'Commerce', 'Marketing', 'Content', 'System', 'Account'];
+const SECTION_ORDER = ['Overview', 'Catalog', 'Commerce', 'Marketing', 'Content', 'Team', 'System', 'Account'];
 
 /**
  * Build a scoped staff sidebar from granted features.

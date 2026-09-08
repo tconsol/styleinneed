@@ -7,11 +7,37 @@ export interface AdminUser {
   phone?: string;
   isActive: boolean;
   providerRef?: string;
-  /** Extra admin features granted to a provider login (feature keys). */
+  /** Effective feature grants (from their role plus any direct grants). */
   permissions?: string[];
+  /** Name of the staff role they hold, when they have one. */
+  roleName?: string;
 }
 
-/** A grantable admin feature, served by GET /providers/features. */
+/** An admin-defined staff role: a named bundle of feature keys. */
+export interface StaffRole {
+  _id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  permissions: string[];
+  isSystem: boolean;
+  isActive: boolean;
+  staffCount?: number;
+  createdAt: string;
+}
+
+export interface StaffMember {
+  _id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  role: 'admin' | 'manager';
+  roleRef?: StaffRole | string;
+  isActive: boolean;
+  createdAt: string;
+}
+
+/** A grantable admin feature, served by GET /staff/features. */
 export interface ProviderFeature {
   key: string;
   label: string;

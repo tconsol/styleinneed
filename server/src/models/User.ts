@@ -31,9 +31,11 @@ const userSchema = new Schema<IUser>(
     // read back the password they set. Only populated for role 'provider'.
     plainPassword: { type: String, select: false },
     providerRef: { type: Schema.Types.ObjectId, ref: 'Provider' },
-    // Extra admin-panel features granted to a provider login (feature keys from
-    // config/providerFeatures.ts). Ignored for other roles — admins have all.
+    // Direct feature grants. Providers carry theirs here; staff normally
+    // inherit from `roleRef` instead, and admins bypass both.
     permissions: { type: [String], default: [] },
+    // The admin-defined role a staff account holds.
+    roleRef: { type: Schema.Types.ObjectId, ref: 'Role' },
     // Auto-provisioned by guest checkout: holds the order history for an email
     // that never registered. Flipped to false if they later sign up.
     isGuest: { type: Boolean, default: false },

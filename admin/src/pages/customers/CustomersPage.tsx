@@ -2,22 +2,13 @@
 import { useNavigate } from 'react-router-dom';
 import { Search, Edit2, Users, Eye, Trash2, X, Download } from 'lucide-react';
 import Modal from '../../components/common/Modal';
-import Select from '../../components/common/Select';
 import StatusToggle from '../../components/common/StatusToggle';
 import { useConfirm } from '../../components/common/ConfirmDialog';
-import { customerApi, providerApi } from '../../api';
-import type { Customer, Pagination, ProviderFeature } from '../../types';
+import { customerApi } from '../../api';
+import type { Customer, Pagination } from '../../types';
 import { formatDate } from '../../utils/format';
 import { downloadBlob, stampedName } from '../../utils/download';
 import toast from 'react-hot-toast';
-
-const ROLES = ['customer', 'manager', 'admin'];
-
-const ROLE_COLORS: Record<string, { bg: string; text: string }> = {
-  customer: { bg: 'var(--c-th-bg)', text: 'var(--c-muted)' },
-  manager:  { bg: 'var(--c-info-soft)', text: 'var(--c-info)' },
-  admin:    { bg: 'var(--c-primary-soft)', text: 'var(--c-primary-dark)' },
-};
 
 function Avatar({ name, email }: { name: string; email: string }) {
   const colors = ['var(--c-primary)','var(--c-sky)','var(--c-success)','var(--c-warning)','var(--c-danger)','var(--c-purple)'];
@@ -37,19 +28,7 @@ export default function CustomersPage() {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<Customer | null>(null);
-  const [roleForm, setRoleForm] = useState({ role: '', isActive: true, permissions: [] as string[] });
-  const [features, setFeatures] = useState<ProviderFeature[]>([]);
-
-  // Feature catalogue for manager grants (same list providers are given).
-  useEffect(() => {
-    providerApi.getFeatures().then(({ data }) => setFeatures(data.data || [])).catch(() => {});
-  }, []);
-
-  const toggleFeature = (key: string) =>
-    setRoleForm((f) => ({
-      ...f,
-      permissions: f.permissions.includes(key) ? f.permissions.filter((k) => k !== key) : [...f.permissions, key],
-    }));
+  const [statusForm, setStatusForm] = useState({ isActive: true });
   const [saving, setSaving] = useState(false);
   const [checked, setChecked] = useState<Set<string>>(new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
@@ -65,8 +44,8 @@ export default function CustomersPage() {
     } catch { toast.error('Export failed'); } finally { setExporting(false); }
   };
 
-  // Only plain customer accounts are deletable (admin accounts are managed elsewhere).
-  const deletable = customers.filter((c) => c.role === 'customer');
+  // This list only ever contains customers — staff live on their own page.
+  const deletable = customers;
   const allChecked = deletable.length > 0 && deletable.every((c) => checked.has(c._id));
   const toggleOne = (id: string) => setChecked((prev) => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
   const toggleAll = () => setChecked(allChecked ? new Set() : new Set(deletable.map((c) => c._id)));
@@ -103,7 +82,7 @@ export default function CustomersPage() {
     } finally { setBulkBusy(false); }
   };
 
-  const openEdit = (c: Customer) => { setSelected(c); setRoleForm({ role: c.role, isActive: c.isActive, permissions: c.permissions || [] }); };
+  const openEdit = (c: Customer) => { setSelected(c); setStatusForm({ isActive: c.isActive }); };
 
   const handleToggleStatus = async (c: Customer) => {
     const next = !c.isActive;
@@ -122,7 +101,7 @@ export default function CustomersPage() {
     if (!selected) return;
     setSaving(true);
     try {
-      await customerApi.updateRole(selected._id, roleForm);
+      await customerApi.updateRole(selected._id, statusForm);
       toast.success('Customer updated');
       setSelected(null); load();
     } catch {} finally { setSaving(false); }
@@ -172,7 +151,6 @@ export default function CustomersPage() {
                   <input type="checkbox" checked={allChecked} onChange={toggleAll} className="w-4 h-4 accent-primary cursor-pointer" aria-label="Select all" />
                 </th>
                 <th className="th text-left">Customer</th>
-                <th className="th text-left" style={{ width: '140px' }}>Role</th>
                 <th className="th text-center" style={{ width: '90px' }}>Verified</th>
                 <th className="th text-center" style={{ width: '90px' }}>Status</th>
                 <th className="th text-left" style={{ width: '110px' }}>Joined</th>
@@ -183,23 +161,20 @@ export default function CustomersPage() {
               {loading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <tr key={i} style={{ borderBottom: '1px solid var(--c-border)' }}>
-                    {Array.from({ length: 7 }).map((__, j) => (
+                    {Array.from({ length: 6 }).map((__, j) => (
                       <td key={j} className="px-3 py-3.5"><div className="h-3 rounded bg-brand-bg animate-pulse" style={{ width: j === 1 ? '140px' : '70px' }} /></td>
                     ))}
                   </tr>
                 ))
               ) : customers.length === 0 ? (
-                <tr><td colSpan={7} className="text-center py-16"><Users size={32} className="mx-auto mb-2 text-brand-border" /><p className="text-[11px] text-brand-muted">No customers found</p></td></tr>
+                <tr><td colSpan={6} className="text-center py-16"><Users size={32} className="mx-auto mb-2 text-brand-border" /><p className="text-[11px] text-brand-muted">No customers found</p></td></tr>
               ) : customers.map((c) => {
-                const rc = ROLE_COLORS[c.role] || ROLE_COLORS.customer;
                 return (
                   <tr key={c._id} className={`group transition-colors ${bulkBusy && checked.has(c._id) ? 'opacity-40 animate-pulse' : ''}`} style={{ borderBottom: '1px solid var(--c-border)' }}
                     onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--c-tr-hover)')}
                     onMouseLeave={(e) => (e.currentTarget.style.background = 'var(--c-surface)')}>
                     <td className="pl-5 py-3 text-center">
-                      {c.role === 'customer' && (
-                        <input type="checkbox" checked={checked.has(c._id)} onChange={() => toggleOne(c._id)} className="w-4 h-4 accent-primary cursor-pointer" aria-label="Select" />
-                      )}
+                      <input type="checkbox" checked={checked.has(c._id)} onChange={() => toggleOne(c._id)} className="w-4 h-4 accent-primary cursor-pointer" aria-label="Select" />
                     </td>
                     <td className="px-3 py-3">
                       <button onClick={() => navigate(`/customers/${c._id}`)} className="flex items-center gap-2.5 text-left group/cust">
@@ -210,9 +185,6 @@ export default function CustomersPage() {
                           {c.phone && <p className="text-[10px] text-brand-muted">{c.phone}</p>}
                         </div>
                       </button>
-                    </td>
-                    <td className="px-3 py-3">
-                      <span className="px-2 py-0.5 rounded-md text-[9px] font-semibold capitalize" style={{ background: rc.bg, color: rc.text }}>{c.role.replace(/_/g, ' ')}</span>
                     </td>
                     <td className="px-3 py-3 text-center">
                       <span className={`text-[10px] font-semibold ${c.isEmailVerified ? 'text-emerald-600' : 'text-amber-500'}`}>
@@ -235,12 +207,10 @@ export default function CustomersPage() {
                           className="w-8 h-8 rounded-lg flex items-center justify-center transition-all text-brand-muted hover:bg-brand-bg hover:text-brand-text">
                           <Edit2 size={13} />
                         </button>
-                        {c.role === 'customer' && (
-                          <button onClick={() => handleDelete(c)} title="Delete customer"
-                            className="w-8 h-8 rounded-lg flex items-center justify-center transition-all text-brand-muted hover:bg-red-50 hover:text-red-500">
-                            <Trash2 size={13} />
-                          </button>
-                        )}
+                        <button onClick={() => handleDelete(c)} title="Delete customer"
+                          className="w-8 h-8 rounded-lg flex items-center justify-center transition-all text-brand-muted hover:bg-red-50 hover:text-red-500">
+                          <Trash2 size={13} />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -278,45 +248,13 @@ export default function CustomersPage() {
                 <p className="text-[10px] text-brand-muted">{selected.email}</p>
               </div>
             </div>
-            <div><label className="input-label">Role</label>
-              <Select value={roleForm.role} onChange={(v) => setRoleForm({ ...roleForm, role: v })}
-                options={ROLES.map((r) => ({ value: r, label: r.replace(/_/g, ' ') }))} />
-            </div>
-            {roleForm.role === 'manager' && (
-              <div className="rounded-xl p-3" style={{ background: 'var(--c-bg)', border: '1px solid var(--c-border)' }}>
-                <div className="flex items-center justify-between mb-1">
-                  <p className="text-[11px] font-semibold text-brand-text">Dashboard Access</p>
-                  {roleForm.permissions.length > 0 && (
-                    <span className="text-[10px] font-semibold" style={{ color: 'var(--c-primary)' }}>{roleForm.permissions.length} granted</span>
-                  )}
-                </div>
-                <p className="text-[10px] text-brand-muted mb-2.5">
-                  A manager sees only what you tick here. Account roles, wallet adjustments and deletions stay
-                  admin-only.
-                </p>
-                <div className="grid grid-cols-2 gap-1.5 max-h-56 overflow-y-auto">
-                  {features.map((ft) => {
-                    const on = roleForm.permissions.includes(ft.key);
-                    return (
-                      <button type="button" key={ft.key} onClick={() => toggleFeature(ft.key)}
-                        className="flex items-start gap-2 px-2.5 py-2 rounded-lg text-left transition-colors"
-                        style={{ background: on ? 'var(--c-primary-soft)' : 'var(--c-surface)', border: `1px solid ${on ? 'var(--c-primary)' : 'var(--c-border)'}` }}>
-                        <input type="checkbox" readOnly checked={on} className="w-3.5 h-3.5 accent-primary pointer-events-none mt-0.5" />
-                        <span className="min-w-0">
-                          <span className="block text-[11px] font-medium text-brand-text">{ft.label}</span>
-                          <span className="block text-[9px] text-brand-muted leading-tight">{ft.description}</span>
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
             <label className="flex items-center gap-2.5 cursor-pointer select-none">
-              <input type="checkbox" checked={roleForm.isActive} onChange={(e) => setRoleForm({ ...roleForm, isActive: e.target.checked })} className="accent-primary w-4 h-4" />
+              <input type="checkbox" checked={statusForm.isActive} onChange={(e) => setStatusForm({ isActive: e.target.checked })} className="accent-primary w-4 h-4" />
               <span className="text-[12px] font-medium">Active Account</span>
             </label>
+            <p className="text-[10px] text-brand-muted">
+              Staff accounts and their permissions are managed on the Staff page.
+            </p>
             <div className="flex gap-2">
               <button type="button" onClick={() => setSelected(null)} className="btn-outline flex-1 justify-center">Cancel</button>
               <button type="submit" disabled={saving} className="btn-primary flex-1 justify-center">{saving ? 'Saving...' : 'Update'}</button>

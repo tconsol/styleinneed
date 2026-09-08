@@ -140,6 +140,19 @@ export const returnApi = {
   retryRefund: (id: string) => client.post(`/returns/${id}/refund/retry`),
 };
 
+export const staffApi = {
+  getFeatures: () => client.get('/staff/features'),
+  listRoles: () => client.get('/staff/roles'),
+  createRole: (data: object) => client.post('/staff/roles', data),
+  updateRole: (id: string, data: object) => client.patch(`/staff/roles/${id}`, data),
+  deleteRole: (id: string) => client.delete(`/staff/roles/${id}`),
+  list: (params?: object) => client.get('/staff', { params }),
+  create: (data: object) => client.post('/staff', data),
+  update: (id: string, data: object) => client.patch(`/staff/${id}`, data),
+  resetPassword: (id: string, data?: object) => client.post(`/staff/${id}/reset-password`, data || {}),
+  remove: (id: string) => client.delete(`/staff/${id}`),
+};
+
 export const walletApi = {
   listGiftCards: (params?: object) => client.get('/wallet/gift-cards', { params }),
   createGiftCards: (data: object) => client.post('/wallet/gift-cards', data),

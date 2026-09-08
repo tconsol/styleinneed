@@ -16,7 +16,9 @@ export const protect = async (req: AuthRequest, res: Response, next: NextFunctio
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as JwtPayload;
-    const user = await User.findById(decoded.userId).select('-password -refreshTokens -otp -otpExpiry');
+    const user = await User.findById(decoded.userId)
+      .select('-password -refreshTokens -otp -otpExpiry')
+      .populate('roleRef', 'permissions isActive name');
     if (!user || !user.isActive) {
       sendError(res, 'User not found or inactive', 401);
       return;
@@ -79,13 +81,26 @@ export const isProvider = restrictTo('provider');
 export const isAnyStaff = restrictTo('admin', 'manager', 'provider');
 
 /**
- * Admins always pass. Managers and providers pass only when they've been
- * granted this feature (see config/providerFeatures.ts). Customers never pass.
+ * Everything a non-admin account can do, resolved fresh per request: the
+ * permissions of the role it holds plus any direct grants. Reading the role at
+ * request time means editing a role takes effect immediately for everyone
+ * holding it, with no re-login.
+ */
+export const effectivePermissions = (user?: AuthRequest['user']): string[] => {
+  if (!user) return [];
+  const role = user.roleRef as unknown as { permissions?: string[]; isActive?: boolean } | undefined;
+  const fromRole = role && role.isActive !== false ? role.permissions || [] : [];
+  return [...new Set([...fromRole, ...(user.permissions || [])])];
+};
+
+/**
+ * Admins always pass. Staff and providers pass only when the feature is in
+ * their effective permissions. Customers never pass.
  */
 export const adminOrFeature = (feature: string) =>
   (req: AuthRequest, res: Response, next: NextFunction): void => {
     if (req.user?.role === 'admin') { next(); return; }
     const scoped = req.user?.role === 'manager' || req.user?.role === 'provider';
-    if (scoped && (req.user!.permissions || []).includes(feature)) { next(); return; }
+    if (scoped && effectivePermissions(req.user).includes(feature)) { next(); return; }
     sendError(res, 'Forbidden: insufficient permissions', 403);
   };

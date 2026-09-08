@@ -9,7 +9,8 @@ export interface IUser extends Document {
   password: string;
   plainPassword?: string;
   providerRef?: Types.ObjectId;
-  permissions: string[]; // granted admin features (provider logins only)
+  permissions: string[]; // direct feature grants (providers)
+  roleRef?: Types.ObjectId; // admin-defined staff role
   isGuest: boolean;      // created by guest checkout, never signed up
   referralCode?: string;
   referredBy?: Types.ObjectId;

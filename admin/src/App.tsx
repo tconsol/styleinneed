@@ -38,6 +38,8 @@ const CmsPage = lazy(() => import('./pages/content/CmsPage'));
 const ProvidersPage = lazy(() => import('./pages/providers/ProvidersPage'));
 const PushNotificationsPage = lazy(() => import('./pages/marketing/PushNotificationsPage'));
 const GiftCardsPage = lazy(() => import('./pages/marketing/GiftCardsPage'));
+const StaffPage = lazy(() => import('./pages/team/StaffPage'));
+const RolesPage = lazy(() => import('./pages/team/RolesPage'));
 const SettingsPage = lazy(() => import('./pages/settings/SettingsPage'));
 const ShippingRatesPage = lazy(() => import('./pages/settings/ShippingRatesPage'));
 const ChangePasswordPage = lazy(() => import('./pages/ChangePasswordPage'));
@@ -126,6 +128,8 @@ export default function App() {
               <Route path="/providers" element={<ProvidersPage />} />
               <Route path="/push-notifications" element={<PushNotificationsPage />} />
               <Route path="/gift-cards" element={<GiftCardsPage />} />
+              <Route path="/staff" element={<StaffPage />} />
+              <Route path="/roles" element={<RolesPage />} />
               <Route path="/settings" element={<SettingsPage />} />
               <Route path="/shipping-rates" element={<ShippingRatesPage />} />
               <Route path="/themes" element={<ThemesPage />} />
