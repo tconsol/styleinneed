@@ -48,13 +48,15 @@ export default function MegaMenu({
 
   const hasRail = !!productType;
 
+  // The panel is deliberately opaque: it can sit over the hero image, where a
+  // translucent background left the text unreadable.
   return (
     <motion.div
       initial={{ opacity: 0, y: -8 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -8 }}
       transition={{ duration: 0.18, ease: 'easeOut' }}
-      className="absolute inset-x-0 top-full z-50 border-t border-brand-border bg-brand-bg/98 shadow-[0_24px_48px_-12px_rgba(0,0,0,0.18)] backdrop-blur-xl"
+      className="absolute inset-x-0 top-full z-50 border-t border-brand-border bg-brand-bg shadow-[0_24px_48px_-12px_rgba(0,0,0,0.25)]"
     >
       <div className="container-custom py-8">
         <div className={`grid gap-10 ${hasRail ? 'lg:grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)]' : 'grid-cols-1'}`}>

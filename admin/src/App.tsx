@@ -40,6 +40,7 @@ const PushNotificationsPage = lazy(() => import('./pages/marketing/PushNotificat
 const GiftCardsPage = lazy(() => import('./pages/marketing/GiftCardsPage'));
 const StaffPage = lazy(() => import('./pages/team/StaffPage'));
 const RolesPage = lazy(() => import('./pages/team/RolesPage'));
+const RoleFormPage = lazy(() => import('./pages/team/RoleFormPage'));
 const SettingsPage = lazy(() => import('./pages/settings/SettingsPage'));
 const ShippingRatesPage = lazy(() => import('./pages/settings/ShippingRatesPage'));
 const ChangePasswordPage = lazy(() => import('./pages/ChangePasswordPage'));
@@ -130,6 +131,8 @@ export default function App() {
               <Route path="/gift-cards" element={<GiftCardsPage />} />
               <Route path="/staff" element={<StaffPage />} />
               <Route path="/roles" element={<RolesPage />} />
+              <Route path="/roles/new" element={<RoleFormPage />} />
+              <Route path="/roles/:id/edit" element={<RoleFormPage />} />
               <Route path="/settings" element={<SettingsPage />} />
               <Route path="/shipping-rates" element={<ShippingRatesPage />} />
               <Route path="/themes" element={<ThemesPage />} />

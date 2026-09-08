@@ -103,7 +103,9 @@ export default function Header({ isCheckout = false }: { isCheckout?: boolean })
   const activeMega = NAV.find((n) => n.label === hoveredNav && n.mega);
 
   const isHome = location.pathname === '/';
-  const transparent = isHome && !scrolled;
+  // A transparent header can't stay transparent while the mega menu is open —
+  // the panel below it is solid, so the strip above would look detached.
+  const transparent = isHome && !scrolled && !hoveredNav;
 
   // Keep --topbar-height in sync with the REAL header height (announcement bar
   // can wrap to 2 lines on small screens, making the fixed header taller than

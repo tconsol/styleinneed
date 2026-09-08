@@ -108,6 +108,12 @@ export const getCollections = async (req: Request, res: Response, next: NextFunc
 
 export const createCollection = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
+    // Default the sort order to one past the current highest, so new
+    // collections land at the end instead of all colliding on 0.
+    if (req.body.sortOrder == null || req.body.sortOrder === '') {
+      const last = await Collection.findOne().sort('-sortOrder').select('sortOrder').lean();
+      req.body.sortOrder = (last?.sortOrder ?? -1) + 1;
+    }
     const collection = await Collection.create(req.body);
     sendSuccess(res, 'Collection created', collection, 201);
   } catch (err) {

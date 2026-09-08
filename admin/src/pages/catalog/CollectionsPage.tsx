@@ -1,15 +1,17 @@
 ﻿import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Plus, Edit2, Trash2, Layers, Star } from 'lucide-react';
+import { Plus, Edit2, Trash2, Layers, Star, Upload, ImageIcon, X } from 'lucide-react';
 import StatusToggle from '../../components/common/StatusToggle';
 import Modal from '../../components/common/Modal';
 import { useConfirm } from '../../components/common/ConfirmDialog';
 import { useCollections, CATALOG_KEYS } from '../../hooks/useCatalog';
-import { collectionApi } from '../../api';
+import { collectionApi, cmsApi } from '../../api';
+import ImageSpecHint from '../../components/common/ImageSpecHint';
+import { IMAGE_SPECS, checkRatio, readImageSize, type RatioCheck } from '../../config/imageSpecs';
 import type { Collection } from '../../types';
 import toast from 'react-hot-toast';
 
-const empty = { name: '', description: '', isActive: true, isFeatured: false, sortOrder: 0 };
+const empty = { name: '', description: '', image: '', isActive: true, isFeatured: false, sortOrder: '' as number | '' };
 
 function ActionBtn({ onClick, variant }: { onClick: () => void; variant: 'edit' | 'delete' }) {
   const edit = variant === 'edit';
@@ -33,15 +35,31 @@ export default function CollectionsPage() {
   const [editing, setEditing] = useState<Collection | null>(null);
   const [form, setForm] = useState(empty);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [imgCheck, setImgCheck] = useState<RatioCheck | null>(null);
 
-  const openNew = () => { setEditing(null); setForm(empty); setModal(true); };
-  const openEdit = (c: Collection) => { setEditing(c); setForm({ name: c.name, description: c.description || '', isActive: c.isActive, isFeatured: c.isFeatured, sortOrder: c.sortOrder }); setModal(true); };
+  const uploadImage = async (files: FileList | null) => {
+    if (!files?.[0]) return;
+    const size = await readImageSize(files[0]);
+    setImgCheck(checkRatio(IMAGE_SPECS.collection, size.width, size.height));
+    setUploading(true);
+    try {
+      const fd = new FormData(); fd.append('image', files[0]);
+      const { data } = await cmsApi.uploadImage(fd);
+      setForm((f) => ({ ...f, image: data.data.url }));
+    } catch { /* interceptor */ } finally { setUploading(false); }
+  };
+
+  const openNew = () => { setEditing(null); setForm(empty); setImgCheck(null); setModal(true); };
+  const openEdit = (c: Collection) => { setEditing(c); setForm({ name: c.name, description: c.description || '', image: c.image || '', isActive: c.isActive, isFeatured: c.isFeatured, sortOrder: c.sortOrder }); setImgCheck(null); setModal(true); };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault(); setSaving(true);
     try {
-      if (editing) { await collectionApi.update(editing._id, form); toast.success('Collection updated'); }
-      else { await collectionApi.create(form); toast.success('Collection created'); }
+      // An empty sortOrder on create tells the server to append (max + 1).
+      const payload = { ...form, sortOrder: form.sortOrder === '' ? undefined : Number(form.sortOrder) };
+      if (editing) { await collectionApi.update(editing._id, payload); toast.success('Collection updated'); }
+      else { await collectionApi.create(payload); toast.success('Collection created'); }
       setModal(false); refresh();
     } catch {} finally { setSaving(false); }
   };
@@ -123,7 +141,26 @@ export default function CollectionsPage() {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div><label className="input-label">Name *</label><input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="input-field" placeholder="e.g. Wedding Collection" required /></div>
           <div><label className="input-label">Description</label><input value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="input-field" /></div>
-          <div><label className="input-label">Sort Order</label><input type="number" value={form.sortOrder} onChange={(e) => setForm({ ...form, sortOrder: Number(e.target.value) })} className="input-field" min="0" /></div>
+          <div>
+            <label className="input-label">Image</label>
+            <div className="flex items-center gap-3">
+              <div className="w-28 h-20 rounded-lg overflow-hidden flex items-center justify-center flex-shrink-0" style={{ background: 'var(--c-bg)', border: '1px solid var(--c-border)' }}>
+                {form.image ? <img src={form.image} alt="" className="w-full h-full object-cover" /> : <ImageIcon size={20} className="text-brand-border" />}
+              </div>
+              <label className="btn-outline text-[12px] cursor-pointer">
+                <input type="file" accept="image/*" className="hidden" onChange={(e) => { uploadImage(e.target.files); e.currentTarget.value = ''; }} />
+                {uploading ? 'Uploading…' : <><Upload size={13} /> {form.image ? 'Replace' : 'Upload'}</>}
+              </label>
+              {form.image && <button type="button" onClick={() => { setForm({ ...form, image: '' }); setImgCheck(null); }} className="text-brand-muted hover:text-red-500"><X size={16} /></button>}
+            </div>
+            <ImageSpecHint spec="collection" check={imgCheck} />
+          </div>
+          <div>
+            <label className="input-label">Sort Order</label>
+            <input type="number" value={form.sortOrder}
+              onChange={(e) => setForm({ ...form, sortOrder: e.target.value === '' ? '' : Number(e.target.value) })}
+              className="input-field" min="0" placeholder={editing ? '' : 'Auto — added to the end'} />
+          </div>
           <div className="flex gap-4">
             <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={form.isActive} onChange={(e) => setForm({ ...form, isActive: e.target.checked })} className="accent-primary w-4 h-4" /><span className="text-[12px] font-medium">Active</span></label>
             <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={form.isFeatured} onChange={(e) => setForm({ ...form, isFeatured: e.target.checked })} className="accent-primary w-4 h-4" /><span className="text-[12px] font-medium">Featured</span></label>

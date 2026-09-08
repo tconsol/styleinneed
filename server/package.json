@@ -11,6 +11,7 @@
     "seed:cms": "ts-node src/scripts/seedCms.ts",
     "seed:jewellery": "ts-node src/scripts/seedJewelleryAttrs.ts",
     "seed:cta": "ts-node src/scripts/seedCtaLinks.ts",
+    "seed:roles": "ts-node src/scripts/seedRoles.ts",
     "lint": "eslint src --ext .ts"
   },
   "dependencies": {
