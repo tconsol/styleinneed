@@ -16,9 +16,9 @@ router.get('/dashboard', adminOrFeature('dashboard'), getDashboardStats);
 router.get('/analytics/revenue', adminOrFeature('analytics'), getRevenueAnalytics);
 router.get('/analytics/top-products', adminOrFeature('analytics'), getTopProducts);
 
-router.get('/users', isAdminOrManager, getUsers);
-router.get('/users/export', isAdminOrManager, exportCustomers);
-router.get('/users/:id', isAdminOrManager, getUserById);
+router.get('/users', adminOrFeature('customers'), getUsers);
+router.get('/users/export', adminOrFeature('customers'), exportCustomers);
+router.get('/users/:id', adminOrFeature('customers'), getUserById);
 router.patch('/users/:id', isSuperAdmin, updateUserRole);
 router.delete('/users/:id', isSuperAdmin, deleteUser);
 

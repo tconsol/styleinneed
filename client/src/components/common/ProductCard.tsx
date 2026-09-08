@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Heart, ShoppingBag, Star } from 'lucide-react';
+import { Heart, ShoppingBag, Star, Scale } from 'lucide-react';
 import type { Product } from '../../types';
 import { useMoney } from '../../hooks/useMoney';
 import { useAuthStore } from '../../stores/authStore';
 import { useCartStore } from '../../stores/cartStore';
 import { useWishlistStore } from '../../stores/wishlistStore';
 import { usePromotionStore, promoFor } from '../../stores/promotionStore';
+import { useCompareStore } from '../../stores/compareStore';
 
 interface Props {
   product: Product;
@@ -18,6 +19,8 @@ export default function ProductCard({ product }: Props) {
   const { isAuthenticated } = useAuthStore();
   const { addItem } = useCartStore();
   const { toggle, isWishlisted } = useWishlistStore();
+  const toggleCompare = useCompareStore((s) => s.toggle);
+  const comparing = useCompareStore((s) => s.items.some((i) => i._id === product._id));
   const { format } = useMoney();
   const wishlisted = isWishlisted(product._id);
   const activePromos = usePromotionStore((s) => s.active);
@@ -91,6 +94,18 @@ export default function ProductCard({ product }: Props) {
             style={{ minWidth: 36, minHeight: 36 }}
           >
             <Heart size={15} fill={wishlisted ? 'currentColor' : 'none'} />
+          </button>
+
+          {/* Compare — no account needed, kept local to the browser */}
+          <button
+            onClick={(e) => { e.preventDefault(); toggleCompare(product); }}
+            className={`absolute top-[3.25rem] right-2.5 w-9 h-9 flex items-center justify-center transition-all duration-200 shadow-md sm:opacity-0 sm:translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 ${
+              comparing ? 'bg-primary text-white' : 'bg-white text-brand-text hover:bg-primary hover:text-white'
+            }`}
+            aria-label={comparing ? 'Remove from compare' : 'Add to compare'}
+            style={{ minWidth: 36, minHeight: 36 }}
+          >
+            <Scale size={15} />
           </button>
 
           {/* Quick Add — always visible on mobile, hover reveal on desktop */}

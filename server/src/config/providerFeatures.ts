@@ -1,9 +1,12 @@
 /**
- * Extra admin-panel features an admin can grant to a provider (supplier) login.
+ * Admin-panel features an admin can grant to a non-admin staff login —
+ * a provider (supplier) or a manager.
  *
- * Providers ALWAYS get: their own products, their business profile, and the
- * change-password page — those aren't listed here. Everything below is opt-in
- * per provider, ticked by the admin on the Providers page.
+ * Providers ALWAYS get their own products, business profile and password page;
+ * managers start with nothing. Everything below is opt-in and ticked by an
+ * admin. Account/role management, wallet adjustments and destructive actions
+ * are deliberately absent — those stay admin-only so a grant can never be used
+ * to widen access.
  *
  * `key` is what's stored on the user + checked by `adminOrFeature()`.
  * `href` is the admin route it unlocks (used to build their sidebar).
@@ -30,6 +33,12 @@ export const PROVIDER_FEATURES: ProviderFeature[] = [
   { key: 'promotions',    label: 'Promotions',     href: '/promotions',      section: 'Marketing', description: 'Create sales & campaigns' },
   { key: 'coupons',       label: 'Coupons',        href: '/coupons',         section: 'Marketing', description: 'Create discount coupons' },
   { key: 'support',       label: 'Support',        href: '/support',         section: 'System',   description: 'Respond to support tickets' },
+  { key: 'customers',     label: 'Customers',      href: '/customers',       section: 'Commerce', description: 'View customer profiles & order history' },
+  { key: 'announcements', label: 'Announcements',  href: '/announcements',   section: 'Marketing', description: 'Site banners & popups' },
+  { key: 'newsletter',    label: 'Newsletter',     href: '/newsletter',      section: 'Marketing', description: 'Subscribers & promo broadcasts' },
+  { key: 'gift-cards',    label: 'Gift Cards',     href: '/gift-cards',      section: 'Marketing', description: 'Issue and deactivate gift cards' },
+  { key: 'blogs',         label: 'Blog',           href: '/blogs',           section: 'Content',  description: 'Write and publish posts' },
+  { key: 'cms',           label: 'CMS Pages',      href: '/cms',             section: 'Content',  description: 'Edit storefront page content' },
 ];
 
 export const PROVIDER_FEATURE_KEYS = PROVIDER_FEATURES.map((f) => f.key);

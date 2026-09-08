@@ -53,15 +53,21 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 }
 
 /**
- * Keeps a provider login inside the pages it was granted. The API enforces this
- * too — this only stops them landing on a page that would just 403.
+ * Keeps a scoped staff login (provider or manager) inside the pages it was
+ * granted. The API enforces this too — this only stops them landing on a page
+ * that would just 403.
  */
 function ProviderGuard({ children }: { children: React.ReactNode }) {
   const user = useAuthStore((s) => s.user);
   const { pathname } = useLocation();
-  if (user?.role !== 'provider') return <>{children}</>;
+  if (!user || user.role === 'admin') return <>{children}</>;
 
-  const allowed = new Set<string>(['/products', '/profile', '/change-password']);
+  // Providers always keep their own products; managers get only what's granted.
+  const allowed = new Set<string>(
+    user.role === 'provider'
+      ? ['/products', '/profile', '/change-password']
+      : ['/profile', '/change-password']
+  );
   for (const key of user.permissions || []) {
     const nav = FEATURE_NAV[key];
     if (nav) allowed.add(nav.href);
@@ -70,7 +76,7 @@ function ProviderGuard({ children }: { children: React.ReactNode }) {
   const ok = [...allowed].some((base) =>
     base === '/' ? pathname === '/' : pathname === base || pathname.startsWith(`${base}/`)
   );
-  return ok ? <>{children}</> : <Navigate to="/products" replace />;
+  return ok ? <>{children}</> : <Navigate to={user.role === 'provider' ? '/products' : '/profile'} replace />;
 }
 
 export default function App() {

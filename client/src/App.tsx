@@ -35,6 +35,7 @@ const PaymentReturnPage = lazy(() => import('./pages/PaymentReturnPage'));
 const UnsubscribePage = lazy(() => import('./pages/UnsubscribePage'));
 const GuestOrderPage = lazy(() => import('./pages/GuestOrderPage'));
 const WalletPage = lazy(() => import('./pages/WalletPage'));
+const ComparePage = lazy(() => import('./pages/ComparePage'));
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 60_000, retry: 1 } },
@@ -66,6 +67,7 @@ export default function App() {
               <Route path="/collections" element={<ProductListPage />} />
               <Route path="/search" element={<SearchPage />} />
               <Route path="/sale" element={<SalePage />} />
+              <Route path="/compare" element={<ComparePage />} />
               <Route path="/unsubscribe" element={<UnsubscribePage />} />
               <Route path="/cms/:key" element={<CmsPage />} />
               <Route path="/blogs" element={<BlogListPage />} />

@@ -2,7 +2,7 @@ export interface AdminUser {
   _id: string;
   name: string;
   email: string;
-  role: 'customer' | 'admin' | 'provider';
+  role: 'customer' | 'admin' | 'manager' | 'provider';
   avatar?: string;
   phone?: string;
   isActive: boolean;
@@ -218,6 +218,8 @@ export interface Customer {
   email: string;
   phone?: string;
   role: string;
+  /** Feature grants when role is 'manager'. */
+  permissions?: string[];
   isActive: boolean;
   isEmailVerified: boolean;
   avatar?: string;

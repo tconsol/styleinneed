@@ -5,16 +5,17 @@ import Modal from '../../components/common/Modal';
 import Select from '../../components/common/Select';
 import StatusToggle from '../../components/common/StatusToggle';
 import { useConfirm } from '../../components/common/ConfirmDialog';
-import { customerApi } from '../../api';
-import type { Customer, Pagination } from '../../types';
+import { customerApi, providerApi } from '../../api';
+import type { Customer, Pagination, ProviderFeature } from '../../types';
 import { formatDate } from '../../utils/format';
 import { downloadBlob, stampedName } from '../../utils/download';
 import toast from 'react-hot-toast';
 
-const ROLES = ['customer', 'admin'];
+const ROLES = ['customer', 'manager', 'admin'];
 
 const ROLE_COLORS: Record<string, { bg: string; text: string }> = {
   customer: { bg: 'var(--c-th-bg)', text: 'var(--c-muted)' },
+  manager:  { bg: 'var(--c-info-soft)', text: 'var(--c-info)' },
   admin:    { bg: 'var(--c-primary-soft)', text: 'var(--c-primary-dark)' },
 };
 
@@ -36,7 +37,19 @@ export default function CustomersPage() {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<Customer | null>(null);
-  const [roleForm, setRoleForm] = useState({ role: '', isActive: true });
+  const [roleForm, setRoleForm] = useState({ role: '', isActive: true, permissions: [] as string[] });
+  const [features, setFeatures] = useState<ProviderFeature[]>([]);
+
+  // Feature catalogue for manager grants (same list providers are given).
+  useEffect(() => {
+    providerApi.getFeatures().then(({ data }) => setFeatures(data.data || [])).catch(() => {});
+  }, []);
+
+  const toggleFeature = (key: string) =>
+    setRoleForm((f) => ({
+      ...f,
+      permissions: f.permissions.includes(key) ? f.permissions.filter((k) => k !== key) : [...f.permissions, key],
+    }));
   const [saving, setSaving] = useState(false);
   const [checked, setChecked] = useState<Set<string>>(new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
@@ -90,7 +103,7 @@ export default function CustomersPage() {
     } finally { setBulkBusy(false); }
   };
 
-  const openEdit = (c: Customer) => { setSelected(c); setRoleForm({ role: c.role, isActive: c.isActive }); };
+  const openEdit = (c: Customer) => { setSelected(c); setRoleForm({ role: c.role, isActive: c.isActive, permissions: c.permissions || [] }); };
 
   const handleToggleStatus = async (c: Customer) => {
     const next = !c.isActive;
@@ -269,6 +282,37 @@ export default function CustomersPage() {
               <Select value={roleForm.role} onChange={(v) => setRoleForm({ ...roleForm, role: v })}
                 options={ROLES.map((r) => ({ value: r, label: r.replace(/_/g, ' ') }))} />
             </div>
+            {roleForm.role === 'manager' && (
+              <div className="rounded-xl p-3" style={{ background: 'var(--c-bg)', border: '1px solid var(--c-border)' }}>
+                <div className="flex items-center justify-between mb-1">
+                  <p className="text-[11px] font-semibold text-brand-text">Dashboard Access</p>
+                  {roleForm.permissions.length > 0 && (
+                    <span className="text-[10px] font-semibold" style={{ color: 'var(--c-primary)' }}>{roleForm.permissions.length} granted</span>
+                  )}
+                </div>
+                <p className="text-[10px] text-brand-muted mb-2.5">
+                  A manager sees only what you tick here. Account roles, wallet adjustments and deletions stay
+                  admin-only.
+                </p>
+                <div className="grid grid-cols-2 gap-1.5 max-h-56 overflow-y-auto">
+                  {features.map((ft) => {
+                    const on = roleForm.permissions.includes(ft.key);
+                    return (
+                      <button type="button" key={ft.key} onClick={() => toggleFeature(ft.key)}
+                        className="flex items-start gap-2 px-2.5 py-2 rounded-lg text-left transition-colors"
+                        style={{ background: on ? 'var(--c-primary-soft)' : 'var(--c-surface)', border: `1px solid ${on ? 'var(--c-primary)' : 'var(--c-border)'}` }}>
+                        <input type="checkbox" readOnly checked={on} className="w-3.5 h-3.5 accent-primary pointer-events-none mt-0.5" />
+                        <span className="min-w-0">
+                          <span className="block text-[11px] font-medium text-brand-text">{ft.label}</span>
+                          <span className="block text-[9px] text-brand-muted leading-tight">{ft.description}</span>
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             <label className="flex items-center gap-2.5 cursor-pointer select-none">
               <input type="checkbox" checked={roleForm.isActive} onChange={(e) => setRoleForm({ ...roleForm, isActive: e.target.checked })} className="accent-primary w-4 h-4" />
               <span className="text-[12px] font-medium">Active Account</span>

@@ -44,7 +44,7 @@ const userSchema = new Schema<IUser>(
     referralRewarded: { type: Boolean, default: false },
     role: {
       type: String,
-      enum: ['customer', 'admin', 'provider'],
+      enum: ['customer', 'admin', 'manager', 'provider'],
       default: 'customer',
     },
     isEmailVerified: { type: Boolean, default: false },

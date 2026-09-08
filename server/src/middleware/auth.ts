@@ -59,23 +59,33 @@ export const restrictTo = (...roles: UserRole[]) =>
     next();
   };
 
-// Single staff role: 'admin' has full control. Aliases kept so existing route
-// imports keep working without churn.
+// 'admin' has full control. 'manager' is a staff account limited to the
+// features an admin grants it — the same per-feature model as providers.
 export const isAdmin = restrictTo('admin');
+// Account/role management and destructive admin actions stay admin-only, so a
+// manager can never widen their own access.
 export const isSuperAdmin = restrictTo('admin');
+// Admin-only. Managers reach individual areas through `adminOrFeature` grants,
+// never wholesale — otherwise adding the role would silently widen access to
+// every route that used this guard.
 export const isAdminOrManager = restrictTo('admin');
 // Providers (suppliers) may add/edit their own products — everything beyond
 // that is opt-in per provider via `adminOrFeature`.
-export const isProviderOrAdmin = restrictTo('admin', 'provider');
+export const isProviderOrAdmin = restrictTo('admin', 'manager', 'provider');
 export const isProvider = restrictTo('provider');
+// Any non-customer staff account. Used for shared, low-risk endpoints like the
+// image uploader, which every content page needs regardless of which specific
+// feature grant brought them there.
+export const isAnyStaff = restrictTo('admin', 'manager', 'provider');
 
 /**
- * Admins always pass. Providers pass only when the admin has granted them this
- * feature (see config/providerFeatures.ts). Customers never pass.
+ * Admins always pass. Managers and providers pass only when they've been
+ * granted this feature (see config/providerFeatures.ts). Customers never pass.
  */
 export const adminOrFeature = (feature: string) =>
   (req: AuthRequest, res: Response, next: NextFunction): void => {
     if (req.user?.role === 'admin') { next(); return; }
-    if (req.user?.role === 'provider' && (req.user.permissions || []).includes(feature)) { next(); return; }
+    const scoped = req.user?.role === 'manager' || req.user?.role === 'provider';
+    if (scoped && (req.user!.permissions || []).includes(feature)) { next(); return; }
     sendError(res, 'Forbidden: insufficient permissions', 403);
   };

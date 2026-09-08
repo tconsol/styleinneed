@@ -3,7 +3,7 @@ import {
   getMyWallet, redeemGiftCard, getMyReferral,
   listGiftCards, createGiftCards, deactivateGiftCard, adjustWallet, getUserWallet,
 } from '../controllers/wallet.controller';
-import { protect, isAdminOrManager } from '../middleware/auth';
+import { protect, isAdminOrManager, adminOrFeature } from '../middleware/auth';
 
 const router = Router();
 
@@ -15,10 +15,10 @@ router.post('/redeem', redeemGiftCard);
 router.get('/referral', getMyReferral);
 
 // Admin — gift cards + manual balance corrections
-router.get('/gift-cards', isAdminOrManager, listGiftCards);
-router.post('/gift-cards', isAdminOrManager, createGiftCards);
-router.patch('/gift-cards/:id/deactivate', isAdminOrManager, deactivateGiftCard);
+router.get('/gift-cards', adminOrFeature('gift-cards'), listGiftCards);
+router.post('/gift-cards', adminOrFeature('gift-cards'), createGiftCards);
+router.patch('/gift-cards/:id/deactivate', adminOrFeature('gift-cards'), deactivateGiftCard);
 router.post('/adjust', isAdminOrManager, adjustWallet);
-router.get('/user/:id', isAdminOrManager, getUserWallet);
+router.get('/user/:id', adminOrFeature('customers'), getUserWallet);
 
 export default router;

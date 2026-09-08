@@ -209,9 +209,8 @@ export default function ProductsPage() {
           />
         </div>
         <div className="flex items-center gap-2">
-          <button disabled title="Coming soon" className="btn-outline opacity-50 cursor-not-allowed relative">
+          <button onClick={() => setBulkOpen(true)} className="btn-outline">
             <Upload size={15} /> Bulk Import
-            <span className="ml-1 px-1.5 py-0.5 rounded-full text-[8px] font-bold uppercase tracking-wide" style={{ background: 'var(--c-primary-soft)', color: 'var(--c-primary)' }}>Soon</span>
           </button>
           <Link to="/products/new" className="btn-primary">
             <Plus size={16} /> Add Product

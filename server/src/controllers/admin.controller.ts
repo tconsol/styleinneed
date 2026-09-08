@@ -15,6 +15,7 @@ import { emitEvent, SOCKET_EVENTS } from '../config/socket';
 import { invalidateCache } from '../middleware/cache';
 import { sendPushToUser, getStatusPushContent } from '../services/push.service';
 import { toCsv, sendCsv, dateStamp } from '../utils/csv';
+import { sanitizeFeatures } from '../config/providerFeatures';
 import { createShiprocketOrder, generateAWB, trackShipment } from '../services/shiprocket.service';
 import logger from '../utils/logger';
 
@@ -177,10 +178,14 @@ export const getUserById = async (req: Request, res: Response, next: NextFunctio
 
 export const updateUserRole = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { role, isActive } = req.body;
+    const { role, isActive, permissions } = req.body;
     const update: Record<string, unknown> = {};
     if (role) update.role = role;
     if (isActive !== undefined) update.isActive = isActive;
+    // Feature grants for a manager account. Whitelisted, and cleared entirely
+    // if the account is moved back to a plain customer.
+    if (permissions !== undefined) update.permissions = sanitizeFeatures(permissions);
+    if (role && role !== 'manager' && role !== 'provider') update.permissions = [];
 
     const user = await User.findByIdAndUpdate(req.params.id, update, { new: true });
     if (!user) { sendError(res, 'User not found', 404); return; }

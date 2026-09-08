@@ -14,7 +14,7 @@ export interface IUser extends Document {
   referralCode?: string;
   referredBy?: Types.ObjectId;
   referralRewarded: boolean;
-  role: 'customer' | 'admin' | 'provider';
+  role: 'customer' | 'admin' | 'manager' | 'provider';
   isEmailVerified: boolean;
   isActive: boolean;
   googleId?: string;
