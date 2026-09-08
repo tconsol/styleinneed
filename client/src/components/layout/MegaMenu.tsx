@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowRight, Sparkles } from 'lucide-react';
@@ -44,9 +45,26 @@ export default function MegaMenu({
   heading, links, productType, viewAllHref, viewAllLabel, onNavigate,
 }: Props) {
   const { format } = useMoney();
-  const { data: products = [], isLoading } = useMegaMenuProducts(productType || '', !!productType);
+  const [hoveredSlug, setHoveredSlug] = useState<string | null>(null);
 
-  const hasRail = !!productType;
+  // Collections have no product type of their own, so their rail is driven by
+  // whichever collection is hovered (falling back to the first). Product-type
+  // tabs show the type's bestsellers, narrowed to a category on hover.
+  const isCollections = !productType;
+  const activeSlug = hoveredSlug ?? (isCollections ? links[0]?.slug : undefined);
+
+  const filter = isCollections
+    ? { collection: activeSlug }
+    : { productType, ...(hoveredSlug ? { category: hoveredSlug } : {}) };
+
+  const { data: products = [], isLoading } = useMegaMenuProducts(
+    filter,
+    isCollections ? !!activeSlug : true
+  );
+
+  const activeName = links.find((l) => l.slug === activeSlug)?.name;
+  // Both modes now have a rail — collections included.
+  const hasRail = !isCollections || links.length > 0;
 
   // Dark frosted glass. A light tint never hid what was behind it — the hero
   // headline and CTA buttons stayed legible through the blur. A dark scrim
@@ -80,7 +98,10 @@ export default function MegaMenu({
                     key={link._id}
                     to={link.href}
                     onClick={onNavigate}
-                    className="group/link flex items-center gap-3 rounded-lg px-2 py-2 transition-colors hover:bg-white/10"
+                    onMouseEnter={() => setHoveredSlug(link.slug)}
+                    className={`group/link flex items-center gap-3 rounded-lg px-2 py-2 transition-colors hover:bg-white/10 ${
+                      activeSlug === link.slug ? 'bg-white/10' : ''
+                    }`}
                   >
                     {link.image ? (
                       <img
@@ -119,7 +140,8 @@ export default function MegaMenu({
           {hasRail && (
             <div>
               <p className="mb-4 flex items-center gap-1.5 font-body text-[10px] font-bold uppercase tracking-[0.2em] text-white/55">
-                <Sparkles size={11} className="text-white/70" /> Popular right now
+                <Sparkles size={11} className="text-white/70" />
+                {activeName ? `From ${activeName}` : 'Popular right now'}
               </p>
 
               {isLoading ? (
@@ -132,7 +154,9 @@ export default function MegaMenu({
                   ))}
                 </div>
               ) : products.length === 0 ? (
-                <p className="font-body text-sm text-white/50">No products in this category yet.</p>
+                <p className="font-body text-sm text-white/50">
+                  {activeName ? `Nothing in ${activeName} yet.` : 'No products here yet.'}
+                </p>
               ) : (
                 <div className="grid grid-cols-4 gap-4">
                   {products.map((p) => (

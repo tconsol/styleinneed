@@ -23,13 +23,21 @@ export const useAttributes = () =>
  * `enabled` keeps it from firing until the menu is actually opened, and the
  * cache means re-hovering the same tab is instant.
  */
-export const useMegaMenuProducts = (productType: string, enabled: boolean) =>
+export const useMegaMenuProducts = (
+  filter: { productType?: string; category?: string; collection?: string },
+  enabled: boolean
+) =>
   useQuery({
-    queryKey: ['mega-menu-products', productType],
+    // Each combination is cached separately, so moving back to a link already
+    // hovered shows its products instantly.
+    queryKey: ['mega-menu-products', filter.productType || '', filter.category || '', filter.collection || ''],
     staleTime,
-    enabled: enabled && !!productType,
+    enabled: enabled && !!(filter.productType || filter.collection),
+    // `placeholderData` keeps the previous rail on screen while the next one
+    // loads, so sliding down a list of links doesn't flash skeletons.
+    placeholderData: (prev) => prev,
     queryFn: () =>
       productApi
-        .getProducts({ productType, limit: 4, sort: '-ratings.count' })
+        .getProducts({ ...filter, limit: 4, sort: '-ratings.count' })
         .then((r) => (r.data.data || []) as Product[]),
   });
