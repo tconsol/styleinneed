@@ -1,10 +1,11 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Search, Edit, Trash2, Eye, RotateCcw, Upload, CheckCircle2, XCircle, X } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Eye, RotateCcw, Upload, CheckCircle2, XCircle, X, ScanEye } from 'lucide-react';
 import DataTable from '../../components/common/DataTable';
 import StatusToggle from '../../components/common/StatusToggle';
 import { useConfirm } from '../../components/common/ConfirmDialog';
 import BulkUploadModal from './BulkUploadModal';
+import ProductDetailsModal from './ProductDetailsModal';
 import { productApi } from '../../api';
 import type { Product, Pagination } from '../../types';
 import { formatPrice, formatDate } from '../../utils/format';
@@ -19,6 +20,7 @@ export default function ProductsPage() {
   const [bulkOpen, setBulkOpen] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
+  const [details, setDetails] = useState<Product | null>(null);
   const confirm = useConfirm();
 
   const toggleSel = (id: string) => setSelected((prev) => {
@@ -124,6 +126,23 @@ export default function ProductsPage() {
       ),
     },
     {
+      key: 'purchasePrice',
+      header: 'Cost',
+      render: (p: Product) => {
+        if (p.purchasePrice == null) return <span className="font-body text-[11px] text-brand-muted">—</span>;
+        const profit = p.salePrice - p.purchasePrice;
+        const pct = p.salePrice > 0 ? Math.round((profit / p.salePrice) * 100) : 0;
+        return (
+          <div>
+            <p className="font-body text-[11px] font-semibold">{formatPrice(p.purchasePrice)}</p>
+            <p className="font-body text-[10px] font-semibold" style={{ color: profit >= 0 ? 'var(--c-success)' : 'var(--c-danger)' }}>
+              {profit >= 0 ? '+' : ''}{formatPrice(profit)} · {pct}%
+            </p>
+          </div>
+        );
+      },
+    },
+    {
       key: 'stock',
       header: 'Stock',
       render: (p: Product) => {
@@ -153,7 +172,10 @@ export default function ProductsPage() {
       header: 'Actions',
       render: (p: Product) => (
         <div className="flex items-center gap-1">
-          <a href={`${import.meta.env.VITE_CLIENT_URL || 'http://localhost:3000'}/products/${p.slug}`} target="_blank" rel="noopener noreferrer" className="w-7 h-7 flex items-center justify-center text-brand-muted hover:text-primary transition-colors">
+          <button onClick={() => setDetails(p)} title="View full details" className="w-7 h-7 flex items-center justify-center text-brand-muted hover:text-primary transition-colors">
+            <ScanEye size={14} />
+          </button>
+          <a href={`${import.meta.env.VITE_CLIENT_URL || 'http://localhost:3000'}/products/${p.slug}`} target="_blank" rel="noopener noreferrer" title="Open on storefront" className="w-7 h-7 flex items-center justify-center text-brand-muted hover:text-primary transition-colors">
             <Eye size={14} />
           </a>
           <Link to={`/products/${p._id}/edit`} className="w-7 h-7 flex items-center justify-center text-brand-muted hover:text-primary transition-colors">
@@ -228,6 +250,7 @@ export default function ProductsPage() {
     </div>
 
     <BulkUploadModal open={bulkOpen} onClose={() => setBulkOpen(false)} onDone={fetch} />
+    <ProductDetailsModal product={details} onClose={() => setDetails(null)} />
     </>
   );
 }

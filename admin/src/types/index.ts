@@ -7,6 +7,17 @@ export interface AdminUser {
   phone?: string;
   isActive: boolean;
   providerRef?: string;
+  /** Extra admin features granted to a provider login (feature keys). */
+  permissions?: string[];
+}
+
+/** A grantable admin feature, served by GET /providers/features. */
+export interface ProviderFeature {
+  key: string;
+  label: string;
+  href: string;
+  section: string;
+  description: string;
 }
 
 export interface DashboardStats {
@@ -36,7 +47,7 @@ export interface Provider {
   notes?: string;
   isActive: boolean;
   createdAt: string;
-  login?: { email?: string; password?: string; active?: boolean; hasLogin?: boolean };
+  login?: { email?: string; password?: string; active?: boolean; hasLogin?: boolean; permissions?: string[] };
 }
 
 export interface Product {
@@ -50,6 +61,7 @@ export interface Product {
   collections: { _id: string; name: string }[];
   mrp: number;
   salePrice: number;
+  purchasePrice?: number; // internal item cost (admin-only)
   usdMrp?: number;
   usdSalePrice?: number;
   discountPercentage: number;
@@ -305,6 +317,11 @@ export interface ReturnRequest {
   reason: string;
   status: 'requested' | 'approved' | 'processing' | 'completed' | 'rejected';
   refundAmount?: number;
+  /** Gateway payout state, set server-side when the return is completed. */
+  refundStatus?: 'none' | 'processing' | 'refunded' | 'failed' | 'manual';
+  refundReference?: string;
+  refundError?: string;
+  refundedAt?: string;
   createdAt: string;
 }
 

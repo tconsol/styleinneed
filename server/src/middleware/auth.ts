@@ -42,6 +42,18 @@ export const restrictTo = (...roles: UserRole[]) =>
 export const isAdmin = restrictTo('admin');
 export const isSuperAdmin = restrictTo('admin');
 export const isAdminOrManager = restrictTo('admin');
-// Providers (suppliers) may add/edit products only — nothing else in the admin.
+// Providers (suppliers) may add/edit their own products — everything beyond
+// that is opt-in per provider via `adminOrFeature`.
 export const isProviderOrAdmin = restrictTo('admin', 'provider');
 export const isProvider = restrictTo('provider');
+
+/**
+ * Admins always pass. Providers pass only when the admin has granted them this
+ * feature (see config/providerFeatures.ts). Customers never pass.
+ */
+export const adminOrFeature = (feature: string) =>
+  (req: AuthRequest, res: Response, next: NextFunction): void => {
+    if (req.user?.role === 'admin') { next(); return; }
+    if (req.user?.role === 'provider' && (req.user.permissions || []).includes(feature)) { next(); return; }
+    sendError(res, 'Forbidden: insufficient permissions', 403);
+  };

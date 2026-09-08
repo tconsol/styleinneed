@@ -43,8 +43,8 @@ export interface OrderPricing {
 
 /**
  * Resolve the shipping charge for a checkout.
- * - India: free at/above the threshold, else the flat rate (INR). free_shipping coupon zeroes it.
- * - US/CA: the admin's per-state charge (USD). No free shipping, ever.
+ * - India: free at/above the INR threshold, else the flat rate. free_shipping coupon zeroes it.
+ * - US/CA: free at/above the admin's USD threshold (0 = never free), else the per-state charge.
  */
 export const resolveShipping = async (
   region: Region,
@@ -57,7 +57,12 @@ export const resolveShipping = async (
     if (freeShippingCoupon) return 0;
     return subtotal >= settings.indiaFreeShipThreshold ? 0 : settings.indiaFlatShipping;
   }
-  // US / CA: look up the state's rate (match by code or full name).
+  // US / CA: an admin-set USD minimum can make shipping free (subtotal is USD here).
+  // Coupon-based free shipping stays India-only, as before.
+  const usaFree = settings.usaFreeShipThreshold || 0;
+  if (usaFree > 0 && subtotal >= usaFree) return 0;
+
+  // Otherwise look up the state's rate (match by code or full name).
   const state = (address.state || '').trim();
   const rate = await ShippingRate.findOne({
     country: region,

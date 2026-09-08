@@ -49,8 +49,8 @@ export const NAV_ITEMS = [
   ]},
 ];
 
-// Providers (suppliers) only manage products + their own password.
-export const PROVIDER_NAV = [
+// Always available to a provider (supplier) login, no permission needed.
+export const PROVIDER_BASE_NAV = [
   { section: 'Catalog', items: [
     { label: 'Products', href: '/products', icon: Package },
   ]},
@@ -59,6 +59,42 @@ export const PROVIDER_NAV = [
     { label: 'Change Password', href: '/change-password', icon: KeyRound },
   ]},
 ];
+
+// Maps a granted feature key -> the nav entry it unlocks. Keys must match
+// server/src/config/providerFeatures.ts.
+export const FEATURE_NAV: Record<string, { label: string; href: string; icon: typeof Package; section: string }> = {
+  'dashboard':     { label: 'Dashboard',     href: '/',              icon: LayoutDashboard,   section: 'Overview' },
+  'analytics':     { label: 'Analytics',     href: '/analytics',     icon: BarChart2,         section: 'Overview' },
+  'product-types': { label: 'Product Types', href: '/product-types', icon: Shapes,            section: 'Catalog' },
+  'attributes':    { label: 'Attributes',    href: '/attributes',    icon: SlidersHorizontal, section: 'Catalog' },
+  'size-charts':   { label: 'Size Charts',   href: '/size-charts',   icon: Ruler,             section: 'Catalog' },
+  'categories':    { label: 'Categories',    href: '/categories',    icon: Tag,               section: 'Catalog' },
+  'collections':   { label: 'Collections',   href: '/collections',   icon: Layers,            section: 'Catalog' },
+  'orders':        { label: 'Orders',        href: '/orders',        icon: ShoppingCart,      section: 'Commerce' },
+  'returns':       { label: 'Returns',       href: '/returns',       icon: RotateCcw,         section: 'Commerce' },
+  'reviews':       { label: 'Reviews',       href: '/reviews',       icon: Star,              section: 'Content' },
+  'promotions':    { label: 'Promotions',    href: '/promotions',    icon: Zap,               section: 'Marketing' },
+  'coupons':       { label: 'Coupons',       href: '/coupons',       icon: Ticket,            section: 'Marketing' },
+  'support':       { label: 'Support',       href: '/support',       icon: Headphones,        section: 'System' },
+};
+
+const SECTION_ORDER = ['Overview', 'Catalog', 'Commerce', 'Marketing', 'Content', 'System', 'Account'];
+
+/** Build a provider's sidebar: the always-on pages plus whatever was granted. */
+export function buildProviderNav(permissions: string[] = []) {
+  const bySection = new Map<string, { label: string; href: string; icon: typeof Package }[]>();
+  for (const { section, items } of PROVIDER_BASE_NAV) bySection.set(section, [...items]);
+  for (const key of permissions) {
+    const entry = FEATURE_NAV[key];
+    if (!entry) continue;
+    const list = bySection.get(entry.section) || [];
+    list.push({ label: entry.label, href: entry.href, icon: entry.icon });
+    bySection.set(entry.section, list);
+  }
+  return SECTION_ORDER
+    .filter((s) => bySection.has(s))
+    .map((section) => ({ section, items: bySection.get(section)! }));
+}
 
 interface Props { isOpen: boolean; onClose: () => void; }
 
@@ -122,7 +158,7 @@ export default function Sidebar({ isOpen, onClose }: Props) {
 
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto py-3 px-2.5">
-        {(user?.role === 'provider' ? PROVIDER_NAV : NAV_ITEMS).map(({ section, items }) => (
+        {(user?.role === 'provider' ? buildProviderNav(user.permissions) : NAV_ITEMS).map(({ section, items }) => (
           <div key={section} className="mb-4">
             <p className="px-2.5 mb-1.5 text-[9px] font-bold uppercase tracking-[0.18em]"
               style={{ color: labelClr }}>{section}</p>

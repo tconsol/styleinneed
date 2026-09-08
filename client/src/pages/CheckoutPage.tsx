@@ -10,6 +10,7 @@ import { authApi } from '../api/auth.api';
 import { couponApi, shippingApi } from '../api/misc.api';
 import { formatPrice } from '../utils/format';
 import toast from 'react-hot-toast';
+import { useSeo } from '../hooks/useSeo';
 
 // Mirror the server's country -> region mapping so the checkout currency and
 // shipping match exactly what will be charged.
@@ -21,6 +22,8 @@ const regionOf = (country?: string): 'IN' | 'US' | 'CA' => {
 };
 
 export default function CheckoutPage() {
+  useSeo({ title: 'Checkout', noIndex: true });
+
   const navigate = useNavigate();
   const { user, fetchMe } = useAuthStore();
   const { items, couponCode, couponDiscount, setCoupon, clearCoupon, clearCart } = useCartStore();

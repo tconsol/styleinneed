@@ -135,6 +135,35 @@ export const sendPromotionEmail = async (email: string, p: PromotionEmail): Prom
   });
 };
 
+/** Internal ops alert — tells the admins a variant needs restocking. */
+export const sendLowStockEmail = async (
+  to: string[],
+  info: { productName: string; slug: string; sku: string; stock: number; threshold: number }
+): Promise<void> => {
+  if (to.length === 0) return;
+  const out = info.stock === 0;
+  await transporter.sendMail({
+    from,
+    to: to.join(','),
+    subject: `${out ? 'Out of stock' : 'Low stock'}: ${info.productName} (${info.sku})`,
+    html: `
+      <div style="font-family: Inter, sans-serif; max-width: 520px; margin: auto; padding: 28px; background: #FFF9F5;">
+        <span style="display:inline-block;background:${out ? '#DC2626' : '#F59E0B'};color:#fff;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:5px 12px;border-radius:999px;">
+          ${out ? 'Out of stock' : 'Low stock'}
+        </span>
+        <h2 style="color:#1C1C1C;margin:14px 0 4px;">${info.productName}</h2>
+        <p style="color:#555;margin:0 0 16px;">Variant <strong>${info.sku}</strong></p>
+        <table style="width:100%;border-collapse:collapse;font-size:14px;color:#333;">
+          <tr><td style="padding:6px 0;color:#888;">Units remaining</td><td style="text-align:right;font-weight:700;">${info.stock}</td></tr>
+          <tr><td style="padding:6px 0;color:#888;">Alert threshold</td><td style="text-align:right;">${info.threshold}</td></tr>
+        </table>
+        <hr style="border:none;border-top:1px solid #F5EFE8;margin:20px 0;" />
+        <p style="color:#bbb;font-size:12px;">Style In Need Fashions — inventory alert</p>
+      </div>
+    `,
+  });
+};
+
 export const verifyEmailConnection = async (): Promise<void> => {
   try {
     await transporter.verify();

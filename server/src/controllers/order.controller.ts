@@ -13,6 +13,7 @@ import { createRazorpayPaymentLink, fetchRazorpayPaymentLink } from '../services
 import { createStripeCheckoutSession, retrieveStripeCheckoutSession } from '../services/stripe.service';
 import { sendOrderConfirmationEmail } from '../services/email.service';
 import { sendPushToUser } from '../services/push.service';
+import { checkLowStock } from '../services/stockAlert.service';
 import { primaryClientUrl } from '../middleware/security';
 import { computeOrderPricing, regionOf, PricedLine } from '../utils/pricing';
 import logger from '../utils/logger';
@@ -144,6 +145,8 @@ const fulfillOrder = async (
       { $inc: { 'variants.$.stock': -item.quantity } }
     );
     emitEvent(SOCKET_EVENTS.stockUpdated, { productId: String(item.product), sku: item.variant.sku });
+    // Best-effort admin alert; never blocks or fails the order.
+    void checkLowStock(String(item.product), item.variant.sku, item.quantity);
   }
   void invalidateCache('/api/v1/products');
 

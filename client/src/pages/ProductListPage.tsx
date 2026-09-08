@@ -7,6 +7,8 @@ import Footer from '../components/layout/Footer';
 import { productApi } from '../api/product.api';
 import { useCategories, useCollections, useProductTypes, useAttributes } from '../hooks/useCatalog';
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
+import { useMoney } from '../hooks/useMoney';
+import { useSeo } from '../hooks/useSeo';
 import { socket, SOCKET_EVENTS } from '../lib/socket';
 import type { Product, Attribute } from '../types';
 
@@ -19,13 +21,24 @@ const SORT_OPTIONS = [
   { label: 'Biggest Discount', value: '-discountPercentage' },
 ];
 
-const PRICE_RANGES = [
-  { label: 'Under ₹999', min: 0, max: 999 },
-  { label: '₹999 – ₹2,999', min: 999, max: 2999 },
-  { label: '₹2,999 – ₹5,999', min: 2999, max: 5999 },
-  { label: '₹5,999 – ₹10,000', min: 5999, max: 10000 },
-  { label: '₹10,000 – ₹20,000', min: 10000, max: 20000 },
-  { label: 'Above ₹20,000', min: 20000, max: 999999 },
+// Price bands are expressed in the shopper's own currency — the API filters
+// against each product's INR or USD price depending on the `currency` param,
+// so the numbers here are never converted, just chosen per currency.
+const PRICE_RANGES_INR = [
+  { min: 0, max: 999 },
+  { min: 999, max: 2999 },
+  { min: 2999, max: 5999 },
+  { min: 5999, max: 10000 },
+  { min: 10000, max: 20000 },
+  { min: 20000, max: 999999 },
+];
+const PRICE_RANGES_USD = [
+  { min: 0, max: 25 },
+  { min: 25, max: 50 },
+  { min: 50, max: 100 },
+  { min: 100, max: 200 },
+  { min: 200, max: 400 },
+  { min: 400, max: 99999 },
 ];
 
 /* ─────────── Collapsible section ─────────── */
@@ -80,14 +93,28 @@ function RadioRow({ label, active, onClick }: { label: string; active: boolean; 
   );
 }
 
-const PRICE_MAX = 100_000;
+const PRICE_MAX_INR = 100_000;
+const PRICE_MAX_USD = 1_500;
 
 function PriceFilter({ min, max, onApply }: { min: number; max: number; onApply: (min: number, max: number) => void }) {
   const [draft, setDraft] = useState<{ min: number; max: number } | null>(null);
   const [custom, setCustom] = useState({ min: '', max: '' });
+  // Values are already in the shopper's currency — no conversion here; the API
+  // is told which currency the bounds are in.
+  const { currency, symbol } = useMoney();
+  const isUsd = currency === 'USD';
+  const bands = isUsd ? PRICE_RANGES_USD : PRICE_RANGES_INR;
+  const priceMax = isUsd ? PRICE_MAX_USD : PRICE_MAX_INR;
+  const step = isUsd ? 5 : 100;
+  const fmt = (n: number) => `${symbol}${n.toLocaleString(isUsd ? 'en-US' : 'en-IN')}`;
 
-  const lo = Math.max(0, Math.min(draft?.min ?? min, PRICE_MAX));
-  const hi = Math.max(0, Math.min(draft?.max ?? max, PRICE_MAX));
+  const lo = Math.max(0, Math.min(draft?.min ?? min, priceMax));
+  const hi = Math.max(0, Math.min(draft?.max ?? max, priceMax));
+
+  const bandLabel = (r: { min: number; max: number }) =>
+    r.min === 0 ? `Under ${fmt(r.max)}`
+      : r.max >= (isUsd ? 99_999 : 999_999) ? `Above ${fmt(r.min)}`
+        : `${fmt(r.min)} – ${fmt(r.max)}`;
 
   const commit = (next: { min: number; max: number }) => {
     setDraft(null);
@@ -96,19 +123,17 @@ function PriceFilter({ min, max, onApply }: { min: number; max: number; onApply:
 
   const applyCustom = () => {
     const cmin = Number(custom.min || '0');
-    const cmax = Number(custom.max || String(PRICE_MAX));
+    const cmax = Number(custom.max || String(priceMax));
     if (Number.isNaN(cmin) || Number.isNaN(cmax) || cmin < 0 || cmax < 0) return;
-    const mn = Math.min(cmin, cmax);
-    const mx = Math.max(cmin, cmax);
-    onApply(mn, mx);
+    onApply(Math.min(cmin, cmax), Math.max(cmin, cmax));
   };
 
   const numCls = 'w-full min-w-0 px-2.5 py-2 bg-brand-surface border border-brand-border rounded-lg text-brand-text text-[12px] font-body outline-none focus:border-primary transition-colors placeholder:text-brand-muted/60';
 
   return (
     <div>
-      {PRICE_RANGES.map((r) => (
-        <RadioRow key={r.label} label={r.label} active={min === r.min && max === r.max} onClick={() => onApply(r.min, r.max)} />
+      {bands.map((r) => (
+        <RadioRow key={`${r.min}-${r.max}`} label={bandLabel(r)} active={min === r.min && max === r.max} onClick={() => onApply(r.min, r.max)} />
       ))}
 
       <div className="mt-4 pt-4 border-t border-brand-border">
@@ -117,40 +142,40 @@ function PriceFilter({ min, max, onApply }: { min: number; max: number; onApply:
           <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-1 rounded-full bg-brand-border" />
           <div
             className="absolute top-1/2 -translate-y-1/2 h-1 rounded-full bg-primary"
-            style={{ left: `${(lo / PRICE_MAX) * 100}%`, right: `${100 - (hi / PRICE_MAX) * 100}%` }}
+            style={{ left: `${(lo / priceMax) * 100}%`, right: `${100 - (hi / priceMax) * 100}%` }}
           />
           <input
             type="range"
             min={0}
-            max={PRICE_MAX}
-            step={100}
+            max={priceMax}
+            step={step}
             value={lo}
             aria-label="Minimum price"
-            onChange={(e) => setDraft((d) => ({ min: Math.min(Number(e.target.value), (d?.max ?? hi) - 100), max: d?.max ?? hi }))}
+            onChange={(e) => setDraft((d) => ({ min: Math.min(Number(e.target.value), (d?.max ?? hi) - step), max: d?.max ?? hi }))}
             className="range-track"
           />
           <input
             type="range"
             min={0}
-            max={PRICE_MAX}
-            step={100}
+            max={priceMax}
+            step={step}
             value={hi}
             aria-label="Maximum price"
-            onChange={(e) => setDraft((d) => ({ min: d?.min ?? lo, max: Math.max(Number(e.target.value), (d?.min ?? lo) + 100) }))}
+            onChange={(e) => setDraft((d) => ({ min: d?.min ?? lo, max: Math.max(Number(e.target.value), (d?.min ?? lo) + step) }))}
             className="range-track"
           />
         </div>
         <div className="flex justify-between font-body text-[11px] text-brand-muted mb-3">
-          <span>₹{lo.toLocaleString('en-IN')}</span>
-          <span>{hi >= PRICE_MAX ? '₹1L+' : `₹${hi.toLocaleString('en-IN')}`}</span>
+          <span>{fmt(lo)}</span>
+          <span>{hi >= priceMax ? `${fmt(priceMax)}+` : fmt(hi)}</span>
         </div>
         <div className="flex items-center gap-1.5">
           <input
             type="number"
             min={0}
-            max={PRICE_MAX}
+            max={priceMax}
             value={custom.min}
-            placeholder="Min"
+            placeholder={`Min ${symbol}`}
             aria-label="Custom minimum price"
             onChange={(e) => setCustom((c) => ({ ...c, min: e.target.value }))}
             className={numCls}
@@ -159,9 +184,9 @@ function PriceFilter({ min, max, onApply }: { min: number; max: number; onApply:
           <input
             type="number"
             min={0}
-            max={PRICE_MAX}
+            max={priceMax}
             value={custom.max}
-            placeholder="Max"
+            placeholder={`Max ${symbol}`}
             aria-label="Custom maximum price"
             onChange={(e) => setCustom((c) => ({ ...c, max: e.target.value }))}
             className={numCls}
@@ -196,6 +221,11 @@ export default function ProductListPage() {
   const [mobileSortOpen, setMobileSortOpen] = useState(false);
   const [activeFilterGroup, setActiveFilterGroup] = useState('category');
   const sortRef = useRef<HTMLDivElement>(null);
+  // Filter bounds are expressed in the shopper's own currency; the API is told
+  // which one so it compares against the matching price field.
+  const { currency } = useMoney();
+  const priceMax = currency === 'USD' ? PRICE_MAX_USD : PRICE_MAX_INR;
+  const priceSymbol = currency === 'USD' ? '$' : '₹';
 
   const page        = Number(params.get('page') || 1);
   const sort        = params.get('sort') || '-createdAt';
@@ -227,6 +257,9 @@ export default function ProductListPage() {
       if (f.page) f.page = Number(f.page);
       if (f.minPrice) f.minPrice = Number(f.minPrice);
       if (f.maxPrice) f.maxPrice = Number(f.maxPrice);
+      // Tell the API which currency the price bounds are in so it filters
+      // against the product's USD price rather than the INR one.
+      if (f.minPrice || f.maxPrice) f.currency = currency;
       const { data } = await productApi.getProducts(f);
       setProducts(data.data || []);
       setTotal(data.pagination?.total || 0);
@@ -237,7 +270,7 @@ export default function ProductListPage() {
       setLoading(false);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search$]);
+  }, [search$, currency]);
 
   // Initial load — defer so setState happens outside the effect body
   useEffect(() => {
@@ -311,7 +344,7 @@ export default function ProductListPage() {
   };
   const setPriceRange = (min: number, max: number) => {
     const next = new URLSearchParams(params);
-    if (min <= 0 && max >= PRICE_MAX) { next.delete('minPrice'); next.delete('maxPrice'); }
+    if (min <= 0 && max >= priceMax) { next.delete('minPrice'); next.delete('maxPrice'); }
     else if (minPrice === String(min) && maxPrice === String(max)) { next.delete('minPrice'); next.delete('maxPrice'); }
     else { next.set('minPrice', String(min)); next.set('maxPrice', String(max)); }
     next.delete('page'); setParams(next);
@@ -340,6 +373,14 @@ export default function ProductListPage() {
     || (isTrending ? 'Trending' : '')
     || 'All Products';
 
+  // Title/description follow the active filter so each browse view is its own
+  // indexable page. Search result pages are kept out of the index.
+  useSeo({
+    title: pageTitle,
+    description: `Shop ${pageTitle.toLowerCase()} at Style In Need Fashions — ${total} styles with fast delivery to India and the USA.`,
+    noIndex: !!search,
+  });
+
   const sortLabel = SORT_OPTIONS.find((o) => o.value === sort)?.label || 'Newest First';
 
   const chips = [
@@ -349,7 +390,7 @@ export default function ProductListPage() {
     isNewArrival && { label: 'New Arrivals', clear: () => setParam('isNewArrival', '') },
     isBestSeller && { label: 'Best Sellers', clear: () => setParam('isBestSeller', '') },
     isTrending   && { label: 'Trending',     clear: () => setParam('isTrending', '') },
-    minPrice     && { label: `₹${Number(minPrice).toLocaleString('en-IN')}+`, clear: () => { setParam('minPrice', ''); setParam('maxPrice', ''); } },
+    minPrice     && { label: `${priceSymbol}${Number(minPrice).toLocaleString(currency === 'USD' ? 'en-US' : 'en-IN')}+`, clear: () => { setParam('minPrice', ''); setParam('maxPrice', ''); } },
     ...attrSelections.map((s) => ({ label: s.value, clear: () => toggleMulti(s.slug, s.value) })),
   ].filter(Boolean) as { label: string; clear: () => void }[];
 
@@ -457,7 +498,7 @@ export default function ProductListPage() {
       content: (
         <PriceFilter
           min={minPrice ? Number(minPrice) : 0}
-          max={maxPrice ? Number(maxPrice) : PRICE_MAX}
+          max={maxPrice ? Number(maxPrice) : priceMax}
           onApply={setPriceRange}
         />
       ),

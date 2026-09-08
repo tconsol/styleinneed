@@ -1,11 +1,12 @@
 ﻿import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, ShoppingBag, Eye, Circle, Trash2 } from 'lucide-react';
+import { Search, ShoppingBag, Eye, Circle, Trash2, Download } from 'lucide-react';
 import { orderApi } from '../../api';
 import { useConfirm } from '../../components/common/ConfirmDialog';
 import StatusTabs from '../../components/common/StatusTabs';
 import type { Order, Pagination } from '../../types';
 import { formatPrice, formatDateTime } from '../../utils/format';
+import { downloadBlob, stampedName } from '../../utils/download';
 import toast from 'react-hot-toast';
 
 const STATUSES = ['all', 'pending', 'confirmed', 'packed', 'shipped', 'delivered', 'returned', 'cancelled'];
@@ -48,6 +49,17 @@ export default function OrdersPage() {
   const [activeStatus, setActiveStatus] = useState('all');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
+  const [exporting, setExporting] = useState(false);
+
+  // Exports the current status filter, not just the page on screen.
+  const exportCsv = async () => {
+    setExporting(true);
+    try {
+      const { data } = await orderApi.exportCsv({ status: activeStatus === 'all' ? undefined : activeStatus });
+      downloadBlob(data as Blob, stampedName('orders'));
+      toast.success('Export downloaded');
+    } catch { toast.error('Export failed'); } finally { setExporting(false); }
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -92,6 +104,11 @@ export default function OrdersPage() {
           <h1 className="text-[15px] font-bold text-brand-text">Orders</h1>
           <p className="text-[10px] text-brand-muted mt-0.5">{pagination.total} total orders</p>
         </div>
+        <button onClick={exportCsv} disabled={exporting} className="btn-outline disabled:opacity-50">
+          {exporting
+            ? <><span className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin" /> Exporting…</>
+            : <><Download size={14} /> Export CSV</>}
+        </button>
       </div>
 
       {/* Status Filter Tabs */}

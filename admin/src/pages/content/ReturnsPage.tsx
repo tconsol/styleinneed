@@ -1,5 +1,5 @@
 ﻿import { useEffect, useState, useCallback } from 'react';
-import { RotateCcw, Edit2, Circle } from 'lucide-react';
+import { RotateCcw, Edit2, Circle, RefreshCw, AlertTriangle } from 'lucide-react';
 import Modal from '../../components/common/Modal';
 import StatusTabs from '../../components/common/StatusTabs';
 import { returnApi } from '../../api';
@@ -17,6 +17,15 @@ const STATUS_STYLE: Record<string, { bg: string; text: string; dot: string }> = 
   rejected:   { bg: 'var(--c-danger-soft)', text: 'var(--c-danger)', dot: 'var(--c-danger)' },
 };
 
+// Gateway refund state — set by the server when a return is completed.
+const REFUND_STYLE: Record<string, { label: string; bg: string; text: string }> = {
+  none:       { label: 'Not refunded', bg: 'var(--c-bg)',            text: 'var(--c-muted)' },
+  processing: { label: 'Processing',   bg: 'var(--c-info-soft)',     text: 'var(--c-info)' },
+  refunded:   { label: 'Refunded',     bg: 'var(--c-success-soft)',  text: 'var(--c-success)' },
+  failed:     { label: 'Failed',       bg: 'var(--c-danger-soft)',   text: 'var(--c-danger)' },
+  manual:     { label: 'Pay manually', bg: 'var(--c-warning-soft)',  text: 'var(--c-warning)' },
+};
+
 export default function ReturnsPage() {
   const [returns, setReturns] = useState<ReturnRequest[]>([]);
   const [pagination, setPagination] = useState<Pagination>({ page: 1, limit: 20, total: 0, pages: 1 });
@@ -26,6 +35,16 @@ export default function ReturnsPage() {
   const [selected, setSelected] = useState<ReturnRequest | null>(null);
   const [form, setForm] = useState({ status: '', refundAmount: '', adminNote: '' });
   const [saving, setSaving] = useState(false);
+  const [retrying, setRetrying] = useState<string | null>(null);
+
+  const retryRefund = async (r: ReturnRequest) => {
+    setRetrying(r._id);
+    try {
+      await returnApi.retryRefund(r._id);
+      toast.success('Refund issued');
+      load();
+    } catch { /* interceptor surfaces the gateway error */ } finally { setRetrying(null); }
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -78,6 +97,7 @@ export default function ReturnsPage() {
                 <th className="th text-left">Customer</th>
                 <th className="th text-left">Reason</th>
                 <th className="th text-right" style={{ width: '110px' }}>Refund</th>
+                <th className="th text-center" style={{ width: '120px' }}>Payout</th>
                 <th className="th text-center" style={{ width: '110px' }}>Status</th>
                 <th className="th text-left" style={{ width: '100px' }}>Date</th>
                 <th className="th text-center" style={{ width: '90px' }}>Actions</th>
@@ -85,9 +105,9 @@ export default function ReturnsPage() {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={7} className="text-center py-12"><span className="w-6 h-6 border-2 border-brand-border border-t-primary rounded-full animate-spin inline-block" /></td></tr>
+                <tr><td colSpan={8} className="text-center py-12"><span className="w-6 h-6 border-2 border-brand-border border-t-primary rounded-full animate-spin inline-block" /></td></tr>
               ) : returns.length === 0 ? (
-                <tr><td colSpan={7} className="text-center py-16"><RotateCcw size={32} className="mx-auto mb-2 text-brand-border" /><p className="text-[11px] text-brand-muted">No return requests</p></td></tr>
+                <tr><td colSpan={8} className="text-center py-16"><RotateCcw size={32} className="mx-auto mb-2 text-brand-border" /><p className="text-[11px] text-brand-muted">No return requests</p></td></tr>
               ) : returns.map((r) => {
                 const ss = STATUS_STYLE[r.status] || STATUS_STYLE.requested;
                 return (
@@ -104,17 +124,39 @@ export default function ReturnsPage() {
                     <td className="px-3 py-3 text-[11px] text-brand-muted capitalize">{r.reason?.replace(/_/g, ' ') || '—'}</td>
                     <td className="px-3 py-3 text-right text-[11px] font-semibold text-brand-text">{r.refundAmount ? formatPrice(r.refundAmount) : '—'}</td>
                     <td className="px-3 py-3 text-center">
+                      {(() => {
+                        const rs = REFUND_STYLE[r.refundStatus || 'none'] || REFUND_STYLE.none;
+                        return (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-semibold"
+                            style={{ background: rs.bg, color: rs.text }}
+                            title={r.refundError || r.refundReference || undefined}>
+                            {r.refundStatus === 'failed' && <AlertTriangle size={9} />}
+                            {rs.label}
+                          </span>
+                        );
+                      })()}
+                    </td>
+                    <td className="px-3 py-3 text-center">
                       <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-semibold capitalize" style={{ background: ss.bg, color: ss.text }}>
                         <Circle size={5} fill={ss.dot} style={{ color: ss.dot }} />{r.status}
                       </span>
                     </td>
                     <td className="px-3 py-3 text-[10px] text-brand-muted">{formatDate(r.createdAt)}</td>
-                    <td className="px-3 py-3 text-center">
-                      <button onClick={() => openUpdate(r)} className="w-8 h-8 rounded-lg flex items-center justify-center mx-auto transition-all" style={{ color: 'var(--c-muted)' }}
-                        onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--c-primary-soft)'; e.currentTarget.style.color = 'var(--c-primary)'; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--c-muted)'; }}>
-                        <Edit2 size={13} />
-                      </button>
+                    <td className="px-3 py-3">
+                      <div className="flex items-center justify-center gap-1">
+                        {r.refundStatus === 'failed' && (
+                          <button onClick={() => retryRefund(r)} disabled={retrying === r._id} title="Retry refund at the gateway"
+                            className="w-8 h-8 rounded-lg flex items-center justify-center transition-all disabled:opacity-40"
+                            style={{ color: 'var(--c-danger)' }}>
+                            <RefreshCw size={13} className={retrying === r._id ? 'animate-spin' : ''} />
+                          </button>
+                        )}
+                        <button onClick={() => openUpdate(r)} className="w-8 h-8 rounded-lg flex items-center justify-center transition-all" style={{ color: 'var(--c-muted)' }}
+                          onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--c-primary-soft)'; e.currentTarget.style.color = 'var(--c-primary)'; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--c-muted)'; }}>
+                          <Edit2 size={13} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );

@@ -8,6 +8,7 @@ import { blogApi } from '../api/misc.api';
 import { useHomepageCms } from '../hooks/useHomepageCms';
 import type { Blog } from '../types';
 import { formatDate } from '../utils/format';
+import { useSeo } from '../hooks/useSeo';
 
 export default function BlogDetailPage() {
   const cms = useHomepageCms();
@@ -19,6 +20,25 @@ export default function BlogDetailPage() {
     if (!slug) return;
     blogApi.getBlogBySlug(slug).then(({ data }) => setBlog(data.data)).catch(() => {}).finally(() => setLoading(false));
   }, [slug]);
+
+  useSeo({
+    title: blog?.title,
+    description: blog?.excerpt,
+    image: blog?.coverImage,
+    type: 'article',
+    canonical: blog ? `/blogs/${blog.slug}` : undefined,
+    jsonLd: blog
+      ? {
+          '@context': 'https://schema.org',
+          '@type': 'BlogPosting',
+          headline: blog.title,
+          description: blog.excerpt,
+          image: blog.coverImage,
+          author: { '@type': 'Person', name: blog.author?.name || 'Style In Need Fashions' },
+          datePublished: blog.publishedAt,
+        }
+      : null,
+  });
 
   if (loading) return <div className="min-h-screen flex items-center justify-center"><Spinner size="lg" /></div>;
   if (!blog) return <div className="min-h-screen flex items-center justify-center"><p className="font-body text-brand-muted">Post not found</p></div>;

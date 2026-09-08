@@ -9,6 +9,7 @@ export interface IUser extends Document {
   password: string;
   plainPassword?: string;
   providerRef?: Types.ObjectId;
+  permissions: string[]; // granted admin features (provider logins only)
   role: 'customer' | 'admin' | 'provider';
   isEmailVerified: boolean;
   isActive: boolean;
@@ -73,6 +74,7 @@ export interface IProduct extends Document {
   weightGrams?: number; // dedicated numeric field (range-filterable)
   mrp: number;
   salePrice: number;
+  purchasePrice?: number; // internal item cost (INR) — never sent to the storefront
   usdMrp?: number;
   usdSalePrice?: number;
   discountPercentage: number;

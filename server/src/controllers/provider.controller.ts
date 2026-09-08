@@ -4,6 +4,7 @@ import User from '../models/User';
 import { AuthRequest } from '../types';
 import { sendSuccess, sendError, getPagination } from '../utils/apiResponse';
 import { encryptSecret, decryptSecret } from '../utils/secretCrypto';
+import { sanitizeFeatures, PROVIDER_FEATURES } from '../config/providerFeatures';
 
 // Business fields a provider may edit on their own record. Login/isActive/category
 // stay admin-controlled (category gates catalogue placement).
@@ -12,18 +13,20 @@ const PROVIDER_EDITABLE = [
   'gstin', 'bankAccountName', 'bankAccountNumber', 'bankIfsc', 'bankName',
 ] as const;
 
-interface LoginOpts { loginEmail?: string; loginPassword?: string; canLogin?: boolean }
+interface LoginOpts { loginEmail?: string; loginPassword?: string; canLogin?: boolean; permissions?: unknown }
 
 // Strip the login-only fields from a provider payload so they never land on the
 // Provider (business) document — credentials live on the linked User account.
 const splitLogin = (body: Record<string, unknown>): { data: Record<string, unknown>; login: LoginOpts } => {
-  const { loginEmail, loginPassword, canLogin, ...data } = body as LoginOpts & Record<string, unknown>;
-  return { data, login: { loginEmail, loginPassword, canLogin } };
+  const { loginEmail, loginPassword, canLogin, permissions, ...data } = body as LoginOpts & Record<string, unknown>;
+  return { data, login: { loginEmail, loginPassword, canLogin, permissions } };
 };
 
 /** Create/update/disable the provider's admin-panel login (role 'provider'). */
 const syncProviderLogin = async (provider: IProvider, opts: LoginOpts): Promise<void> => {
-  const { loginEmail, loginPassword, canLogin } = opts;
+  const { loginEmail, loginPassword, canLogin, permissions } = opts;
+  // Only ever trust known feature keys — the payload is admin-supplied.
+  const features = permissions !== undefined ? sanitizeFeatures(permissions) : undefined;
   let user = await User.findOne({ providerRef: provider._id, role: 'provider' }).select('+plainPassword +password');
 
   if (canLogin === false) {
@@ -40,6 +43,7 @@ const syncProviderLogin = async (provider: IProvider, opts: LoginOpts): Promise<
       plainPassword: encryptSecret(loginPassword),
       role: 'provider',
       providerRef: provider._id,
+      permissions: features || [],
       isEmailVerified: true,
       isActive: true,
     });
@@ -50,24 +54,30 @@ const syncProviderLogin = async (provider: IProvider, opts: LoginOpts): Promise<
   if (loginEmail) user.email = String(loginEmail).toLowerCase().trim();
   if (loginPassword) { user.password = loginPassword; user.plainPassword = encryptSecret(loginPassword); }
   if (canLogin === true) user.isActive = true;
+  if (features) user.permissions = features;
   await user.save();
 };
 
-// Attach { login: { email, password, active, hasLogin } } to provider records.
+// Attach { login: { email, password, active, hasLogin, permissions } } to provider records.
 const attachLogin = async <T extends { _id: unknown }>(providers: T[]) => {
   const ids = providers.map((p) => p._id);
   const users = await User.find({ role: 'provider', providerRef: { $in: ids } })
-    .select('email plainPassword providerRef isActive').lean();
+    .select('email plainPassword providerRef isActive permissions').lean();
   const map = new Map(users.map((u) => [String(u.providerRef), u]));
   return providers.map((p) => {
     const u = map.get(String(p._id));
     return {
       ...p,
       login: u
-        ? { email: u.email, password: decryptSecret(u.plainPassword), active: u.isActive, hasLogin: true }
-        : { hasLogin: false, active: false },
+        ? { email: u.email, password: decryptSecret(u.plainPassword), active: u.isActive, hasLogin: true, permissions: u.permissions || [] }
+        : { hasLogin: false, active: false, permissions: [] },
     };
   });
+};
+
+/** The list of extra admin features an admin can grant to a provider login. */
+export const getProviderFeatures = async (_req: Request, res: Response): Promise<void> => {
+  sendSuccess(res, 'Provider features', PROVIDER_FEATURES);
 };
 
 export const getProviders = async (req: Request, res: Response, next: NextFunction): Promise<void> => {

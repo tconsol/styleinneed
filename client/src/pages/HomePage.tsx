@@ -12,8 +12,14 @@ import { productApi } from '../api/product.api';
 import { useHomepageCms } from '../hooks/useHomepageCms';
 import { socket, SOCKET_EVENTS } from '../lib/socket';
 import type { Product } from '../types';
+import { useSeo } from '../hooks/useSeo';
 
 export default function HomePage() {
+  useSeo({
+    title: 'Premium Women’s Fashion',
+    description: 'Shop premium sarees, kurtis, lehengas and western wear. Handpicked ethnic and modern styles with fast delivery across India and the USA.',
+  });
+
   const cms = useHomepageCms();
   const [newArrivals, setNewArrivals] = useState<Product[]>([]);
   const [bestSellers, setBestSellers] = useState<Product[]>([]);

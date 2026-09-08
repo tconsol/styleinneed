@@ -1,13 +1,15 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import Promotion from '../models/Promotion';
-import { protect, isAdminOrManager } from '../middleware/auth';
+import { protect, adminOrFeature } from '../middleware/auth';
 import { emitEvent, SOCKET_EVENTS } from '../config/socket';
 import { sendSuccess, sendError, getPagination } from '../utils/apiResponse';
 
 const router = Router();
 const announce = () => emitEvent(SOCKET_EVENTS.contentUpdated, { kind: 'promotion' });
 
-router.get('/', async (req: Request, res: Response, next: NextFunction) => {
+// Admin listing — declared before the router-wide guard below, so it carries
+// its own (without this it would be publicly readable).
+router.get('/', protect, adminOrFeature('promotions'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { page, limit } = req.query as Record<string, string>;
     const { page: p, limit: l, skip } = getPagination(page, limit);
@@ -32,7 +34,7 @@ router.get('/active', async (_req: Request, res: Response, next: NextFunction) =
   } catch (err) { next(err); }
 });
 
-router.use(protect, isAdminOrManager);
+router.use(protect, adminOrFeature('promotions'));
 
 router.post('/', async (req: Request, res: Response, next: NextFunction) => {
   try {

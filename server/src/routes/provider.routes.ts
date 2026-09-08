@@ -3,13 +3,15 @@ import { protect, isAdminOrManager, isProviderOrAdmin } from '../middleware/auth
 import {
   getProviders, getAllProvidersSimple, getProviderById,
   createProvider, updateProvider, deleteProvider,
-  getMyProviderProfile, updateMyProviderProfile,
+  getMyProviderProfile, updateMyProviderProfile, getProviderFeatures,
 } from '../controllers/provider.controller';
 
 const router = Router();
 
 router.use(protect);
 
+// Catalogue of grantable admin features (drives the permission checkboxes).
+router.get('/features', isAdminOrManager, getProviderFeatures);
 // Lightweight dropdown list — allowed for providers too (used by the product form).
 router.get('/all',    isProviderOrAdmin, getAllProvidersSimple);
 // Provider self-service on their own business profile (must precede '/:id').

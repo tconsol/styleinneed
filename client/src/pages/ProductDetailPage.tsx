@@ -10,6 +10,7 @@ import { reviewApi } from '../api/misc.api';
 import type { Product, ProductVariant, Review, Attribute, SizeChart } from '../types';
 import { formatDate } from '../utils/format';
 import { useMoney } from '../hooks/useMoney';
+import { useSeo, productJsonLd } from '../hooks/useSeo';
 import { useRegion } from '../hooks/useRegion';
 import { colorLabel } from '../utils/colorName';
 import { socket, SOCKET_EVENTS } from '../lib/socket';
@@ -40,9 +41,10 @@ export default function ProductDetailPage() {
   const { addItem, updateItem, removeItem, openCart, items: cartItems, isLoading: cartLoading } = useCartStore();
   const { toggle, isWishlisted } = useWishlistStore();
   const activePromos = usePromotionStore((s) => s.active);
-  const { format } = useMoney();
+  const { format, value: toDisplayPrice, currency } = useMoney();
   const { isUSA } = useRegion();
   const freeShipThreshold = useCurrencyStore((s) => s.freeShipThreshold);
+  const usaFreeShipThreshold = useCurrencyStore((s) => s.usaFreeShipThreshold);
 
   useEffect(() => {
     if (!slug) return;
@@ -94,6 +96,28 @@ export default function ProductDetailPage() {
       reviewApi.getProductReviews(product._id).then(({ data }) => setReviews(data.data || [])).catch(() => {});
     }
   }, [product?._id]);
+
+  // Per-product SEO + Product structured data. Runs before the early returns
+  // below so hook order stays stable while the product loads.
+  useSeo({
+    title: product?.name,
+    description: product?.shortDescription || product?.description?.slice(0, 160),
+    image: product?.images?.[0],
+    type: 'product',
+    canonical: product ? `/products/${product.slug}` : undefined,
+    jsonLd: product
+      ? productJsonLd({
+          name: product.name,
+          description: product.shortDescription,
+          images: product.images,
+          slug: product.slug,
+          price: toDisplayPrice(product.salePrice, product.usdSalePrice),
+          currency,
+          inStock: product.variants?.some((v) => v.stock > 0) ?? false,
+          rating: product.ratings,
+        })
+      : null,
+  });
 
   if (loading) return <div className="min-h-screen flex items-center justify-center"><Spinner size="lg" /></div>;
   if (!product) return null;
@@ -361,7 +385,9 @@ export default function ProductDetailPage() {
             <div className="grid grid-cols-3 gap-3 mt-6 py-5 border-y border-brand-border">
               {[
                 isUSA
-                  ? { icon: Truck, label: 'Delivery', sub: 'Calculated at checkout' }
+                  ? usaFreeShipThreshold > 0
+                    ? { icon: Truck, label: 'Free Delivery', sub: `On orders $${usaFreeShipThreshold.toLocaleString('en-US')}+` }
+                    : { icon: Truck, label: 'Delivery', sub: 'Calculated at checkout' }
                   : { icon: Truck, label: 'Free Delivery', sub: `On orders ₹${freeShipThreshold.toLocaleString('en-IN')}+` },
                 returnDays > 0
                   ? { icon: RotateCcw, label: 'Easy Returns', sub: `${returnDays}-day returns` }
@@ -457,6 +483,7 @@ export default function ProductDetailPage() {
                   <div className="font-body text-sm text-brand-muted leading-relaxed space-y-3">
                     {isUSA ? (
                       <>
+                        {usaFreeShipThreshold > 0 && <p>• Free shipping on orders above ${usaFreeShipThreshold.toLocaleString('en-US')}</p>}
                         <p>• Delivery charges calculated by state at checkout</p>
                         <p>• Standard delivery: 7–14 business days</p>
                         <p>• Secure international card payment</p>

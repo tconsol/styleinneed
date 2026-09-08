@@ -1,12 +1,15 @@
 import { useState, useRef, useEffect } from 'react';
 import { Save, Globe, Check, AlertCircle, Building2, Phone, Lock, CornerDownLeft, Truck, Briefcase, Home, LayoutTemplate, Upload, X, ImageIcon, Trash2, Plus, LogIn } from 'lucide-react';
 import { cmsApi } from '../../api';
+import ImageSpecHint from '../../components/common/ImageSpecHint';
+import { IMAGE_SPECS, checkRatio, readImageSize, type ImageSpecKey, type RatioCheck } from '../../config/imageSpecs';
 import toast from 'react-hot-toast';
 
 interface GroupItemField {
   suffix: string;
   label: string;
   type: 'text' | 'textarea' | 'image' | 'link';
+  spec?: ImageSpecKey;
   placeholder?: string;
   help?: string;
   rows?: number;
@@ -24,6 +27,7 @@ interface FieldDef {
   key: string;
   label: string;
   type: 'text' | 'textarea' | 'richtext' | 'url' | 'email' | 'phone' | 'section' | 'image' | 'link' | 'group';
+  spec?: ImageSpecKey;
   placeholder?: string;
   help?: string;
   rows?: number;
@@ -112,7 +116,7 @@ const PAGES: PageDef[] = [
           { suffix: 'cta_href', label: 'Button 1 Link', type: 'link', placeholder: '/products' },
           { suffix: 'cta2', label: 'Button 2 Text', type: 'text', placeholder: 'View Collections' },
           { suffix: 'cta2_href', label: 'Button 2 Link', type: 'link', placeholder: '/collections' },
-          { suffix: 'image', label: 'Background Image', type: 'image' },
+          { suffix: 'image', label: 'Background Image', type: 'image', spec: 'hero' },
         ],
       } },
       // ── MARQUEE ──
@@ -137,7 +141,7 @@ const PAGES: PageDef[] = [
           { suffix: 'label', label: 'Label', type: 'text', placeholder: 'Exclusive' },
           { suffix: 'title', label: 'Title', type: 'text', placeholder: 'Wedding Season Collection' },
           { suffix: 'subtitle', label: 'Subtitle', type: 'textarea', placeholder: 'Handcrafted silks and brocades...', rows: 2 },
-          { suffix: 'image', label: 'Image', type: 'image' },
+          { suffix: 'image', label: 'Image', type: 'image', spec: 'collection' },
           { suffix: 'href', label: 'Link', type: 'link', placeholder: '/products?category=sarees' },
           { suffix: 'cta', label: 'Button Text', type: 'text', placeholder: 'Explore Collection' },
           { suffix: 'dark', label: 'Dark overlay? (true/false)', type: 'text', placeholder: 'true' },
@@ -166,7 +170,7 @@ const PAGES: PageDef[] = [
       { key: 'story_heading', label: 'Heading', type: 'text', placeholder: 'Crafting Elegance\nSince 2019', help: 'Use \\n for line break' },
       { key: 'story_para1', label: 'Paragraph 1', type: 'textarea', placeholder: 'Founded with a passion...', rows: 3 },
       { key: 'story_para2', label: 'Paragraph 2', type: 'textarea', placeholder: 'Every piece in our collection...', rows: 3 },
-      { key: 'story_image', label: 'Image URL', type: 'image', placeholder: 'https://...' },
+      { key: 'story_image', label: 'Image URL', type: 'image', spec: 'story', placeholder: 'https://...' },
       { key: 'story_years', label: 'Years Value', type: 'text', placeholder: '5+' },
       { key: 'story_years_label', label: 'Years Label', type: 'text', placeholder: 'Years of Craftsmanship' },
       { key: 'story_stat1_value', label: 'Stat 1 Value', type: 'text', placeholder: '5000+' },
@@ -212,9 +216,9 @@ const PAGES: PageDef[] = [
       { key: 'login_heading', label: 'Heading', type: 'text', placeholder: 'Where Heritage\\nMeets Elegance', help: 'Use \\n for a line break' },
       { key: 'login_subtitle', label: 'Subtitle', type: 'textarea', placeholder: "Discover 5000+ handpicked styles from India's finest weavers and designers.", rows: 2 },
       { key: 's_login_images', label: 'Background Images (shown at random)', type: 'section' },
-      { key: 'login_image_1', label: 'Image 1', type: 'image' },
-      { key: 'login_image_2', label: 'Image 2', type: 'image' },
-      { key: 'login_image_3', label: 'Image 3', type: 'image' },
+      { key: 'login_image_1', label: 'Image 1', type: 'image', spec: 'product' },
+      { key: 'login_image_2', label: 'Image 2', type: 'image', spec: 'product' },
+      { key: 'login_image_3', label: 'Image 3', type: 'image', spec: 'product' },
       { key: 's_login_stats', label: 'Stats', type: 'section' },
       { key: 'login_stat1_value', label: 'Stat 1 Value', type: 'text', placeholder: '5000+' },
       { key: 'login_stat1_label', label: 'Stat 1 Label', type: 'text', placeholder: 'Styles' },
@@ -369,6 +373,7 @@ export default function CmsPage() {
                       label={field.label.replace(/ URL$/, '')}
                       value={fieldValues[field.key] || ''}
                       onChange={(url) => set(field.key, url)}
+                      spec={field.spec}
                     />
                   ) : field.type === 'link' ? (
                     <>
@@ -487,7 +492,7 @@ function GroupField({ groupKey, group, values, setMany }: {
             {group.fields.map((f) => {
               const val = values[itemKey(i, f.suffix)] || '';
               if (f.type === 'image') {
-                return <ImageField key={f.suffix} label={f.label} value={val} onChange={(url) => setField(i, f.suffix, url)} />;
+                return <ImageField key={f.suffix} label={f.label} value={val} onChange={(url) => setField(i, f.suffix, url)} spec={f.spec} />;
               }
               return (
                 <div key={f.suffix}>
@@ -525,12 +530,17 @@ function GroupField({ groupKey, group, values, setMany }: {
   );
 }
 
-function ImageField({ label, value, onChange }: { label: string; value: string; onChange: (url: string) => void }) {
+function ImageField({ label, value, onChange, spec }: { label: string; value: string; onChange: (url: string) => void; spec?: ImageSpecKey }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
+  const [check, setCheck] = useState<RatioCheck | null>(null);
 
   const upload = async (file: File) => {
     if (!file.type.startsWith('image/')) { toast.error('Please choose an image file'); return; }
+    if (spec) {
+      const size = await readImageSize(file);
+      setCheck(checkRatio(IMAGE_SPECS[spec], size.width, size.height));
+    }
     setBusy(true);
     try {
       const fd = new FormData();
@@ -574,6 +584,7 @@ function ImageField({ label, value, onChange }: { label: string; value: string; 
           <input type="url" value={value} onChange={(e) => onChange(e.target.value)}
             placeholder="…or paste an image URL"
             className="input-field text-[11px]" />
+          {spec && <ImageSpecHint spec={spec} check={check} />}
         </div>
       </div>
     </>

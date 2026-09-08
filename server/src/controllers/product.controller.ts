@@ -7,6 +7,7 @@ import Attribute from '../models/Attribute';
 import Cart from '../models/Cart';
 import Wishlist from '../models/Wishlist';
 import { nextSeq } from '../models/Counter';
+import { getSettings } from '../models/Settings';
 import { AuthRequest } from '../types';
 import { uploadToGCS, deleteFromGCS } from '../config/gcs';
 import { emitEvent, SOCKET_EVENTS } from '../config/socket';
@@ -100,7 +101,7 @@ export const getProducts = async (req: Request, res: Response, next: NextFunctio
       page, limit, sort = '-createdAt', category, collection,
       minPrice, maxPrice, search, isFeatured, isNewArrival,
       isBestSeller, isTrending, tags,
-      productType, minWeight, maxWeight,
+      productType, minWeight, maxWeight, currency,
     } = req.query as Record<string, string>;
 
     const { page: p, limit: l, skip } = getPagination(page, limit);
@@ -159,9 +160,22 @@ export const getProducts = async (req: Request, res: Response, next: NextFunctio
     }
 
     if (minPrice || maxPrice) {
-      filter.salePrice = {};
-      if (minPrice) (filter.salePrice as Record<string, unknown>).$gte = Number(minPrice);
-      if (maxPrice) (filter.salePrice as Record<string, unknown>).$lte = Number(maxPrice);
+      if (currency === 'USD') {
+        // USD shoppers filter against the product's own USD price. Products
+        // without an explicit USD price fall back to the converted INR one, so
+        // the band still matches what the storefront actually displays.
+        const { usdExchangeRate } = await getSettings();
+        const rate = usdExchangeRate > 0 ? usdExchangeRate : 83;
+        const usdPrice = { $ifNull: ['$usdSalePrice', { $divide: ['$salePrice', rate] }] };
+        const bounds: Record<string, unknown>[] = [];
+        if (minPrice) bounds.push({ $gte: [usdPrice, Number(minPrice)] });
+        if (maxPrice) bounds.push({ $lte: [usdPrice, Number(maxPrice)] });
+        filter.$expr = { $and: bounds };
+      } else {
+        filter.salePrice = {};
+        if (minPrice) (filter.salePrice as Record<string, unknown>).$gte = Number(minPrice);
+        if (maxPrice) (filter.salePrice as Record<string, unknown>).$lte = Number(maxPrice);
+      }
     }
     if (search) filter.$text = { $search: search };
 

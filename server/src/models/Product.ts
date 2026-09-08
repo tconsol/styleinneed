@@ -28,6 +28,10 @@ const productSchema = new Schema<IProduct>(
     weightGrams: Number, // dedicated numeric field (range-filterable)
     mrp: { type: Number, required: true, min: 0 },
     salePrice: { type: Number, required: true, min: 0 },
+    // What we paid for the item (INR). Internal margin data — `select: false`
+    // keeps it out of every storefront response; admin reads opt in explicitly
+    // with .select('+purchasePrice').
+    purchasePrice: { type: Number, min: 0, select: false },
     usdMrp: { type: Number, min: 0 },
     usdSalePrice: { type: Number, min: 0 },
     discountPercentage: { type: Number, default: 0 },

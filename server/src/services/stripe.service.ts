@@ -42,5 +42,9 @@ export const createStripeCheckoutSession = async (
 export const retrieveStripeCheckoutSession = async (id: string) =>
   getStripe().checkout.sessions.retrieve(id);
 
-export const refundStripePayment = async (paymentIntentId: string) =>
-  getStripe().refunds.create({ payment_intent: paymentIntentId });
+/** Refund a Stripe payment. `amount` is in major units (USD); omit for a full refund. */
+export const refundStripePayment = async (paymentIntentId: string, amount?: number) =>
+  getStripe().refunds.create({
+    payment_intent: paymentIntentId,
+    ...(amount != null ? { amount: Math.round(amount * 100) } : {}),
+  });

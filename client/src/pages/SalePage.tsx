@@ -4,8 +4,10 @@ import ProductCard from '../components/common/ProductCard';
 import Dropdown from '../components/common/Dropdown';
 import Spinner from '../components/common/Spinner';
 import { productApi } from '../api/product.api';
+import { useMoney } from '../hooks/useMoney';
 import { usePromotionStore, promoFor, type Promotion } from '../stores/promotionStore';
 import type { Product } from '../types';
+import { useSeo } from '../hooks/useSeo';
 
 const productsForPromo = (promo: Promotion, all: Product[]): Product[] => {
   const ids = new Set(promo.applicableProducts.map((p) => (typeof p === 'string' ? p : p._id)));
@@ -28,6 +30,11 @@ type Sort = 'newest' | 'price-asc' | 'price-desc' | 'discount';
 const EMPTY = { search: '', productType: '', category: '', collection: '', minPrice: '', maxPrice: '', isNewArrival: false, isBestSeller: false, isTrending: false, sort: 'newest' as Sort };
 
 export default function SalePage() {
+  useSeo({
+    title: 'Sale & Offers',
+    description: 'Live sales, flash deals and seasonal offers on sarees, kurtis, lehengas and more.',
+  });
+
   const { active, loaded, fetchActive } = usePromotionStore();
   const [products, setProducts] = useState<Product[]>([]);
   const [types, setTypes] = useState<{ slug: string; name: string }[]>([]);
@@ -35,6 +42,7 @@ export default function SalePage() {
   const [loading, setLoading] = useState(true);
   const [f, setF] = useState(EMPTY);
   const [panelOpen, setPanelOpen] = useState(false);
+  const { format, value, symbol } = useMoney();
 
   useEffect(() => {
     if (!loaded) fetchActive();
@@ -64,12 +72,16 @@ export default function SalePage() {
 
   const applyFilters = (items: Product[]): Product[] => {
     let out = items.filter((p) => {
+      // Compare against the price the shopper actually sees (the product's own
+      // USD price when set, else the converted INR one) — bounds are typed in
+      // that same currency.
+      const shown = value(p.salePrice, p.usdSalePrice);
       if (f.search && !p.name.toLowerCase().includes(f.search.toLowerCase())) return false;
       if (f.productType && p.productType !== f.productType) return false;
       if (f.category && p.category?._id !== f.category) return false;
       if (f.collection && !(p.collections || []).some((c) => c._id === f.collection)) return false;
-      if (f.minPrice && p.salePrice < Number(f.minPrice)) return false;
-      if (f.maxPrice && p.salePrice > Number(f.maxPrice)) return false;
+      if (f.minPrice && shown < Number(f.minPrice)) return false;
+      if (f.maxPrice && shown > Number(f.maxPrice)) return false;
       if (f.isNewArrival && !p.isNewArrival) return false;
       if (f.isBestSeller && !p.isBestSeller) return false;
       if (f.isTrending && !p.isTrending) return false;
@@ -132,7 +144,7 @@ export default function SalePage() {
       )}
 
       <div>
-        <label className="font-body text-[11px] font-semibold text-brand-muted uppercase tracking-wider">Price (₹)</label>
+        <label className="font-body text-[11px] font-semibold text-brand-muted uppercase tracking-wider">Price ({symbol})</label>
         <div className="mt-1.5 flex items-center gap-2">
           <input type="number" min="0" value={f.minPrice} onChange={(e) => set('minPrice', e.target.value)} placeholder="Min" className="w-full px-3 py-2 rounded-lg border border-brand-border bg-brand-surface text-sm outline-none focus:border-primary" />
           <span className="text-brand-muted">–</span>
@@ -208,7 +220,7 @@ export default function SalePage() {
                           </span>
                           <h2 className="font-heading text-xl md:text-3xl font-bold text-white mt-2">{promo.name}</h2>
                           <div className="flex items-center gap-4 mt-2">
-                            <span className="font-body text-white font-semibold text-sm">{promo.discountType === 'percentage' ? `${promo.discountValue}% OFF` : `₹${promo.discountValue} OFF`}</span>
+                            <span className="font-body text-white font-semibold text-sm">{promo.discountType === 'percentage' ? `${promo.discountValue}% OFF` : `${format(promo.discountValue)} OFF`}</span>
                             <span className="inline-flex items-center gap-1 font-body text-white/80 text-xs"><Clock size={12} /> {timeLeft(promo.expiryDate)}</span>
                           </div>
                         </div>

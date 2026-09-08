@@ -26,6 +26,7 @@ import providerRoutes from './routes/provider.routes';
 import sizeChartRoutes from './routes/sizeChart.routes';
 import settingsRoutes from './routes/settings.routes';
 import shippingRoutes from './routes/shipping.routes';
+import { getSitemap, getRobots } from './controllers/seo.controller';
 
 const app = express();
 
@@ -46,6 +47,11 @@ app.use(
   )
 );
 app.use(globalLimiter);
+
+// Crawler files live at the root (not under /api/v1) so they can be proxied
+// straight through from the storefront host.
+app.get('/sitemap.xml', getSitemap);
+app.get('/robots.txt', getRobots);
 
 const API = '/api/v1';
 app.use(`${API}/auth`, authRoutes);

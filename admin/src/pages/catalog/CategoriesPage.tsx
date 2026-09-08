@@ -7,6 +7,8 @@ import { useConfirm } from '../../components/common/ConfirmDialog';
 import StatusToggle from '../../components/common/StatusToggle';
 import { useCategories, useProductTypes, CATALOG_KEYS } from '../../hooks/useCatalog';
 import { categoryApi } from '../../api';
+import ImageSpecHint from '../../components/common/ImageSpecHint';
+import { IMAGE_SPECS, checkRatio, readImageSize, type RatioCheck } from '../../config/imageSpecs';
 import type { Category } from '../../types';
 import toast from 'react-hot-toast';
 
@@ -42,6 +44,7 @@ export default function CategoriesPage() {
   const [form, setForm] = useState(empty);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [imgCheck, setImgCheck] = useState<RatioCheck | null>(null);
   const confirm = useConfirm();
 
   const openNew = () => { setEditing(null); setForm(empty); setModal(true); };
@@ -54,6 +57,8 @@ export default function CategoriesPage() {
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    const size = await readImageSize(file);
+    setImgCheck(checkRatio(IMAGE_SPECS.category, size.width, size.height));
     setUploading(true);
     try {
       const fd = new FormData();
@@ -263,7 +268,8 @@ export default function CategoriesPage() {
                 )}
               </div>
             </div>
-            <p className="text-[10px] mt-1.5" style={{ color: 'var(--c-muted)' }}>Shown as the category tile on the storefront. JPG, PNG or WebP, max 2MB.</p>
+            <p className="text-[10px] mt-1.5" style={{ color: 'var(--c-muted)' }}>JPG, PNG or WebP, max 2MB.</p>
+            <ImageSpecHint spec="category" check={imgCheck} />
           </div>
           <div>
             <label className="input-label">Product Type *</label>

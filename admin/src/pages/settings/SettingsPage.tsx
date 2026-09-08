@@ -9,20 +9,26 @@ interface Form {
   usdExchangeRate: string;
   indiaFreeShipThreshold: string;
   indiaFlatShipping: string;
+  usaFreeShipThreshold: string;
+  lowStockThreshold: string;
+  lowStockAlerts: boolean;
 }
 
 export default function SettingsPage() {
-  const [form, setForm] = useState<Form>({ usdExchangeRate: '', indiaFreeShipThreshold: '', indiaFlatShipping: '' });
+  const [form, setForm] = useState<Form>({ usdExchangeRate: '', indiaFreeShipThreshold: '', indiaFlatShipping: '', usaFreeShipThreshold: '', lowStockThreshold: '5', lowStockAlerts: true });
   const [rateUpdatedAt, setRateUpdatedAt] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
-  const apply = (s: { usdExchangeRate?: number; indiaFreeShipThreshold?: number; indiaFlatShipping?: number; rateUpdatedAt?: string }) => {
+  const apply = (s: { usdExchangeRate?: number; indiaFreeShipThreshold?: number; indiaFlatShipping?: number; usaFreeShipThreshold?: number; lowStockThreshold?: number; lowStockAlerts?: boolean; rateUpdatedAt?: string }) => {
     setForm({
       usdExchangeRate: String(s.usdExchangeRate ?? 83),
       indiaFreeShipThreshold: String(s.indiaFreeShipThreshold ?? 999),
       indiaFlatShipping: String(s.indiaFlatShipping ?? 99),
+      usaFreeShipThreshold: String(s.usaFreeShipThreshold ?? 0),
+      lowStockThreshold: String(s.lowStockThreshold ?? 5),
+      lowStockAlerts: s.lowStockAlerts ?? true,
     });
     setRateUpdatedAt(s.rateUpdatedAt ?? null);
   };
@@ -48,6 +54,9 @@ export default function SettingsPage() {
         usdExchangeRate: Number(form.usdExchangeRate),
         indiaFreeShipThreshold: Number(form.indiaFreeShipThreshold),
         indiaFlatShipping: Number(form.indiaFlatShipping),
+        usaFreeShipThreshold: Number(form.usaFreeShipThreshold),
+        lowStockThreshold: Number(form.lowStockThreshold),
+        lowStockAlerts: form.lowStockAlerts,
       });
       toast.success('Settings saved');
     } catch { /* toast handled by interceptor */ } finally { setSaving(false); }
@@ -115,7 +124,40 @@ export default function SettingsPage() {
                 className="input-field" required />
             </div>
           </div>
-          <p className="text-[11px] text-brand-muted mt-2">USA/Canada orders never get free shipping — set per-state charges in Shipping Rates.</p>
+        </div>
+
+        <div>
+          <h2 className="font-heading text-base font-semibold border-b border-brand-border pb-3 mb-4">USA / Canada Shipping</h2>
+          <div className="max-w-md">
+            <label className="input-label">Free-delivery minimum ($)</label>
+            <input type="number" min="0" step="0.01" value={form.usaFreeShipThreshold}
+              onChange={(e) => setForm({ ...form, usaFreeShipThreshold: e.target.value })}
+              className="input-field" placeholder="0 = never free" />
+            <p className="text-[11px] text-brand-muted mt-2">
+              Orders at or above this USD subtotal ship free to the USA &amp; Canada. Set <b>0</b> to always charge the
+              per-state rate from Shipping Rates.
+            </p>
+          </div>
+        </div>
+
+        <div>
+          <h2 className="font-heading text-base font-semibold border-b border-brand-border pb-3 mb-4">Inventory Alerts</h2>
+          <label className="flex items-center gap-2.5 cursor-pointer select-none mb-3">
+            <input type="checkbox" checked={form.lowStockAlerts}
+              onChange={(e) => setForm({ ...form, lowStockAlerts: e.target.checked })}
+              className="accent-primary w-4 h-4" />
+            <span className="text-[12px] font-medium">Email &amp; notify admins when stock runs low</span>
+          </label>
+          <div className="max-w-md">
+            <label className="input-label">Low-stock threshold (units)</label>
+            <input type="number" min="0" value={form.lowStockThreshold}
+              onChange={(e) => setForm({ ...form, lowStockThreshold: e.target.value })}
+              className="input-field" disabled={!form.lowStockAlerts} />
+            <p className="text-[11px] text-brand-muted mt-2">
+              Alerts fire once, when a sale takes a variant down to this level (or to zero) — not on every
+              subsequent order, so restocking resets it.
+            </p>
+          </div>
         </div>
 
         <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Saving…' : 'Save Settings'}</button>

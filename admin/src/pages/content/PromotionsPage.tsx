@@ -6,6 +6,8 @@ import Badge from '../../components/common/Badge';
 import { promotionApi, notificationApi, productApi, cmsApi, newsletterApi, ctaLinkApi } from '../../api';
 import { useCategories } from '../../hooks/useCatalog';
 import { useConfirm } from '../../components/common/ConfirmDialog';
+import ImageSpecHint from '../../components/common/ImageSpecHint';
+import { IMAGE_SPECS, checkRatio, readImageSize, type RatioCheck } from '../../config/imageSpecs';
 import { formatDate } from '../../utils/format';
 import toast from 'react-hot-toast';
 
@@ -46,6 +48,7 @@ export default function PromotionsPage() {
   const [allProducts, setAllProducts] = useState<MiniProduct[]>([]);
   const [prodSearch, setProdSearch] = useState('');
   const [bannerUploading, setBannerUploading] = useState(false);
+  const [bannerCheck, setBannerCheck] = useState<RatioCheck | null>(null);
   const [subscribers, setSubscribers] = useState<string[]>([]);
   const [selectedEmails, setSelectedEmails] = useState<string[]>([]);
   const [emailSearch, setEmailSearch] = useState('');
@@ -146,6 +149,8 @@ export default function PromotionsPage() {
 
   const uploadBanner = async (files: FileList | null) => {
     if (!files?.[0]) return;
+    const size = await readImageSize(files[0]);
+    setBannerCheck(checkRatio(IMAGE_SPECS.banner, size.width, size.height));
     setBannerUploading(true);
     try {
       const fd = new FormData(); fd.append('image', files[0]);
@@ -262,6 +267,7 @@ export default function PromotionsPage() {
             </label>
             {form.bannerImage && <button type="button" onClick={() => setForm({ ...form, bannerImage: '' })} className="text-brand-muted hover:text-red-500"><X size={16} /></button>}
           </div>
+          <ImageSpecHint spec="banner" check={bannerCheck} />
         </div>
 
         {/* Categories */}

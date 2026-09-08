@@ -9,8 +9,14 @@ import { blogApi } from '../api/misc.api';
 import { useHomepageCms } from '../hooks/useHomepageCms';
 import type { Blog } from '../types';
 import { formatDate } from '../utils/format';
+import { useSeo } from '../hooks/useSeo';
 
 export default function BlogListPage() {
+  useSeo({
+    title: 'Fashion Journal',
+    description: 'Styling guides, fabric care tips and the stories behind our collections.',
+  });
+
   const cms = useHomepageCms();
   const [params] = useSearchParams();
   const category = params.get('category') || undefined;

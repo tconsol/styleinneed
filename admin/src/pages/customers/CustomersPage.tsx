@@ -1,6 +1,6 @@
 ﻿import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Edit2, Users, Eye, Trash2, X } from 'lucide-react';
+import { Search, Edit2, Users, Eye, Trash2, X, Download } from 'lucide-react';
 import Modal from '../../components/common/Modal';
 import Select from '../../components/common/Select';
 import StatusToggle from '../../components/common/StatusToggle';
@@ -8,6 +8,7 @@ import { useConfirm } from '../../components/common/ConfirmDialog';
 import { customerApi } from '../../api';
 import type { Customer, Pagination } from '../../types';
 import { formatDate } from '../../utils/format';
+import { downloadBlob, stampedName } from '../../utils/download';
 import toast from 'react-hot-toast';
 
 const ROLES = ['customer', 'admin'];
@@ -39,7 +40,17 @@ export default function CustomersPage() {
   const [saving, setSaving] = useState(false);
   const [checked, setChecked] = useState<Set<string>>(new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const confirm = useConfirm();
+
+  const exportCsv = async () => {
+    setExporting(true);
+    try {
+      const { data } = await customerApi.exportCsv();
+      downloadBlob(data as Blob, stampedName('customers'));
+      toast.success('Export downloaded');
+    } catch { toast.error('Export failed'); } finally { setExporting(false); }
+  };
 
   // Only plain customer accounts are deletable (admin accounts are managed elsewhere).
   const deletable = customers.filter((c) => c.role === 'customer');
@@ -112,9 +123,16 @@ export default function CustomersPage() {
             <h1 className="text-[15px] font-bold text-brand-text">Customers</h1>
             <p className="text-[10px] text-brand-muted mt-0.5">{pagination.total} total users</p>
           </div>
-          <div className="relative w-64">
-            <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-muted" />
-            <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} placeholder="Search by name or email..." className="input-field pl-8 text-[11px]" />
+          <div className="flex items-center gap-2">
+            <div className="relative w-64">
+              <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-muted" />
+              <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} placeholder="Search by name or email..." className="input-field pl-8 text-[11px]" />
+            </div>
+            <button onClick={exportCsv} disabled={exporting} className="btn-outline disabled:opacity-50 flex-shrink-0">
+              {exporting
+                ? <><span className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin" /> Exporting…</>
+                : <><Download size={14} /> Export CSV</>}
+            </button>
           </div>
         </div>
 

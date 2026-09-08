@@ -130,7 +130,12 @@ export const login = async (req: Request, res: Response, next: NextFunction): Pr
     sendSuccess(res, 'Login successful', {
       accessToken,
       refreshToken,
-      user: { _id: user._id, name: user.name, email: user.email, role: user.role, avatar: user.avatar, providerRef: user.providerRef },
+      user: {
+        _id: user._id, name: user.name, email: user.email, role: user.role,
+        avatar: user.avatar, providerRef: user.providerRef,
+        // Drives which admin pages a provider login can open.
+        permissions: user.role === 'provider' ? user.permissions || [] : [],
+      },
     });
   } catch (err) {
     next(err);

@@ -5,6 +5,8 @@ import { productApi, providerApi, sizeChartApi } from '../../api';
 import { useAuthStore } from '../../stores/authStore';
 import { useCategories, useCollections, useProductTypes, useAttributes } from '../../hooks/useCatalog';
 import Select from '../../components/common/Select';
+import ImageSpecHint from '../../components/common/ImageSpecHint';
+import { IMAGE_SPECS, checkRatio, readImageSize, type RatioCheck } from '../../config/imageSpecs';
 import type { ProductVariant, Attribute, SizeChart } from '../../types';
 import toast from 'react-hot-toast';
 import { PageSpinner } from '../../components/common/Spinner';
@@ -22,6 +24,7 @@ interface FormState {
   collections: string[];
   mrp: string;
   salePrice: string;
+  purchasePrice: string; // internal item cost — admin-only, never shown on the storefront
   usdMrp: string;
   usdSalePrice: string;
   returnDays: string;
@@ -43,7 +46,7 @@ interface FormState {
 
 const emptyForm: FormState = {
   name: '', shortDescription: '', description: '', productType: 'clothing', category: '', collections: [],
-  mrp: '', salePrice: '', usdMrp: '', usdSalePrice: '', returnDays: '7', provider: '', images: [], tags: '',
+  mrp: '', salePrice: '', purchasePrice: '', usdMrp: '', usdSalePrice: '', returnDays: '7', provider: '', images: [], tags: '',
   attributes: {}, weightGrams: '',
   isFeatured: false, isNewArrival: true, isBestSeller: false, isTrending: false, isActive: true,
   variants: [{ sku: '', stock: 0, attributes: {} }],
@@ -64,6 +67,7 @@ export default function ProductFormPage() {
   const [loading, setLoading] = useState(isEdit ? true : false);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [imgCheck, setImgCheck] = useState<RatioCheck | null>(null);
   const [providers, setProviders] = useState<{ _id: string; name: string; category: string }[]>([]);
   const [sizeCharts, setSizeCharts] = useState<SizeChart[]>([]);
 
@@ -88,6 +92,7 @@ export default function ProductFormPage() {
         productType: p.productType || 'clothing',
         category: p.category?._id || '', collections: p.collections?.map((c: { _id: string }) => c._id) || [],
         mrp: String(p.mrp), salePrice: String(p.salePrice),
+        purchasePrice: p.purchasePrice != null ? String(p.purchasePrice) : '',
         usdMrp: p.usdMrp != null ? String(p.usdMrp) : '',
         usdSalePrice: p.usdSalePrice != null ? String(p.usdSalePrice) : '',
         returnDays: p.returnDays != null ? String(p.returnDays) : '7',
@@ -149,6 +154,11 @@ export default function ProductFormPage() {
     if (!files?.length) return;
     setUploading(true);
     try {
+      // Measure the first file so we can warn if the crop won't match the
+      // storefront's 3:4 product frame. Never blocks the upload.
+      const size = await readImageSize(files[0]);
+      setImgCheck(checkRatio(IMAGE_SPECS.product, size.width, size.height));
+
       const fd = new FormData();
       Array.from(files).forEach((f) => fd.append('images', f));
       const { data } = await productApi.uploadImages(fd);
@@ -265,6 +275,7 @@ export default function ProductFormPage() {
       ...form,
       mrp: Number(form.mrp),
       salePrice: Number(form.salePrice),
+      purchasePrice: form.purchasePrice ? Number(form.purchasePrice) : undefined,
       usdMrp: form.usdMrp ? Number(form.usdMrp) : undefined,
       usdSalePrice: form.usdSalePrice ? Number(form.usdSalePrice) : undefined,
       returnDays: form.returnDays !== '' ? Number(form.returnDays) : 7,
@@ -319,6 +330,33 @@ export default function ProductFormPage() {
                 <label className="input-label">Sale Price ($)</label>
                 <input type="number" value={form.usdSalePrice} onChange={(e) => setForm({ ...form, usdSalePrice: e.target.value })} className="input-field" min="0" step="0.01" placeholder="Optional" />
               </div>
+            </div>
+
+            {/* Internal cost — never exposed on the storefront */}
+            <div className="rounded-xl p-3" style={{ border: '1px solid var(--c-border)', background: 'var(--c-bg)' }}>
+              <div className="grid grid-cols-2 gap-4 items-end">
+                <div>
+                  <label className="input-label">Purchase Price (₹)</label>
+                  <input type="number" value={form.purchasePrice} onChange={(e) => setForm({ ...form, purchasePrice: e.target.value })} className="input-field" min="0" placeholder="What we paid" />
+                </div>
+                <div>
+                  <label className="input-label">Margin</label>
+                  {(() => {
+                    const cost = Number(form.purchasePrice);
+                    const sell = Number(form.salePrice);
+                    if (!cost || !sell) return <p className="text-[11px] text-brand-muted h-9 flex items-center">Enter cost & sale price</p>;
+                    const profit = sell - cost;
+                    const pct = Math.round((profit / sell) * 100);
+                    return (
+                      <p className="text-[13px] font-bold h-9 flex items-center gap-1.5" style={{ color: profit >= 0 ? 'var(--c-success)' : 'var(--c-danger)' }}>
+                        ₹{profit.toLocaleString('en-IN')}
+                        <span className="text-[10px] font-semibold opacity-70">({pct}%)</span>
+                      </p>
+                    );
+                  })()}
+                </div>
+              </div>
+              <p className="text-[10px] text-brand-muted mt-1.5">Internal cost for margin tracking — never shown to customers.</p>
             </div>
             {!isProvider && (
               <div>
@@ -430,6 +468,7 @@ export default function ProductFormPage() {
               <span className="font-body text-xs text-brand-muted mt-1">JPG, PNG, WebP — max 2MB each, auto-converted to WebP</span>
               <input type="file" multiple accept="image/*" className="hidden" onChange={handleImageUpload} disabled={uploading} />
             </label>
+            <ImageSpecHint spec="product" check={imgCheck} />
           </div>
 
           {/* Variants */}

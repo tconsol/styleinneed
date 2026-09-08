@@ -11,6 +11,12 @@ export interface IReturn extends Document {
   status: 'requested' | 'approved' | 'processing' | 'completed' | 'rejected';
   refundAmount?: number;
   refundMethod?: string;
+  // Gateway refund tracking. 'manual' = COD/no gateway, admin pays out by hand.
+  refundStatus: 'none' | 'processing' | 'refunded' | 'failed' | 'manual';
+  refundReference?: string; // gateway refund id
+  refundError?: string;     // last failure reason, for admin visibility
+  refundedAt?: Date;
+  restocked: boolean;       // guards against double-restocking a return
   adminNote?: string;
   processedBy?: Types.ObjectId;
   createdAt: Date;
@@ -42,6 +48,15 @@ const returnSchema = new Schema<IReturn>(
     },
     refundAmount: Number,
     refundMethod: String,
+    refundStatus: {
+      type: String,
+      enum: ['none', 'processing', 'refunded', 'failed', 'manual'],
+      default: 'none',
+    },
+    refundReference: String,
+    refundError: String,
+    refundedAt: Date,
+    restocked: { type: Boolean, default: false },
     adminNote: String,
     processedBy: { type: Schema.Types.ObjectId, ref: 'User' },
   },

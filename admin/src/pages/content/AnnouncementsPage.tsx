@@ -5,6 +5,8 @@ import Select from '../../components/common/Select';
 import Badge from '../../components/common/Badge';
 import StatusToggle from '../../components/common/StatusToggle';
 import { announcementApi, notificationApi, ctaLinkApi, cmsApi } from '../../api';
+import ImageSpecHint from '../../components/common/ImageSpecHint';
+import { IMAGE_SPECS, checkRatio, readImageSize, type RatioCheck } from '../../config/imageSpecs';
 import type { Announcement } from '../../types';
 import { formatDate } from '../../utils/format';
 import toast from 'react-hot-toast';
@@ -24,9 +26,12 @@ export default function AnnouncementsPage() {
   const [pushing, setPushing] = useState<string | null>(null);
   const [ctaLinks, setCtaLinks] = useState<CtaLink[]>([]);
   const [bannerUploading, setBannerUploading] = useState(false);
+  const [bannerCheck, setBannerCheck] = useState<RatioCheck | null>(null);
 
   const uploadBanner = async (files: FileList | null) => {
     if (!files?.[0]) return;
+    const size = await readImageSize(files[0]);
+    setBannerCheck(checkRatio(IMAGE_SPECS.banner, size.width, size.height));
     setBannerUploading(true);
     try {
       const fd = new FormData(); fd.append('image', files[0]);
@@ -152,7 +157,7 @@ export default function AnnouncementsPage() {
                 </label>
                 {form.image && <button type="button" onClick={() => setForm({ ...form, image: '' })} className="text-brand-muted hover:text-red-500"><X size={16} /></button>}
               </div>
-              <p className="text-[10px] text-brand-muted mt-1">Shown at the top of the popup / banner. Wide landscape image works best.</p>
+              <ImageSpecHint spec="banner" check={bannerCheck} />
             </div>
           )}
           <div>

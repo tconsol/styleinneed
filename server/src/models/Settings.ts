@@ -9,6 +9,9 @@ export interface ISettings extends Document {
   rateUpdatedAt?: Date;          // when the live rate was last synced
   indiaFreeShipThreshold: number; // INR subtotal at/above which India shipping is free
   indiaFlatShipping: number;      // INR flat shipping below the threshold
+  usaFreeShipThreshold: number;   // USD subtotal at/above which US/CA shipping is free (0 = never)
+  lowStockThreshold: number;      // alert admins when a variant falls to/below this
+  lowStockAlerts: boolean;        // master switch for those alerts
   activeTheme: string;           // key of the currently applied theme
   themes: ThemeTokens[];         // editable themes (seeded from presets on first read)
   fontHeading: string;           // heading font family (Google font name)
@@ -34,6 +37,10 @@ const settingsSchema = new Schema<ISettings>(
     rateUpdatedAt: Date,
     indiaFreeShipThreshold: { type: Number, default: 999, min: 0 },
     indiaFlatShipping: { type: Number, default: 99, min: 0 },
+    // 0 disables free shipping for US/CA entirely (the previous behaviour).
+    usaFreeShipThreshold: { type: Number, default: 0, min: 0 },
+    lowStockThreshold: { type: Number, default: 5, min: 0 },
+    lowStockAlerts: { type: Boolean, default: true },
     activeTheme: { type: String, default: 'indigo' },
     themes: { type: [themeSchema], default: [] },
     fontHeading: { type: String, default: 'Poppins' },

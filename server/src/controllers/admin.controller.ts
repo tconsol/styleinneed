@@ -14,6 +14,7 @@ import { sendSuccess, sendError, getPagination } from '../utils/apiResponse';
 import { emitEvent, SOCKET_EVENTS } from '../config/socket';
 import { invalidateCache } from '../middleware/cache';
 import { sendPushToUser, getStatusPushContent } from '../services/push.service';
+import { toCsv, sendCsv, dateStamp } from '../utils/csv';
 
 export const getDashboardStats = async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
@@ -219,6 +220,97 @@ export const deleteUser = async (req: AuthRequest, res: Response, next: NextFunc
   }
 };
 
+/** Orders as CSV. Honours the same filters as the orders list. */
+export const exportOrders = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { status, paymentStatus, from, to } = req.query as Record<string, string>;
+    const filter: Record<string, unknown> = {};
+    if (status) filter.status = status;
+    if (paymentStatus) filter.paymentStatus = paymentStatus;
+    if (from || to) {
+      const range: Record<string, Date> = {};
+      if (from) range.$gte = new Date(`${from}T00:00:00`);
+      if (to) range.$lte = new Date(`${to}T23:59:59`);
+      filter.createdAt = range;
+    }
+
+    const orders = await Order.find(filter)
+      .populate('user', 'name email phone')
+      .sort('-createdAt')
+      .limit(10_000)
+      .lean();
+
+    type Row = (typeof orders)[number];
+    const addr = (o: Row) => o.shippingAddress || ({} as NonNullable<Row['shippingAddress']>);
+    const csv = toCsv<Row>(orders, [
+      { header: 'Order ID',       value: (o) => o.orderId },
+      { header: 'Date',           value: (o) => new Date(o.createdAt).toISOString() },
+      { header: 'Customer',       value: (o) => (o.user as { name?: string } | null)?.name },
+      { header: 'Email',          value: (o) => (o.user as { email?: string } | null)?.email },
+      { header: 'Phone',          value: (o) => addr(o).phone },
+      { header: 'Ship To',        value: (o) => addr(o).fullName },
+      { header: 'Items',          value: (o) => o.items?.length ?? 0 },
+      { header: 'Products',       value: (o) => o.items?.map((i) => `${i.variant?.sku ?? ''} x${i.quantity}`).join(' | ') },
+      { header: 'Currency',       value: (o) => o.currency || 'INR' },
+      { header: 'Subtotal',       value: (o) => o.subtotal },
+      { header: 'Shipping',       value: (o) => o.shippingCharge },
+      { header: 'Discount',       value: (o) => o.discount },
+      { header: 'Total',          value: (o) => o.total },
+      { header: 'Payment Method', value: (o) => o.paymentMethod },
+      { header: 'Payment Status', value: (o) => o.paymentStatus },
+      { header: 'Order Status',   value: (o) => o.status },
+      { header: 'City',           value: (o) => addr(o).city },
+      { header: 'State',          value: (o) => addr(o).state },
+      { header: 'Pincode',       value: (o) => addr(o).pincode },
+      { header: 'Country',        value: (o) => addr(o).country },
+    ]);
+
+    sendCsv(res, `orders-${dateStamp()}.csv`, csv);
+  } catch (err) {
+    next(err);
+  }
+};
+
+/** Customers as CSV (no credentials — profile + lifetime order stats only). */
+export const exportCustomers = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { role, isActive } = req.query as Record<string, string>;
+    const filter: Record<string, unknown> = {};
+    filter.role = role || 'customer';
+    if (isActive !== undefined) filter.isActive = isActive === 'true';
+
+    const users = await User.find(filter)
+      .select('name email phone role isActive isEmailVerified createdAt')
+      .sort('-createdAt')
+      .limit(10_000)
+      .lean();
+
+    // One aggregate for everyone's spend, rather than a query per customer.
+    const stats = await Order.aggregate<{ _id: unknown; orders: number; spent: number; last: Date }>([
+      { $match: { paymentStatus: 'paid' } },
+      { $group: { _id: '$user', orders: { $sum: 1 }, spent: { $sum: '$total' }, last: { $max: '$createdAt' } } },
+    ]);
+    const byUser = new Map(stats.map((s) => [String(s._id), s]));
+
+    type Row = (typeof users)[number];
+    const csv = toCsv<Row>(users, [
+      { header: 'Name',        value: (u) => u.name },
+      { header: 'Email',       value: (u) => u.email },
+      { header: 'Phone',       value: (u) => u.phone },
+      { header: 'Verified',    value: (u) => (u.isEmailVerified ? 'Yes' : 'No') },
+      { header: 'Active',      value: (u) => (u.isActive ? 'Yes' : 'No') },
+      { header: 'Paid Orders', value: (u) => byUser.get(String(u._id))?.orders ?? 0 },
+      { header: 'Total Spent', value: (u) => Math.round(byUser.get(String(u._id))?.spent ?? 0) },
+      { header: 'Last Order',  value: (u) => byUser.get(String(u._id))?.last?.toISOString().slice(0, 10) ?? '' },
+      { header: 'Joined',      value: (u) => new Date(u.createdAt).toISOString().slice(0, 10) },
+    ]);
+
+    sendCsv(res, `customers-${dateStamp()}.csv`, csv);
+  } catch (err) {
+    next(err);
+  }
+};
+
 export const getAuditLogs = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { page, limit, resource, userId } = req.query as Record<string, string>;
@@ -289,6 +381,7 @@ export const getAdminProducts = async (req: AuthRequest, res: Response, next: Ne
 
     const [products, total] = await Promise.all([
       Product.find(filter)
+        .select('+purchasePrice') // internal cost column, admin-only
         .populate('category', 'name slug')
         .populate('collections', 'name slug')
         .sort(sort)
@@ -309,6 +402,7 @@ export const getAdminProducts = async (req: AuthRequest, res: Response, next: Ne
 export const getAdminProductById = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const product = await Product.findById(req.params.id)
+      .select('+purchasePrice') // internal cost, admin-only
       .populate('category', 'name slug')
       .populate('collections', 'name slug')
       .populate('sizeChartId', '_id name');

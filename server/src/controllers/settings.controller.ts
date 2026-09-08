@@ -62,6 +62,7 @@ export const getPublicSettings = async (_req: Request, res: Response, next: Next
       usdExchangeRate: s.usdExchangeRate,
       indiaFreeShipThreshold: s.indiaFreeShipThreshold,
       indiaFlatShipping: s.indiaFlatShipping,
+      usaFreeShipThreshold: s.usaFreeShipThreshold,
     });
   } catch (err) {
     next(err);
@@ -80,11 +81,17 @@ export const getAdminSettings = async (_req: Request, res: Response, next: NextF
 // Admin: update settings.
 export const updateSettings = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { usdExchangeRate, indiaFreeShipThreshold, indiaFlatShipping } = req.body;
-    const update: Record<string, number> = {};
+    const {
+      usdExchangeRate, indiaFreeShipThreshold, indiaFlatShipping, usaFreeShipThreshold,
+      lowStockThreshold, lowStockAlerts,
+    } = req.body;
+    const update: Record<string, number | boolean> = {};
     if (usdExchangeRate != null) update.usdExchangeRate = Number(usdExchangeRate);
     if (indiaFreeShipThreshold != null) update.indiaFreeShipThreshold = Number(indiaFreeShipThreshold);
     if (indiaFlatShipping != null) update.indiaFlatShipping = Number(indiaFlatShipping);
+    if (usaFreeShipThreshold != null) update.usaFreeShipThreshold = Number(usaFreeShipThreshold);
+    if (lowStockThreshold != null) update.lowStockThreshold = Number(lowStockThreshold);
+    if (lowStockAlerts != null) update.lowStockAlerts = !!lowStockAlerts;
 
     const doc = await Settings.findOneAndUpdate({ key: 'global' }, update, { new: true, upsert: true });
     sendSuccess(res, 'Settings updated', doc);

@@ -31,6 +31,9 @@ const userSchema = new Schema<IUser>(
     // read back the password they set. Only populated for role 'provider'.
     plainPassword: { type: String, select: false },
     providerRef: { type: Schema.Types.ObjectId, ref: 'Provider' },
+    // Extra admin-panel features granted to a provider login (feature keys from
+    // config/providerFeatures.ts). Ignored for other roles — admins have all.
+    permissions: { type: [String], default: [] },
     role: {
       type: String,
       enum: ['customer', 'admin', 'provider'],

@@ -67,13 +67,17 @@ export const quoteShipping = async (req: Request, res: Response, next: NextFunct
     const sub = Number(subtotal) || 0;
     if (region !== 'IN') await ensureShippingRatesSeeded();
     const charge = await resolveShipping(region, { state } as IAddress, sub, settings, false);
-    const freeEligible = region === 'IN' && sub >= settings.indiaFreeShipThreshold;
+    // Each region has its own free-shipping minimum, in its own currency.
+    // A US/CA threshold of 0 means "never free".
+    const threshold = region === 'IN'
+      ? settings.indiaFreeShipThreshold
+      : (settings.usaFreeShipThreshold || 0) > 0 ? settings.usaFreeShipThreshold : null;
     sendSuccess(res, 'Shipping quote', {
       region,
       currency: currencyOf(region),
       charge,
-      freeShippingEligible: freeEligible,
-      freeShippingThreshold: region === 'IN' ? settings.indiaFreeShipThreshold : null,
+      freeShippingEligible: threshold != null && sub >= threshold,
+      freeShippingThreshold: threshold,
     });
   } catch (err) {
     next(err);

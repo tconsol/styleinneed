@@ -71,6 +71,7 @@ export const orderApi = {
   getById: (id: string) => client.get(`/admin/orders/${id}`),
   updateStatus: (id: string, data: object) => client.patch(`/admin/orders/${id}/status`, data),
   delete: (id: string) => client.delete(`/admin/orders/${id}`),
+  exportCsv: (params?: object) => client.get('/admin/orders/export', { params, responseType: 'blob' }),
 };
 
 export const customerApi = {
@@ -78,6 +79,7 @@ export const customerApi = {
   getById: (id: string) => client.get(`/admin/users/${id}`),
   updateRole: (id: string, data: object) => client.patch(`/admin/users/${id}`, data),
   delete: (id: string) => client.delete(`/admin/users/${id}`),
+  exportCsv: (params?: object) => client.get('/admin/users/export', { params, responseType: 'blob' }),
 };
 
 export const couponApi = {
@@ -133,6 +135,7 @@ export const supportApi = {
 export const returnApi = {
   getAll: (params?: object) => client.get('/returns', { params }),
   updateStatus: (id: string, data: object) => client.patch(`/returns/${id}/status`, data),
+  retryRefund: (id: string) => client.post(`/returns/${id}/refund/retry`),
 };
 
 export const cmsApi = {
@@ -149,6 +152,7 @@ export const auditApi = {
 export const providerApi = {
   getAll: (params?: object) => client.get('/providers', { params }),
   getAllSimple: () => client.get('/providers/all'),
+  getFeatures: () => client.get('/providers/features'),
   getMine: () => client.get('/providers/me'),
   updateMine: (data: object) => client.patch('/providers/me', data),
   getById: (id: string) => client.get(`/providers/${id}`),

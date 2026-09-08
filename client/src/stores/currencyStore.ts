@@ -21,8 +21,9 @@ function detectFromLocale(): Currency | null {
 
 interface CurrencyState {
   currency: Currency;
-  rate: number;              // INR per 1 USD
-  freeShipThreshold: number; // INR free-shipping threshold (India)
+  rate: number;                 // INR per 1 USD
+  freeShipThreshold: number;    // INR free-shipping threshold (India)
+  usaFreeShipThreshold: number; // USD free-shipping threshold (US/CA); 0 = never free
   ready: boolean;
   init: () => Promise<void>;
 }
@@ -33,6 +34,7 @@ export const useCurrencyStore = create<CurrencyState>()(
       currency: 'INR',
       rate: 83,
       freeShipThreshold: 999,
+      usaFreeShipThreshold: 0,
       ready: false,
 
       init: async () => {
@@ -41,6 +43,7 @@ export const useCurrencyStore = create<CurrencyState>()(
           const { data } = await settingsApi.get();
           if (data?.data?.usdExchangeRate) set({ rate: data.data.usdExchangeRate });
           if (data?.data?.indiaFreeShipThreshold != null) set({ freeShipThreshold: data.data.indiaFreeShipThreshold });
+          if (data?.data?.usaFreeShipThreshold != null) set({ usaFreeShipThreshold: data.data.usaFreeShipThreshold });
         } catch { /* keep defaults */ }
 
         // 2) Auto-pick the currency from the device timezone/locale.

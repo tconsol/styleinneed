@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Plus, Pencil, Trash2, Search, Building2, Phone, Mail, MapPin, ChevronLeft, ChevronRight, X, Eye, CreditCard, FileText } from 'lucide-react';
 import { providerApi } from '../../api';
-import type { Provider } from '../../types';
+import type { Provider, ProviderFeature } from '../../types';
 import toast from 'react-hot-toast';
 import { useConfirm } from '../../components/common/ConfirmDialog';
 import Select from '../../components/common/Select';
@@ -14,8 +14,9 @@ const EMPTY = {
   category: 'all', address: '', city: '', state: '',
   gstin: '', bankAccountName: '', bankAccountNumber: '', bankIfsc: '', bankName: '',
   notes: '', isActive: true,
-  // Admin-panel login for this provider (restricted to the Products area).
-  canLogin: false, loginEmail: '', loginPassword: '',
+  // Admin-panel login for this provider. Products + their own profile are
+  // always included; `permissions` grants extra pages on top.
+  canLogin: false, loginEmail: '', loginPassword: '', permissions: [] as string[],
 };
 
 const CAT_COLORS: Record<string, string> = {
@@ -238,6 +239,18 @@ export default function ProvidersPage() {
   const [editing, setEditing] = useState<Provider | null>(null);
   const [form, setForm] = useState({ ...EMPTY });
   const [saving, setSaving] = useState(false);
+  const [features, setFeatures] = useState<ProviderFeature[]>([]);
+
+  // Grantable admin features come from the server so the list can't drift.
+  useEffect(() => {
+    providerApi.getFeatures().then(({ data }) => setFeatures(data.data || [])).catch(() => {});
+  }, []);
+
+  const toggleFeature = (key: string) =>
+    setForm((f) => ({
+      ...f,
+      permissions: f.permissions.includes(key) ? f.permissions.filter((k) => k !== key) : [...f.permissions, key],
+    }));
 
   const load = async (p = page) => {
     setLoading(true);
@@ -271,6 +284,7 @@ export default function ProvidersPage() {
       bankIfsc: p.bankIfsc || '', bankName: p.bankName || '',
       notes: p.notes || '', isActive: p.isActive,
       canLogin: !!p.login?.hasLogin, loginEmail: p.login?.email || '', loginPassword: '',
+      permissions: p.login?.permissions || [],
     });
     setShowModal(true);
   };
@@ -545,6 +559,36 @@ export default function ProvidersPage() {
                       <p className="col-span-2 text-[11px] text-brand-muted">Current password: <span className="font-mono font-semibold text-brand-text">{editing.login.password}</span></p>
                     )}
                     <p className="col-span-2 text-[10px] text-amber-600">The provider can change this password later; you'll still see the updated one here.</p>
+                  </div>
+                )}
+
+                {form.canLogin && (
+                  <div className="rounded-xl p-3" style={{ background: 'var(--c-bg)', border: '1px solid var(--c-border)' }}>
+                    <div className="flex items-center justify-between mb-1">
+                      <p className="text-[11px] font-semibold text-brand-text">Extra Dashboard Access</p>
+                      {form.permissions.length > 0 && (
+                        <span className="text-[10px] font-semibold" style={{ color: 'var(--c-primary)' }}>{form.permissions.length} granted</span>
+                      )}
+                    </div>
+                    <p className="text-[10px] text-brand-muted mb-2.5">
+                      Products, their own profile and password are always included. Tick anything extra this provider should see.
+                    </p>
+                    <div className="grid grid-cols-2 gap-1.5 max-h-56 overflow-y-auto">
+                      {features.map((ft) => {
+                        const on = form.permissions.includes(ft.key);
+                        return (
+                          <button type="button" key={ft.key} onClick={() => toggleFeature(ft.key)}
+                            className="flex items-start gap-2 px-2.5 py-2 rounded-lg text-left transition-colors"
+                            style={{ background: on ? 'var(--c-primary-soft)' : 'var(--c-surface)', border: `1px solid ${on ? 'var(--c-primary)' : 'var(--c-border)'}` }}>
+                            <input type="checkbox" readOnly checked={on} className="w-3.5 h-3.5 accent-primary pointer-events-none mt-0.5" />
+                            <span className="min-w-0">
+                              <span className="block text-[11px] font-medium text-brand-text">{ft.label}</span>
+                              <span className="block text-[9px] text-brand-muted leading-tight">{ft.description}</span>
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
                 )}
               </div>

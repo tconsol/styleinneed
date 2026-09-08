@@ -1,11 +1,12 @@
 ﻿import { lazy, Suspense, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import AdminLayout from './components/layout/AdminLayout';
 import { PageSpinner } from './components/common/Spinner';
 import { ConfirmProvider } from './components/common/ConfirmDialog';
 import { useAuthStore } from './stores/authStore';
+import { FEATURE_NAV } from './components/layout/Sidebar';
 import { refreshTheme, applyAppearance, type Appearance } from './lib/theme';
 import { getSocket, ADMIN_SOCKET_EVENTS } from './lib/socket';
 
@@ -50,6 +51,27 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return isAuthenticated && hasToken ? <>{children}</> : <Navigate to="/login" replace />;
 }
 
+/**
+ * Keeps a provider login inside the pages it was granted. The API enforces this
+ * too — this only stops them landing on a page that would just 403.
+ */
+function ProviderGuard({ children }: { children: React.ReactNode }) {
+  const user = useAuthStore((s) => s.user);
+  const { pathname } = useLocation();
+  if (user?.role !== 'provider') return <>{children}</>;
+
+  const allowed = new Set<string>(['/products', '/profile', '/change-password']);
+  for (const key of user.permissions || []) {
+    const nav = FEATURE_NAV[key];
+    if (nav) allowed.add(nav.href);
+  }
+  // Sub-routes of an allowed page stay allowed (/products/new, /orders/:id …).
+  const ok = [...allowed].some((base) =>
+    base === '/' ? pathname === '/' : pathname === base || pathname.startsWith(`${base}/`)
+  );
+  return ok ? <>{children}</> : <Navigate to="/products" replace />;
+}
+
 export default function App() {
   useEffect(() => {
     void refreshTheme();
@@ -67,7 +89,7 @@ export default function App() {
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route
-              element={<ProtectedRoute><AdminLayout /></ProtectedRoute>}
+              element={<ProtectedRoute><ProviderGuard><AdminLayout /></ProviderGuard></ProtectedRoute>}
             >
               <Route path="/" element={<DashboardPage />} />
               <Route path="/analytics" element={<AnalyticsPage />} />
