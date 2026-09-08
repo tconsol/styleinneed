@@ -37,6 +37,11 @@ const userSchema = new Schema<IUser>(
     // Auto-provisioned by guest checkout: holds the order history for an email
     // that never registered. Flipped to false if they later sign up.
     isGuest: { type: Boolean, default: false },
+    // Referrals: each customer gets a shareable code; `referredBy` records who
+    // invited them, and `referralRewarded` makes the payout strictly once.
+    referralCode: { type: String, unique: true, sparse: true, uppercase: true, trim: true },
+    referredBy: { type: Schema.Types.ObjectId, ref: 'User' },
+    referralRewarded: { type: Boolean, default: false },
     role: {
       type: String,
       enum: ['customer', 'admin', 'provider'],

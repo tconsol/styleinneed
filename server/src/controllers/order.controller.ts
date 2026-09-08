@@ -18,6 +18,8 @@ import { sendPushToUser } from '../services/push.service';
 import { checkLowStock } from '../services/stockAlert.service';
 import { primaryClientUrl } from '../middleware/security';
 import { computeOrderPricing, regionOf, PricedLine } from '../utils/pricing';
+import { getBalance, debit, refundToWallet, credit } from '../utils/wallet';
+import { rewardReferralOnFirstOrder } from '../utils/referrals';
 import logger from '../utils/logger';
 import { IOrder, IUser, IAddress } from '../types';
 
@@ -195,6 +197,7 @@ const fulfillOrder = async (
     stripePaymentIntentId?: string;
     isGuestOrder?: boolean;
     guestToken?: string;
+    walletCreditUsed?: number;
   }
 ): Promise<IOrder> => {
   const user = data.user!;
@@ -215,6 +218,7 @@ const fulfillOrder = async (
     stripePaymentIntentId: data.stripePaymentIntentId,
     isGuestOrder: !!data.isGuestOrder,
     guestToken: data.guestToken,
+    walletCreditUsed: data.walletCreditUsed || 0,
   });
 
   pushStatus(order, 'confirmed', data.paymentMethod === 'cod' ? 'Order placed (Cash on Delivery)' : 'Payment received, order confirmed');
@@ -242,6 +246,30 @@ const fulfillOrder = async (
   });
 
   await Cart.findOneAndUpdate({ user: user._id }, { items: [], coupon: undefined });
+
+  // ── Store credit earned on this order, and any referral payout it unlocks ──
+  // Both are best-effort: a wallet hiccup must never fail a paid order.
+  try {
+    const settings = await getSettings();
+    if (settings.loyaltyEnabled && settings.loyaltyEarnPercent > 0 && data.paymentStatus === 'paid') {
+      // Cashback is earned on what the customer actually paid, in INR. USD
+      // orders convert back at the admin rate so the ledger stays single-currency.
+      const paidInBase = order.currency === 'USD'
+        ? order.total * (settings.usdExchangeRate || 83)
+        : order.total;
+      if (paidInBase >= (settings.loyaltyMinOrder || 0)) {
+        const cashback = Math.floor((paidInBase * settings.loyaltyEarnPercent) / 100);
+        if (cashback > 0) {
+          await credit(user._id, cashback, 'loyalty', `Cashback on order #${order.orderId}`, {
+            order: order._id, once: true,
+          });
+        }
+      }
+    }
+    if (data.paymentStatus === 'paid') await rewardReferralOnFirstOrder(user._id);
+  } catch (err) {
+    logger.warn(`Wallet rewards failed for order ${order.orderId}:`, err);
+  }
 
   const addressEmail = order.shippingAddress.email?.trim();
   const fallbackEmail = user.email;
@@ -281,12 +309,44 @@ export const createOrder = async (req: AuthRequest, res: Response, next: NextFun
     const { pricing, address, coupon } = built;
     const { user, isGuest } = actor;
 
+    // ── Store credit ──
+    // Credit is held in INR; a USD order converts it at the admin rate. The
+    // debit happens before the order is created so the balance can't be spent
+    // twice by two concurrent checkouts, and is refunded if anything downstream
+    // throws.
+    const settings = await getSettings();
+    const rate = settings.usdExchangeRate || 83;
+    const requestedCredit = Math.max(0, Number(req.body.walletCredit) || 0);
+    let creditApplied = 0; // in the ORDER's currency
+
+    if (requestedCredit > 0 && !isGuest) {
+      const balanceInr = await getBalance(user._id);
+      const balanceInOrderCcy = pricing.currency === 'USD' ? balanceInr / rate : balanceInr;
+      const cap = (pricing.total * (settings.walletMaxRedeemPercent ?? 100)) / 100;
+      creditApplied = Math.min(requestedCredit, balanceInOrderCcy, cap, pricing.total);
+      creditApplied = Math.floor(creditApplied * 100) / 100;
+
+      if (creditApplied > 0) {
+        const debitInr = pricing.currency === 'USD' ? creditApplied * rate : creditApplied;
+        const spent = await debit(user._id, debitInr, 'spend', 'Applied to an order');
+        if (!spent.ok) { sendError(res, 'Not enough store credit', 400); return; }
+        pricing.total = Math.max(0, Math.round((pricing.total - creditApplied) * 100) / 100);
+      }
+    }
+
+    // Give the credit back if this request fails before the order exists.
+    const releaseCredit = async () => {
+      if (creditApplied <= 0) return;
+      const back = pricing.currency === 'USD' ? creditApplied * rate : creditApplied;
+      await refundToWallet(user._id, back, 'Checkout not completed — credit returned');
+    };
+
     if (paymentMethod === 'cod') {
-      if (pricing.region !== 'IN') { sendError(res, 'Cash on Delivery is available for India only', 400); return; }
+      if (pricing.region !== 'IN') { await releaseCredit(); sendError(res, 'Cash on Delivery is available for India only', 400); return; }
       const guestToken = isGuest ? crypto.randomBytes(24).toString('hex') : undefined;
       const order = await fulfillOrder({
         user, pricing, address, coupon, paymentMethod: 'cod', paymentStatus: 'pending',
-        isGuestOrder: isGuest, guestToken,
+        isGuestOrder: isGuest, guestToken, walletCreditUsed: creditApplied,
       });
       sendSuccess(res, 'COD Order placed', {
         orderId: order._id, orderNumber: order.orderId, guestToken,
@@ -295,10 +355,24 @@ export const createOrder = async (req: AuthRequest, res: Response, next: NextFun
     }
 
     if (paymentMethod === 'razorpay' && pricing.currency !== 'INR') {
+      await releaseCredit();
       sendError(res, 'Razorpay supports INR orders only. Use card payment.', 400); return;
     }
     if (paymentMethod !== 'razorpay' && paymentMethod !== 'stripe') {
+      await releaseCredit();
       sendError(res, 'Unsupported payment method', 400); return;
+    }
+    // Credit covered the whole order — nothing left for the gateway to charge.
+    if (pricing.total <= 0) {
+      const guestToken = isGuest ? crypto.randomBytes(24).toString('hex') : undefined;
+      const order = await fulfillOrder({
+        user, pricing, address, coupon, paymentMethod, paymentStatus: 'paid',
+        isGuestOrder: isGuest, guestToken, walletCreditUsed: creditApplied,
+      });
+      sendSuccess(res, 'Order placed with store credit', {
+        orderId: order._id, orderNumber: order.orderId, guestToken,
+      }, 201);
+      return;
     }
 
     // Guests get an unguessable token; without it a session id (a sequential-ish
@@ -319,6 +393,7 @@ export const createOrder = async (req: AuthRequest, res: Response, next: NextFun
       provider: paymentMethod,
       isGuest,
       guestToken: sessionToken,
+      walletCreditUsed: creditApplied,
     });
 
     const clientUrl = primaryClientUrl();
@@ -355,6 +430,7 @@ export const createOrder = async (req: AuthRequest, res: Response, next: NextFun
       }
     } catch (gwErr) {
       await PaymentSession.deleteOne({ _id: session._id }).catch(() => {});
+      await releaseCredit();
       logger.error('Payment gateway error', gwErr);
       sendError(res, 'Could not start payment. The payment gateway is misconfigured or unavailable — please try again or contact support.', 502);
     }
@@ -375,6 +451,7 @@ const confirmPaidSession = async (session: IPaymentSession, paymentRef?: string)
     user: user || undefined,
     isGuestOrder: session.isGuest,
     guestToken: session.isGuest ? session.guestToken : undefined,
+    walletCreditUsed: session.walletCreditUsed || 0,
     pricing: {
       region: regionOf(session.shippingAddress.country),
       currency: session.currency,
@@ -564,6 +641,16 @@ export const cancelOrder = async (req: AuthRequest, res: Response, next: NextFun
         { $inc: { 'variants.$.stock': item.quantity } }
       );
     }
+
+    // Store credit spent on a cancelled order goes back to the wallet.
+    if (order.walletCreditUsed > 0) {
+      const settings = await getSettings();
+      const inr = order.currency === 'USD'
+        ? order.walletCreditUsed * (settings.usdExchangeRate || 83)
+        : order.walletCreditUsed;
+      await refundToWallet(req.user!._id, inr, `Credit returned — order #${order.orderId} cancelled`, order._id);
+    }
+
     sendSuccess(res, 'Order cancelled');
   } catch (err) {
     next(err);

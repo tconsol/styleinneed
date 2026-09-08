@@ -6,6 +6,7 @@ import { useAuthStore } from '../stores/authStore';
 import { useCartStore, selectSubtotal } from '../stores/cartStore';
 import { useCurrencyStore } from '../stores/currencyStore';
 import { orderApi } from '../api/order.api';
+import { walletApi } from '../api/misc.api';
 import { authApi } from '../api/auth.api';
 import { couponApi, shippingApi } from '../api/misc.api';
 import { formatPrice } from '../utils/format';
@@ -47,6 +48,10 @@ export default function CheckoutPage() {
   // Guests type their address straight into the form and give an email for the
   // order confirmation — there is no saved-address list to pick from.
   const [guestEmail, setGuestEmail] = useState('');
+  // Store credit (signed-in shoppers only — a guest has no wallet).
+  const [walletBalance, setWalletBalance] = useState(0);
+  const [maxRedeemPercent, setMaxRedeemPercent] = useState(100);
+  const [useCredit, setUseCredit] = useState(false);
   const [addrForm, setAddrForm] = useState(emptyAddr);
   const [savingAddr, setSavingAddr] = useState(false);
 
@@ -77,6 +82,16 @@ export default function CheckoutPage() {
   // Convert an INR amount into the checkout currency for display.
   const toDisplay = (inr: number): number => (isUSA ? Math.round((inr / rate) * 100) / 100 : inr);
   const fmt = (inr: number) => formatPrice(toDisplay(inr), currency);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    walletApi.getMine()
+      .then(({ data }) => {
+        setWalletBalance(data.data.balance || 0);
+        setMaxRedeemPercent(data.data.maxRedeemPercent ?? 100);
+      })
+      .catch(() => {});
+  }, [isAuthenticated]);
 
   useEffect(() => {
     orderApi.getPaymentConfig()
@@ -115,7 +130,15 @@ export default function CheckoutPage() {
   const shippingDisplay = shipping ? shipping.charge : 0;
   const subtotalDisplay = toDisplay(subtotal);
   const discountDisplay = toDisplay(couponDiscount);
-  const total = Math.max(0, subtotalDisplay - discountDisplay + shippingDisplay);
+  const grossTotal = Math.max(0, subtotalDisplay - discountDisplay + shippingDisplay);
+  // Credit is held in INR; convert it into the checkout currency, then cap it
+  // at the admin's max-redeem share of the order.
+  const creditAvailable = toDisplay(walletBalance);
+  const creditCap = (grossTotal * maxRedeemPercent) / 100;
+  const creditApplied = useCredit
+    ? Math.floor(Math.min(creditAvailable, creditCap, grossTotal) * 100) / 100
+    : 0;
+  const total = Math.max(0, Math.round((grossTotal - creditApplied) * 100) / 100);
 
   const applyCoupon = async () => {
     if (!couponInput.trim()) return;
@@ -144,7 +167,7 @@ export default function CheckoutPage() {
       // Members check out their server cart by address id; guests send their
       // email, address and the items they built up locally.
       const payload = isAuthenticated
-        ? { addressId: selectedAddress, paymentMethod, couponCode: couponCode || undefined }
+        ? { addressId: selectedAddress, paymentMethod, couponCode: couponCode || undefined, walletCredit: creditApplied || undefined }
         : {
             email: guestEmail.trim(),
             address: addrForm,
@@ -372,6 +395,26 @@ export default function CheckoutPage() {
                 {couponCode && <p className="font-body text-xs text-green-600 mt-1">{'✓'} {couponCode} applied</p>}
               </div>
 
+              {isAuthenticated && walletBalance > 0 && (
+                <label className="mb-4 flex cursor-pointer items-start gap-2.5 rounded-lg border border-brand-border bg-brand-bg p-3">
+                  <input
+                    type="checkbox"
+                    checked={useCredit}
+                    onChange={(e) => setUseCredit(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 accent-primary"
+                  />
+                  <span className="min-w-0 flex-1">
+                    <span className="block font-body text-sm font-medium text-brand-text">
+                      Use store credit
+                    </span>
+                    <span className="block font-body text-xs text-brand-muted">
+                      {formatPrice(creditAvailable, currency)} available
+                      {maxRedeemPercent < 100 && ` · up to ${maxRedeemPercent}% of an order`}
+                    </span>
+                  </span>
+                </label>
+              )}
+
               <div className="space-y-2">
                 <div className="flex justify-between font-body text-sm text-brand-muted">
                   <span>Subtotal</span><span>{fmt(subtotal)}</span>
@@ -385,6 +428,11 @@ export default function CheckoutPage() {
                   <span>Shipping{isUSA && addr?.state ? ` (${addr.state})` : ''}</span>
                   <span>{!shipping ? '—' : shippingDisplay === 0 ? 'FREE' : formatPrice(shippingDisplay, currency)}</span>
                 </div>
+                {creditApplied > 0 && (
+                  <div className="flex justify-between font-body text-sm text-green-600">
+                    <span>Store credit</span><span>-{formatPrice(creditApplied, currency)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between font-heading text-xl font-bold text-brand-text border-t border-brand-border pt-3 mt-1">
                   <span>Total</span><span>{formatPrice(total, currency)}</span>
                 </div>
@@ -393,11 +441,11 @@ export default function CheckoutPage() {
                 )}
               </div>
 
-              <motion.button onClick={handlePlaceOrder} disabled={placing || !selectedAddress}
+              <motion.button onClick={handlePlaceOrder} disabled={placing || (isAuthenticated && !selectedAddress)}
                 whileTap={{ scale: 0.98 }}
                 className="btn-primary w-full justify-center mt-6 disabled:opacity-60 disabled:cursor-not-allowed">
                 {placing ? <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  : paymentMethod === 'cod' ? 'Place Order' : 'Proceed to Pay'}
+                  : paymentMethod === 'cod' || total <= 0 ? 'Place Order' : 'Proceed to Pay'}
               </motion.button>
             </div>
           </aside>

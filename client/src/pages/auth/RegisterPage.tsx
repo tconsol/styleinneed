@@ -58,7 +58,11 @@ export default function RegisterPage() {
 function RegisterForm() {
   const navigate = useNavigate();
   const { googleLogin } = useAuthStore();
-  const [form, setForm] = useState({ name: '', email: '', phone: '', password: '', confirmPassword: '' });
+  // A ?ref= code in the invite link pre-fills the referral field.
+  const [form, setForm] = useState(() => ({
+    name: '', email: '', phone: '', password: '', confirmPassword: '',
+    referralCode: new URLSearchParams(window.location.search).get('ref')?.toUpperCase() || '',
+  }));
   const [showPw, setShowPw] = useState(false);
   const [showConfirmPw, setShowConfirmPw] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -70,7 +74,7 @@ function RegisterForm() {
     if (form.password.length < 8) { toast.error('Password must be at least 8 characters'); return; }
     setLoading(true);
     try {
-      await authApi.register({ name: form.name, email: form.email, password: form.password, phone: form.phone || undefined });
+      await authApi.register({ name: form.name, email: form.email, password: form.password, phone: form.phone || undefined, referralCode: form.referralCode.trim() || undefined });
       toast.success('Account created! Check your email for the verification OTP.');
       navigate('/auth/verify-email', { state: { email: form.email } });
     } catch { /* error toast shown by api interceptor */ } finally { setLoading(false); }
@@ -166,6 +170,10 @@ function RegisterForm() {
                 <div>
                   <label className="font-body text-xs font-semibold text-brand-muted uppercase tracking-wider block mb-1.5">Phone <span className="text-brand-muted font-normal normal-case tracking-normal">(optional)</span></label>
                   <input type="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className={inputCls} placeholder="10-digit mobile" pattern="[6-9][0-9]{9}" autoComplete="tel" />
+                </div>
+                <div>
+                  <label className="font-body text-xs font-semibold text-brand-muted uppercase tracking-wider block mb-1.5">Referral Code <span className="text-brand-muted font-normal normal-case tracking-normal">(optional)</span></label>
+                  <input value={form.referralCode} onChange={(e) => setForm({ ...form, referralCode: e.target.value.toUpperCase() })} className={inputCls + ' font-mono tracking-widest'} placeholder="Invited by a friend?" />
                 </div>
                 <div>
                   <label className="font-body text-xs font-semibold text-brand-muted uppercase tracking-wider block mb-1.5">Password *</label>

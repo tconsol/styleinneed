@@ -89,3 +89,9 @@ export const supportApi = {
   addMessage: (id: string, content: string) =>
     client.post(`/support/${id}/message`, { content }),
 };
+
+export const walletApi = {
+  getMine: () => client.get('/wallet/me'),
+  redeemGiftCard: (code: string) => client.post('/wallet/redeem', { code }),
+  getReferral: () => client.get('/wallet/referral'),
+};

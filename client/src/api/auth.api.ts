@@ -1,7 +1,7 @@
 import client from './client';
 
 export const authApi = {
-  register: (data: { name: string; email: string; password: string; phone?: string }) =>
+  register: (data: { name: string; email: string; password: string; phone?: string; referralCode?: string }) =>
     client.post('/auth/register', data),
 
   verifyEmail: (data: { email: string; otp: string }) =>

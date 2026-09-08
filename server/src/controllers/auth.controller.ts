@@ -9,21 +9,47 @@ import { sendOtpEmail, sendPasswordResetEmail } from '../services/email.service'
 import { sendSuccess, sendError } from '../utils/apiResponse';
 import { primaryClientUrl } from '../middleware/security';
 import { encryptSecret } from '../utils/secretCrypto';
+import { findReferrer } from '../utils/referrals';
 
 export const register = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { name, email, password, phone } = req.body;
-
-    const existing = await User.findOne({ email });
-    if (existing) {
-      sendError(res, 'Email already registered', 409);
-      return;
-    }
+    const { name, email, password, phone, referralCode } = req.body;
 
     const otp = generateOtp();
     const otpExpiry = new Date(Date.now() + Number(process.env.OTP_EXPIRES_IN || 10) * 60 * 1000);
 
-    const user = await User.create({ name, email, password, phone, otp, otpExpiry });
+    const existing = await User.findOne({ email }).select('+password isGuest');
+    if (existing && !existing.isGuest) {
+      sendError(res, 'Email already registered', 409);
+      return;
+    }
+
+    // Someone who checked out as a guest already has a shell account holding
+    // their order history — turn it into a real one instead of rejecting them.
+    if (existing?.isGuest) {
+      existing.name = name || existing.name;
+      existing.password = password;
+      if (phone) existing.phone = phone;
+      existing.isGuest = false;
+      existing.otp = otp;
+      existing.otpExpiry = otpExpiry;
+      if (!existing.referredBy) {
+        const referrer = await findReferrer(referralCode);
+        if (referrer && String(referrer._id) !== String(existing._id)) existing.referredBy = referrer._id;
+      }
+      await existing.save();
+      await sendOtpEmail(email, otp, existing.name);
+      sendSuccess(res, 'Registration successful. Check email for OTP.', { userId: existing._id }, 201);
+      return;
+    }
+
+    // A referral code is optional; an unknown one is simply ignored.
+    const referrer = await findReferrer(referralCode);
+
+    const user = await User.create({
+      name, email, password, phone, otp, otpExpiry,
+      referredBy: referrer?._id,
+    });
     await sendOtpEmail(email, otp, name);
 
     sendSuccess(res, 'Registration successful. Check email for OTP.', { userId: user._id }, 201);

@@ -68,6 +68,7 @@ const orderSchema = new Schema<IOrder>(
     razorpayOrderId: String,
     razorpayPaymentId: String,
     stripePaymentIntentId: String,
+    walletCreditUsed: { type: Number, default: 0, min: 0 },
     isGuestOrder: { type: Boolean, default: false },
     // Random handle emailed to guests so they can open their order without an
     // account. select:false keeps it out of every ordinary response.

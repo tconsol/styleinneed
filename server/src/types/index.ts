@@ -11,6 +11,9 @@ export interface IUser extends Document {
   providerRef?: Types.ObjectId;
   permissions: string[]; // granted admin features (provider logins only)
   isGuest: boolean;      // created by guest checkout, never signed up
+  referralCode?: string;
+  referredBy?: Types.ObjectId;
+  referralRewarded: boolean;
   role: 'customer' | 'admin' | 'provider';
   isEmailVerified: boolean;
   isActive: boolean;
@@ -122,6 +125,7 @@ export interface IOrder extends Document {
   razorpayOrderId?: string;
   razorpayPaymentId?: string;
   stripePaymentIntentId?: string;
+  walletCreditUsed: number; // store credit applied to this order (order currency)
   isGuestOrder: boolean;
   guestToken?: string;   // unguessable handle so a guest can view their own order
   status: 'pending' | 'confirmed' | 'packed' | 'shipped' | 'delivered' | 'returned' | 'cancelled';

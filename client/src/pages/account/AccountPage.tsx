@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { NavLink, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
-import { User, Package, Heart, RotateCcw, Headphones, LogOut, MapPin, ChevronRight, Sparkles } from 'lucide-react';
+import { User, Package, Heart, RotateCcw, Headphones, LogOut, MapPin, ChevronRight, Sparkles, Wallet } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
 import { ProfileSection } from '../ProfilePage';
 import { formatDate } from '../../utils/format';
@@ -9,6 +9,7 @@ const MENU = [
   { path: '/profile', label: 'My Profile', hint: 'Personal details & security', icon: User },
   { path: '/orders', label: 'My Orders', hint: 'Track and manage orders', icon: Package },
   { path: '/wishlist', label: 'Wishlist', hint: 'Your saved styles', icon: Heart },
+  { path: '/wallet', label: 'Wallet & Rewards', hint: 'Store credit, gift cards & referrals', icon: Wallet },
   { path: '/addresses', label: 'Addresses', hint: 'Saved delivery addresses', icon: MapPin },
   { path: '/returns', label: 'Returns', hint: 'Returns & refunds', icon: RotateCcw },
   { path: '/support', label: 'Support', hint: 'Help centre & tickets', icon: Headphones },

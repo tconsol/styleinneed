@@ -34,6 +34,7 @@ const OrderTrackingPage = lazy(() => import('./pages/OrderTrackingPage'));
 const PaymentReturnPage = lazy(() => import('./pages/PaymentReturnPage'));
 const UnsubscribePage = lazy(() => import('./pages/UnsubscribePage'));
 const GuestOrderPage = lazy(() => import('./pages/GuestOrderPage'));
+const WalletPage = lazy(() => import('./pages/WalletPage'));
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 60_000, retry: 1 } },
@@ -95,6 +96,10 @@ export default function App() {
               <Route
                 path="/wishlist"
                 element={<ProtectedRoute><WishlistPage /></ProtectedRoute>}
+              />
+              <Route
+                path="/wallet"
+                element={<ProtectedRoute><WalletPage /></ProtectedRoute>}
               />
               <Route
                 path="/addresses"

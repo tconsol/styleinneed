@@ -138,6 +138,14 @@ export const returnApi = {
   retryRefund: (id: string) => client.post(`/returns/${id}/refund/retry`),
 };
 
+export const walletApi = {
+  listGiftCards: (params?: object) => client.get('/wallet/gift-cards', { params }),
+  createGiftCards: (data: object) => client.post('/wallet/gift-cards', data),
+  deactivateGiftCard: (id: string) => client.patch(`/wallet/gift-cards/${id}/deactivate`),
+  adjust: (data: object) => client.post('/wallet/adjust', data),
+  getUserWallet: (id: string) => client.get(`/wallet/user/${id}`),
+};
+
 export const cmsApi = {
   list: () => client.get('/cms'),
   get: (key: string) => client.get(`/cms/${key}`),

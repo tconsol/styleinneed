@@ -15,6 +15,15 @@ export interface ISettings extends Document {
   abandonedCartEmails: boolean;   // send cart-recovery emails
   abandonedCartDelayHours: number;// idle hours before the first reminder
   abandonedCartMaxReminders: number;
+  // ── Store credit / loyalty ──
+  loyaltyEnabled: boolean;
+  loyaltyEarnPercent: number;      // % of an order's value returned as credit
+  loyaltyMinOrder: number;         // INR order value before cashback applies
+  walletMaxRedeemPercent: number;  // cap on how much of an order credit can cover
+  // ── Referrals ──
+  referralEnabled: boolean;
+  referrerReward: number;          // INR credited to the inviter
+  refereeReward: number;           // INR credited to the invitee
   activeTheme: string;           // key of the currently applied theme
   themes: ThemeTokens[];         // editable themes (seeded from presets on first read)
   fontHeading: string;           // heading font family (Google font name)
@@ -47,6 +56,13 @@ const settingsSchema = new Schema<ISettings>(
     abandonedCartEmails: { type: Boolean, default: true },
     abandonedCartDelayHours: { type: Number, default: 6, min: 1 },
     abandonedCartMaxReminders: { type: Number, default: 2, min: 0, max: 3 },
+    loyaltyEnabled: { type: Boolean, default: true },
+    loyaltyEarnPercent: { type: Number, default: 2, min: 0, max: 100 },
+    loyaltyMinOrder: { type: Number, default: 0, min: 0 },
+    walletMaxRedeemPercent: { type: Number, default: 100, min: 0, max: 100 },
+    referralEnabled: { type: Boolean, default: true },
+    referrerReward: { type: Number, default: 200, min: 0 },
+    refereeReward: { type: Number, default: 100, min: 0 },
     activeTheme: { type: String, default: 'indigo' },
     themes: { type: [themeSchema], default: [] },
     fontHeading: { type: String, default: 'Poppins' },

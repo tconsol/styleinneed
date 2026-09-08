@@ -85,6 +85,8 @@ export const updateSettings = async (req: Request, res: Response, next: NextFunc
       usdExchangeRate, indiaFreeShipThreshold, indiaFlatShipping, usaFreeShipThreshold,
       lowStockThreshold, lowStockAlerts,
       abandonedCartEmails, abandonedCartDelayHours, abandonedCartMaxReminders,
+      loyaltyEnabled, loyaltyEarnPercent, loyaltyMinOrder, walletMaxRedeemPercent,
+      referralEnabled, referrerReward, refereeReward,
     } = req.body;
     const update: Record<string, number | boolean> = {};
     if (usdExchangeRate != null) update.usdExchangeRate = Number(usdExchangeRate);
@@ -96,6 +98,13 @@ export const updateSettings = async (req: Request, res: Response, next: NextFunc
     if (abandonedCartEmails != null) update.abandonedCartEmails = !!abandonedCartEmails;
     if (abandonedCartDelayHours != null) update.abandonedCartDelayHours = Number(abandonedCartDelayHours);
     if (abandonedCartMaxReminders != null) update.abandonedCartMaxReminders = Number(abandonedCartMaxReminders);
+    if (loyaltyEnabled != null) update.loyaltyEnabled = !!loyaltyEnabled;
+    if (loyaltyEarnPercent != null) update.loyaltyEarnPercent = Number(loyaltyEarnPercent);
+    if (loyaltyMinOrder != null) update.loyaltyMinOrder = Number(loyaltyMinOrder);
+    if (walletMaxRedeemPercent != null) update.walletMaxRedeemPercent = Number(walletMaxRedeemPercent);
+    if (referralEnabled != null) update.referralEnabled = !!referralEnabled;
+    if (referrerReward != null) update.referrerReward = Number(referrerReward);
+    if (refereeReward != null) update.refereeReward = Number(refereeReward);
 
     const doc = await Settings.findOneAndUpdate({ key: 'global' }, update, { new: true, upsert: true });
     sendSuccess(res, 'Settings updated', doc);

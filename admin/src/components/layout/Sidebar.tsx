@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Package, Tag, Layers, ShoppingCart, Users,
   Ticket, Megaphone, Zap, FileText, Mail, Headphones,
   RotateCcw, FileEdit, BarChart2, ScrollText,
-  Star, LogOut, Settings, X, Shapes, SlidersHorizontal, Truck, BellRing, Ruler, Globe, UserCircle, KeyRound, Palette,
+  Star, LogOut, Settings, X, Shapes, SlidersHorizontal, Truck, BellRing, Ruler, Globe, UserCircle, KeyRound, Palette, Gift,
 } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
 import { useThemeStore } from '../../stores/themeStore';
@@ -36,6 +36,7 @@ export const NAV_ITEMS = [
     { label: 'Promotions', href: '/promotions', icon: Zap },
     { label: 'Push Notifications', href: '/push-notifications', icon: BellRing },
     { label: 'Newsletter', href: '/newsletter', icon: Mail },
+    { label: 'Gift Cards', href: '/gift-cards', icon: Gift },
   ]},
   { section: 'Content', items: [
     { label: 'Blog', href: '/blogs', icon: FileText },

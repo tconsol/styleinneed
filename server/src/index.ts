@@ -6,6 +6,7 @@ import { initSocket } from './config/socket';
 import { verifyEmailConnection } from './services/email.service';
 import { startExchangeRateSync, stopExchangeRateSync } from './services/exchangeRate.service';
 import { startAbandonedCartSweep, stopAbandonedCartSweep } from './services/abandonedCart.service';
+import { startCreditReleaseSweep, stopCreditReleaseSweep } from './services/creditRelease.service';
 import { ensureSystemCtaLinks } from './utils/ctaLinks';
 import logger from './utils/logger';
 
@@ -29,6 +30,8 @@ connectDB()
     startExchangeRateSync();
     // Hourly sweep that emails shoppers who left items in their cart.
     startAbandonedCartSweep();
+    // Hands back store credit reserved for checkouts that were never paid.
+    startCreditReleaseSweep();
     // Ensure built-in CTA links exist (non-fatal).
     ensureSystemCtaLinks().catch((err) => logger.warn('CTA link seed failed:', err));
   })
@@ -46,6 +49,7 @@ const shutdown = (signal: string) => {
   logger.info(`${signal} received. Shutting down gracefully...`);
   stopExchangeRateSync();
   stopAbandonedCartSweep();
+  stopCreditReleaseSweep();
   server.close(() => {
     logger.info('HTTP server closed');
     process.exit(0);

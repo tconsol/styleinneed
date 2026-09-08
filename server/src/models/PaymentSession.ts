@@ -21,9 +21,15 @@ export interface IPaymentSession extends Document {
   stripeSessionId?: string;
   isGuest: boolean;
   guestToken?: string; // required to consume a guest session (ids are guessable)
+  /** Store credit reserved for this checkout (order currency). */
+  walletCreditUsed: number;
+  /** Set once reserved credit has been handed back to an abandoned checkout. */
+  creditReleased: boolean;
   status: 'pending' | 'consumed';
   order?: Types.ObjectId; // set once consumed
   expiresAt: Date;
+  /** When the row itself is deleted — later than expiresAt so the credit-release sweep can still see it. */
+  purgeAt: Date;
   createdAt: Date;
 }
 
@@ -75,15 +81,22 @@ const paymentSessionSchema = new Schema<IPaymentSession>(
     stripeSessionId: String,
     isGuest: { type: Boolean, default: false },
     guestToken: { type: String, select: false },
+    walletCreditUsed: { type: Number, default: 0, min: 0 },
+    creditReleased: { type: Boolean, default: false },
     status: { type: String, enum: ['pending', 'consumed'], default: 'pending' },
     order: { type: Schema.Types.ObjectId, ref: 'Order' },
-    // TTL: unpaid sessions auto-delete ~1h after creation.
+    // Payment validity window: ~1h after creation.
     expiresAt: { type: Date, default: () => new Date(Date.now() + 60 * 60 * 1000) },
+    // The row lingers past that so reserved store credit can be released before
+    // the document disappears.
+    purgeAt: { type: Date, default: () => new Date(Date.now() + 7 * 60 * 60 * 1000) },
   },
   { timestamps: true }
 );
 
-// Mongo TTL monitor removes docs once expiresAt passes.
-paymentSessionSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+// Mongo TTL monitor removes docs once purgeAt passes.
+paymentSessionSchema.index({ purgeAt: 1 }, { expireAfterSeconds: 0 });
+// Drives the abandoned-checkout credit-release sweep.
+paymentSessionSchema.index({ status: 1, creditReleased: 1, expiresAt: 1 });
 
 export default mongoose.model<IPaymentSession>('PaymentSession', paymentSessionSchema);
