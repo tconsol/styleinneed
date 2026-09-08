@@ -48,16 +48,19 @@ export default function MegaMenu({
 
   const hasRail = !!productType;
 
-  // Frosted glass. The earlier `/98` produced NO background at all — Tailwind's
-  // opacity scale has no 98 step, so the class was silently dropped. `/90` is a
-  // real step, and the heavy backdrop blur keeps text readable over the hero.
+  // Frosted glass. Two things matter here:
+  //  - the opacity must be a real Tailwind step (an earlier `/98` compiled to
+  //    nothing, leaving the panel fully see-through);
+  //  - the blur has to be heavy enough that big high-contrast shapes behind it
+  //    (the hero headline and CTA buttons) dissolve rather than stay readable.
+  //    40px (`backdrop-blur-2xl`) wasn't, so this uses an explicit 80px.
   return (
     <motion.div
       initial={{ opacity: 0, y: -8 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -8 }}
       transition={{ duration: 0.18, ease: 'easeOut' }}
-      className="absolute inset-x-0 top-full z-50 border-t border-brand-border bg-brand-bg/90 shadow-[0_24px_48px_-12px_rgba(0,0,0,0.22)] backdrop-blur-2xl backdrop-saturate-150"
+      className="absolute inset-x-0 top-full z-50 border-t border-brand-border bg-brand-bg/95 shadow-[0_24px_48px_-12px_rgba(0,0,0,0.22)] backdrop-blur-[80px] backdrop-saturate-150"
     >
       <div className="container-custom py-8">
         <div className={`grid gap-10 ${hasRail ? 'lg:grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)]' : 'grid-cols-1'}`}>
