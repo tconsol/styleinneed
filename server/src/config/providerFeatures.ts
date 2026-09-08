@@ -36,6 +36,7 @@ export const PROVIDER_FEATURES: ProviderFeature[] = [
   { key: 'customers',     label: 'Customers',      href: '/customers',       section: 'Commerce', description: 'View customer profiles & order history' },
   { key: 'announcements', label: 'Announcements',  href: '/announcements',   section: 'Marketing', description: 'Site banners & popups' },
   { key: 'newsletter',    label: 'Newsletter',     href: '/newsletter',      section: 'Marketing', description: 'Subscribers & promo broadcasts' },
+  { key: 'email-marketing', label: 'Email Marketing', href: '/email-marketing', section: 'Marketing', description: 'Campaigns to the combined customer audience' },
   { key: 'gift-cards',    label: 'Gift Cards',     href: '/gift-cards',      section: 'Marketing', description: 'Issue and deactivate gift cards' },
   { key: 'blogs',         label: 'Blog',           href: '/blogs',           section: 'Content',  description: 'Write and publish posts' },
   { key: 'cms',           label: 'CMS Pages',      href: '/cms',             section: 'Content',  description: 'Edit storefront page content' },

@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Package, Tag, Layers, ShoppingCart, Users,
   Ticket, Megaphone, Zap, FileText, Mail, Headphones,
   RotateCcw, FileEdit, BarChart2, ScrollText,
-  Star, LogOut, Settings, X, Shapes, SlidersHorizontal, Truck, BellRing, Ruler, Globe, UserCircle, KeyRound, Palette, Gift, UserCog, ShieldCheck,
+  Star, LogOut, Settings, X, Shapes, SlidersHorizontal, Truck, BellRing, Ruler, Globe, UserCircle, KeyRound, Palette, Gift, UserCog, ShieldCheck, Mails,
 } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
 import { useThemeStore } from '../../stores/themeStore';
@@ -36,6 +36,7 @@ export const NAV_ITEMS = [
     { label: 'Promotions', href: '/promotions', icon: Zap },
     { label: 'Push Notifications', href: '/push-notifications', icon: BellRing },
     { label: 'Newsletter', href: '/newsletter', icon: Mail },
+    { label: 'Email Marketing', href: '/email-marketing', icon: Mails },
     { label: 'Gift Cards', href: '/gift-cards', icon: Gift },
   ]},
   { section: 'Content', items: [
@@ -81,6 +82,13 @@ export const FEATURE_NAV: Record<string, { label: string; href: string; icon: ty
   'promotions':    { label: 'Promotions',    href: '/promotions',    icon: Zap,               section: 'Marketing' },
   'coupons':       { label: 'Coupons',       href: '/coupons',       icon: Ticket,            section: 'Marketing' },
   'support':       { label: 'Support',       href: '/support',       icon: Headphones,        section: 'System' },
+  'customers':     { label: 'Customers',     href: '/customers',     icon: Users,             section: 'Commerce' },
+  'announcements': { label: 'Announcements', href: '/announcements', icon: Megaphone,         section: 'Marketing' },
+  'newsletter':    { label: 'Newsletter',    href: '/newsletter',    icon: Mail,              section: 'Marketing' },
+  'email-marketing': { label: 'Email Marketing', href: '/email-marketing', icon: Mails,       section: 'Marketing' },
+  'gift-cards':    { label: 'Gift Cards',    href: '/gift-cards',    icon: Gift,              section: 'Marketing' },
+  'blogs':         { label: 'Blog',          href: '/blogs',         icon: FileText,          section: 'Content' },
+  'cms':           { label: 'CMS Pages',     href: '/cms',           icon: FileEdit,          section: 'Content' },
 };
 
 const SECTION_ORDER = ['Overview', 'Catalog', 'Commerce', 'Marketing', 'Content', 'Team', 'System', 'Account'];

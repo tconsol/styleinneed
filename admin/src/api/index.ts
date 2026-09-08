@@ -140,6 +140,12 @@ export const returnApi = {
   retryRefund: (id: string) => client.post(`/returns/${id}/refund/retry`),
 };
 
+export const emailMarketingApi = {
+  getAudience: (params?: object) => client.get('/email-marketing/audience', { params }),
+  exportAudience: () => client.get('/email-marketing/audience/export', { responseType: 'blob' }),
+  send: (data: object) => client.post('/email-marketing/send', data),
+};
+
 export const staffApi = {
   getFeatures: () => client.get('/staff/features'),
   listRoles: () => client.get('/staff/roles'),

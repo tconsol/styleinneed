@@ -28,6 +28,7 @@ import settingsRoutes from './routes/settings.routes';
 import shippingRoutes from './routes/shipping.routes';
 import walletRoutes from './routes/wallet.routes';
 import staffRoutes from './routes/staff.routes';
+import emailMarketingRoutes from './routes/emailMarketing.routes';
 import { getSitemap, getRobots } from './controllers/seo.controller';
 
 const app = express();
@@ -79,6 +80,7 @@ app.use(`${API}/settings`, settingsRoutes);
 app.use(`${API}/shipping-rates`, shippingRoutes);
 app.use(`${API}/wallet`, walletRoutes);
 app.use(`${API}/staff`, staffRoutes);
+app.use(`${API}/email-marketing`, emailMarketingRoutes);
 
 app.get('/health', (_req, res) => res.json({ status: 'ok', env: process.env.NODE_ENV }));
 
