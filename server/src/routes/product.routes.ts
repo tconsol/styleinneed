@@ -2,7 +2,7 @@ import { Router } from 'express';
 import {
   getProducts, getProductBySlug, getRelatedProducts,
   createProduct, updateProduct, deleteProduct,
-  uploadProductImages, deleteProductImage, searchProducts,
+  uploadProductImages, deleteProductImage, searchProducts, suggestProducts,
 } from '../controllers/product.controller';
 import { protect, isProviderOrAdmin } from '../middleware/auth';
 import { productUpload, sheetUpload } from '../middleware/upload';
@@ -19,6 +19,7 @@ router.post('/bulk/upload', protect, isProviderOrAdmin, flushProducts, sheetUplo
 
 router.get('/', cache(60), getProducts);
 router.get('/search', searchProducts);
+router.get('/suggest', suggestProducts);
 router.get('/:slug', cache(120), getProductBySlug);
 router.get('/:slug/related', cache(120), getRelatedProducts);
 

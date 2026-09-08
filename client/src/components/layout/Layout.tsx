@@ -18,7 +18,7 @@ import { useCurrencyStore } from '../../stores/currencyStore';
 export default function Layout() {
   const location = useLocation();
   const { isAuthenticated, fetchMe } = useAuthStore();
-  const { fetchCart } = useCartStore();
+  const { mergeGuestCart } = useCartStore();
   const { fetchWishlist } = useWishlistStore();
   const initCurrency = useCurrencyStore((s) => s.init);
 
@@ -30,10 +30,12 @@ export default function Layout() {
   useEffect(() => {
     if (isAuthenticated) {
       fetchMe();
-      fetchCart();
+      // Folds anything added while signed out into the account cart, then
+      // loads the server cart (it falls through to a plain fetch when empty).
+      void mergeGuestCart();
       fetchWishlist();
     }
-  }, [isAuthenticated, fetchMe, fetchCart, fetchWishlist]);
+  }, [isAuthenticated, fetchMe, fetchWishlist, mergeGuestCart]);
 
   const isAuthPage = location.pathname.startsWith('/auth');
   const isCheckout = location.pathname.startsWith('/checkout');

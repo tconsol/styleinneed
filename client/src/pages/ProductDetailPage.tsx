@@ -19,6 +19,8 @@ import { useCartStore } from '../stores/cartStore';
 import { useWishlistStore } from '../stores/wishlistStore';
 import { useCurrencyStore } from '../stores/currencyStore';
 import { usePromotionStore, promoFor } from '../stores/promotionStore';
+import { useRecentlyViewedStore } from '../stores/recentlyViewedStore';
+import RecentlyViewed from '../components/common/RecentlyViewed';
 import toast from 'react-hot-toast';
 
 export default function ProductDetailPage() {
@@ -97,6 +99,10 @@ export default function ProductDetailPage() {
     }
   }, [product?._id]);
 
+  // Remember this product for the "Recently Viewed" strip.
+  const addRecentlyViewed = useRecentlyViewedStore((s) => s.add);
+  useEffect(() => { if (product) addRecentlyViewed(product); }, [product?._id, addRecentlyViewed]);
+
   // Per-product SEO + Product structured data. Runs before the early returns
   // below so hook order stays stable while the product loads.
   useSeo({
@@ -155,9 +161,9 @@ export default function ProductDetailPage() {
   };
 
   const handleAddToCart = async () => {
-    if (!isAuthenticated) { navigate('/auth/login'); return; }
+    // Guests can fill a cart and check out — no login gate here.
     if (!selectedVariant) { toast.error('Please select a variant'); return; }
-    await addItem(product._id, selectedVariant.sku, qty);
+    await addItem(product._id, selectedVariant.sku, qty, product);
   };
 
   const inCartQty = cartItem?.quantity ?? 0;
@@ -612,6 +618,8 @@ export default function ProductDetailPage() {
           viewAllHref={`/products?category=${product.category?.slug}`}
         />
       )}
+
+      <RecentlyViewed excludeId={product._id} />
     </div>
   );
 }

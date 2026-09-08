@@ -10,6 +10,7 @@ import { useUiStore } from '../../stores/uiStore';
 import { useCategories, useCollections, useProductTypes } from '../../hooks/useCatalog';
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 import AnnouncementBar from '../common/AnnouncementBar';
+import SearchSuggestions from '../common/SearchSuggestions';
 
 interface NavSub { label: string; href: string }
 interface NavItem { label: string; href: string; sub?: NavSub[]; badge?: string }
@@ -68,6 +69,13 @@ export default function Header({ isCheckout = false }: { isCheckout?: boolean })
   useEffect(() => {
     if (isSearchOpen) setTimeout(() => searchRef.current?.focus(), 100);
   }, [isSearchOpen]);
+
+  // Shared by the suggestion dropdown: navigate, then reset the search UI.
+  const goTo = (href: string) => {
+    navigate(href);
+    closeSearch();
+    setSearchQuery('');
+  };
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -287,6 +295,7 @@ export default function Header({ isCheckout = false }: { isCheckout?: boolean })
                   <X size={20} />
                 </button>
               </div>
+              <SearchSuggestions query={searchQuery} onPick={goTo} />
             </motion.form>
           </motion.div>
         )}

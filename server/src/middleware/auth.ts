@@ -28,6 +28,28 @@ export const protect = async (req: AuthRequest, res: Response, next: NextFunctio
   }
 };
 
+/**
+ * Populates `req.user` when a valid token is present, but lets the request
+ * through when it isn't. Used by the checkout routes, which serve both
+ * signed-in shoppers and guests. An invalid/expired token is treated as "no
+ * user" rather than an error so a stale token can't block a guest purchase.
+ */
+export const optionalAuth = async (req: AuthRequest, _res: Response, next: NextFunction): Promise<void> => {
+  const token = req.headers.authorization?.startsWith('Bearer ')
+    ? req.headers.authorization.split(' ')[1]
+    : undefined;
+  if (!token) { next(); return; }
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as JwtPayload;
+    const user = await User.findById(decoded.userId).select('-password -refreshTokens -otp -otpExpiry');
+    if (user && user.isActive) req.user = user;
+  } catch {
+    /* fall through as a guest */
+  }
+  next();
+};
+
 export const restrictTo = (...roles: UserRole[]) =>
   (req: AuthRequest, res: Response, next: NextFunction): void => {
     if (!req.user || !roles.includes(req.user.role)) {

@@ -33,6 +33,7 @@ const ResetPasswordPage = lazy(() => import('./pages/auth/ResetPasswordPage'));
 const OrderTrackingPage = lazy(() => import('./pages/OrderTrackingPage'));
 const PaymentReturnPage = lazy(() => import('./pages/PaymentReturnPage'));
 const UnsubscribePage = lazy(() => import('./pages/UnsubscribePage'));
+const GuestOrderPage = lazy(() => import('./pages/GuestOrderPage'));
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 60_000, retry: 1 } },
@@ -68,22 +69,21 @@ export default function App() {
               <Route path="/cms/:key" element={<CmsPage />} />
               <Route path="/blogs" element={<BlogListPage />} />
               <Route path="/blogs/:slug" element={<BlogDetailPage />} />
-              <Route
-                path="/checkout"
-                element={<ProtectedRoute><CheckoutPage /></ProtectedRoute>}
-              />
+              {/* Open to guests — the page collects an email + address instead
+                  of requiring an account. */}
+              <Route path="/checkout" element={<CheckoutPage />} />
               <Route
                 path="/orders"
                 element={<ProtectedRoute><OrdersPage /></ProtectedRoute>}
               />
+              {/* Token-scoped guest order view — no session required. */}
+              <Route path="/orders/guest/:id" element={<GuestOrderPage />} />
               <Route
                 path="/orders/:id"
                 element={<ProtectedRoute><OrderTrackingPage /></ProtectedRoute>}
               />
-              <Route
-                path="/payment-return"
-                element={<ProtectedRoute><PaymentReturnPage /></ProtectedRoute>}
-              />
+              {/* Guests come back here from the gateway, so it can't be gated. */}
+              <Route path="/payment-return" element={<PaymentReturnPage />} />
               <Route
                 path="/account"
                 element={<ProtectedRoute><AccountPage /></ProtectedRoute>}

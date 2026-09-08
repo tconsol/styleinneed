@@ -1,6 +1,8 @@
 import { Response, NextFunction } from 'express';
+import crypto from 'crypto';
 import Order from '../models/Order';
-import Cart from '../models/Cart';
+import User from '../models/User';
+import Cart, { ICart } from '../models/Cart';
 import Product from '../models/Product';
 import Coupon from '../models/Coupon';
 import PaymentSession, { IPaymentSession } from '../models/PaymentSession';
@@ -17,7 +19,7 @@ import { checkLowStock } from '../services/stockAlert.service';
 import { primaryClientUrl } from '../middleware/security';
 import { computeOrderPricing, regionOf, PricedLine } from '../utils/pricing';
 import logger from '../utils/logger';
-import { IOrder } from '../types';
+import { IOrder, IUser, IAddress } from '../types';
 
 const pushStatus = (order: IOrder, status: IOrder['status'], note?: string): void => {
   order.status = status;
@@ -43,26 +45,100 @@ export const getPaymentConfig = async (_req: AuthRequest, res: Response): Promis
 };
 
 /**
- * Validate cart + address + coupon and compute currency-correct pricing.
+ * Find-or-create the account a guest checkout belongs to.
+ *
+ * Orders always hang off a User, so a guest gets a lightweight one keyed by
+ * their email. If that email already has an account (guest or registered) the
+ * order joins it — but nothing about that account is ever returned to the
+ * caller, and no session is issued, so this can't be used to probe or take
+ * over a registered account.
+ */
+const resolveGuestUser = async (
+  email: string,
+  name: string,
+  phone?: string
+): Promise<IUser> => {
+  const normalised = email.toLowerCase().trim();
+  const existing = await User.findOne({ email: normalised });
+  if (existing) return existing;
+
+  return User.create({
+    name: name || normalised.split('@')[0],
+    email: normalised,
+    phone,
+    // Unusable random password — a guest signs in only after a real reset.
+    password: crypto.randomBytes(24).toString('hex'),
+    role: 'customer',
+    isGuest: true,
+    isEmailVerified: false,
+  });
+};
+
+/** The parties + items a checkout is being built for. */
+interface CheckoutActor {
+  user: IUser;
+  address: IAddress;
+  /** Cart doc to clear on success — guests have none. */
+  cart?: ICart;
+  isGuest: boolean;
+}
+
+/**
+ * Work out who is checking out and with what.
+ * - Signed in: address from their saved list, items from their server cart.
+ * - Guest: address + items come from the request body (there is no server cart).
+ * Returns null after sending an error.
+ */
+const resolveActor = async (req: AuthRequest, res: Response): Promise<CheckoutActor | null> => {
+  if (req.user) {
+    const address = req.user.addresses.find((a) => a._id?.toString() === req.body.addressId);
+    if (!address) { sendError(res, 'Address not found', 404); return null; }
+    const cart = await Cart.findOne({ user: req.user._id });
+    if (!cart || !cart.items.length) { sendError(res, 'Cart is empty', 400); return null; }
+    return { user: req.user, address, cart, isGuest: false };
+  }
+
+  // ── Guest ──
+  const { email, address } = req.body as { email?: string; address?: IAddress };
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    sendError(res, 'A valid email is required to check out as a guest', 400); return null;
+  }
+  if (!address?.fullName || !address?.phone || !address?.line1 || !address?.city || !address?.state || !address?.pincode) {
+    sendError(res, 'A complete shipping address is required', 400); return null;
+  }
+  const user = await resolveGuestUser(email, address.fullName, address.phone);
+  return { user, address: { ...address, email }, isGuest: true };
+};
+
+/**
+ * Validate items + address + coupon and compute currency-correct pricing.
  * Shared by createOrder (COD + online). Returns null after sending an error.
  */
-const buildPricing = async (req: AuthRequest, res: Response, couponCode?: string) => {
-  const user = req.user!;
-  const { addressId } = req.body;
-  const address = user.addresses.find((a) => a._id?.toString() === addressId);
-  if (!address) { sendError(res, 'Address not found', 404); return null; }
+const buildPricing = async (
+  req: AuthRequest,
+  res: Response,
+  actor: CheckoutActor,
+  couponCode?: string
+) => {
+  const { user, address, cart } = actor;
 
-  const cart = await Cart.findOne({ user: user._id });
-  if (!cart || !cart.items.length) { sendError(res, 'Cart is empty', 400); return null; }
+  // Signed-in shoppers check out their server cart; guests post the items.
+  const requested: { product: string; variantSku: string; quantity: number }[] = cart
+    ? cart.items.map((i) => ({ product: String(i.product), variantSku: i.variantSku, quantity: i.quantity }))
+    : ((req.body.items || []) as { productId?: string; product?: string; variantSku: string; quantity: number }[])
+        .map((i) => ({ product: String(i.productId || i.product), variantSku: i.variantSku, quantity: Number(i.quantity) || 0 }));
+
+  if (requested.length === 0) { sendError(res, 'Cart is empty', 400); return null; }
 
   const lines: PricedLine[] = [];
-  const stale: typeof cart.items = [];
-  for (const item of cart.items) {
-    const product = await Product.findById(item.product);
+  const staleSkus: string[] = [];
+  for (const item of requested) {
+    if (item.quantity < 1) continue;
+    const product = await Product.findById(item.product).catch(() => null);
     const variant = product?.variants.find((v) => v.sku === item.variantSku);
-    // Product deleted/inactive, or its variant no longer exists → drop it from the
-    // cart instead of blocking the whole checkout.
-    if (!product || !product.isActive || !variant) { stale.push(item); continue; }
+    // Product deleted/inactive, or its variant no longer exists → drop it
+    // instead of blocking the whole checkout.
+    if (!product || !product.isActive || !variant) { staleSkus.push(item.variantSku); continue; }
     if (variant.stock < item.quantity) {
       sendError(res, `Insufficient stock for ${product.name}`, 400);
       return null;
@@ -70,9 +146,9 @@ const buildPricing = async (req: AuthRequest, res: Response, couponCode?: string
     lines.push({ product, variantSku: item.variantSku, quantity: item.quantity });
   }
 
-  // Self-heal: persist the cart without the dead items.
-  if (stale.length) {
-    cart.items = cart.items.filter((i) => !stale.includes(i));
+  // Self-heal: persist the signed-in cart without the dead items.
+  if (staleSkus.length && cart) {
+    cart.items = cart.items.filter((i) => !staleSkus.includes(i.variantSku));
     await cart.save();
   }
   if (lines.length === 0) {
@@ -117,6 +193,8 @@ const fulfillOrder = async (
     razorpayOrderId?: string;
     razorpayPaymentId?: string;
     stripePaymentIntentId?: string;
+    isGuestOrder?: boolean;
+    guestToken?: string;
   }
 ): Promise<IOrder> => {
   const user = data.user!;
@@ -135,6 +213,8 @@ const fulfillOrder = async (
     razorpayOrderId: data.razorpayOrderId,
     razorpayPaymentId: data.razorpayPaymentId,
     stripePaymentIntentId: data.stripePaymentIntentId,
+    isGuestOrder: !!data.isGuestOrder,
+    guestToken: data.guestToken,
   });
 
   pushStatus(order, 'confirmed', data.paymentMethod === 'cod' ? 'Order placed (Cash on Delivery)' : 'Payment received, order confirmed');
@@ -194,15 +274,23 @@ const fulfillOrder = async (
 export const createOrder = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { paymentMethod, couponCode } = req.body;
-    const built = await buildPricing(req, res, couponCode);
+    const actor = await resolveActor(req, res);
+    if (!actor) return;
+    const built = await buildPricing(req, res, actor, couponCode);
     if (!built) return;
     const { pricing, address, coupon } = built;
-    const user = req.user!;
+    const { user, isGuest } = actor;
 
     if (paymentMethod === 'cod') {
       if (pricing.region !== 'IN') { sendError(res, 'Cash on Delivery is available for India only', 400); return; }
-      const order = await fulfillOrder({ user, pricing, address, coupon, paymentMethod: 'cod', paymentStatus: 'pending' });
-      sendSuccess(res, 'COD Order placed', { orderId: order._id, orderNumber: order.orderId }, 201);
+      const guestToken = isGuest ? crypto.randomBytes(24).toString('hex') : undefined;
+      const order = await fulfillOrder({
+        user, pricing, address, coupon, paymentMethod: 'cod', paymentStatus: 'pending',
+        isGuestOrder: isGuest, guestToken,
+      });
+      sendSuccess(res, 'COD Order placed', {
+        orderId: order._id, orderNumber: order.orderId, guestToken,
+      }, 201);
       return;
     }
 
@@ -212,6 +300,10 @@ export const createOrder = async (req: AuthRequest, res: Response, next: NextFun
     if (paymentMethod !== 'razorpay' && paymentMethod !== 'stripe') {
       sendError(res, 'Unsupported payment method', 400); return;
     }
+
+    // Guests get an unguessable token; without it a session id (a sequential-ish
+    // ObjectId) would be enough to consume someone else's checkout.
+    const sessionToken = isGuest ? crypto.randomBytes(24).toString('hex') : undefined;
 
     const session = await PaymentSession.create({
       user: user._id,
@@ -225,6 +317,8 @@ export const createOrder = async (req: AuthRequest, res: Response, next: NextFun
       coupon: (coupon as { _id?: unknown })?._id,
       paymentMethod,
       provider: paymentMethod,
+      isGuest,
+      guestToken: sessionToken,
     });
 
     const clientUrl = primaryClientUrl();
@@ -244,7 +338,7 @@ export const createOrder = async (req: AuthRequest, res: Response, next: NextFun
         await session.save();
         sendSuccess(res, 'Payment session created', {
           sessionId: session._id, provider: 'stripe', url: checkout.url,
-          amount: pricing.total, currency: pricing.currency,
+          amount: pricing.total, currency: pricing.currency, sessionToken,
         }, 201);
       } else {
         const link = await createRazorpayPaymentLink(
@@ -256,7 +350,7 @@ export const createOrder = async (req: AuthRequest, res: Response, next: NextFun
         await session.save();
         sendSuccess(res, 'Payment session created', {
           sessionId: session._id, provider: 'razorpay', url: link.short_url,
-          amount: pricing.total, currency: pricing.currency,
+          amount: pricing.total, currency: pricing.currency, sessionToken,
         }, 201);
       }
     } catch (gwErr) {
@@ -270,12 +364,17 @@ export const createOrder = async (req: AuthRequest, res: Response, next: NextFun
 };
 
 /** Turn a paid session into a real Order (idempotent). */
-const confirmPaidSession = async (session: IPaymentSession, user: AuthRequest['user'], paymentRef?: string): Promise<IOrder> => {
+const confirmPaidSession = async (session: IPaymentSession, paymentRef?: string): Promise<IOrder> => {
   if (session.status === 'consumed' && session.order) {
     return (await Order.findById(session.order)) as IOrder;
   }
+  // The session records who it belongs to — for a guest that's the
+  // auto-provisioned account, so this works with or without a login.
+  const user = await User.findById(session.user);
   const order = await fulfillOrder({
-    user,
+    user: user || undefined,
+    isGuestOrder: session.isGuest,
+    guestToken: session.isGuest ? session.guestToken : undefined,
     pricing: {
       region: regionOf(session.shippingAddress.country),
       currency: session.currency,
@@ -299,12 +398,40 @@ const confirmPaidSession = async (session: IPaymentSession, user: AuthRequest['u
   return order;
 };
 
+/**
+ * Load the payment session a verify call refers to.
+ *
+ * Signed in: the session must belong to them. Guest: the session must be a
+ * guest session AND the caller must present its token — a session id alone is
+ * an ObjectId, which is not unguessable enough to authorise consuming a
+ * checkout. Returns null after sending an error.
+ */
+const loadSessionForVerify = async (
+  req: AuthRequest,
+  res: Response
+): Promise<IPaymentSession | null> => {
+  const { sessionId, sessionToken } = req.body as { sessionId?: string; sessionToken?: string };
+  if (!sessionId) { sendError(res, 'sessionId is required', 400); return null; }
+
+  if (req.user) {
+    const owned = await PaymentSession.findOne({ _id: sessionId, user: req.user._id });
+    if (owned) return owned;
+    // Fall through: a guest may have started this checkout before signing in.
+  }
+
+  if (!sessionToken) { sendError(res, 'Payment session not found or expired', 404); return null; }
+  const session = await PaymentSession.findOne({ _id: sessionId, isGuest: true }).select('+guestToken');
+  if (!session || !session.guestToken || session.guestToken !== sessionToken) {
+    sendError(res, 'Payment session not found or expired', 404); return null;
+  }
+  return session;
+};
+
 /** Verify a Razorpay Payment Link, then create the order from the session. */
 export const verifyPayment = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { sessionId } = req.body;
-    const session = await PaymentSession.findOne({ _id: sessionId, user: req.user!._id });
-    if (!session) { sendError(res, 'Payment session not found or expired', 404); return; }
+    const session = await loadSessionForVerify(req, res);
+    if (!session) return;
     if (session.status === 'consumed' && session.order) {
       const existing = await Order.findById(session.order);
       sendSuccess(res, 'Order already confirmed', { orderId: existing?._id, orderNumber: existing?.orderId });
@@ -320,7 +447,7 @@ export const verifyPayment = async (req: AuthRequest, res: Response, next: NextF
     if (link.status !== 'paid') { sendError(res, `Payment not completed (status: ${link.status})`, 400); return; }
 
     const payments = (link.payments as unknown as Array<{ payment_id: string }> | undefined) ?? [];
-    const order = await confirmPaidSession(session, req.user!, payments[0]?.payment_id);
+    const order = await confirmPaidSession(session, payments[0]?.payment_id);
     sendSuccess(res, 'Payment verified. Order confirmed.', { orderId: order._id, orderNumber: order.orderId });
   } catch (err) {
     next(err);
@@ -330,9 +457,8 @@ export const verifyPayment = async (req: AuthRequest, res: Response, next: NextF
 /** Verify a Stripe Checkout Session, then create the order from the session. */
 export const verifyStripePayment = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { sessionId } = req.body;
-    const session = await PaymentSession.findOne({ _id: sessionId, user: req.user!._id });
-    if (!session) { sendError(res, 'Payment session not found or expired', 404); return; }
+    const session = await loadSessionForVerify(req, res);
+    if (!session) return;
     if (session.status === 'consumed' && session.order) {
       const existing = await Order.findById(session.order);
       sendSuccess(res, 'Order already confirmed', { orderId: existing?._id, orderNumber: existing?.orderId });
@@ -347,8 +473,34 @@ export const verifyStripePayment = async (req: AuthRequest, res: Response, next:
     }
     if (checkout.payment_status !== 'paid') { sendError(res, `Payment not completed (status: ${checkout.payment_status})`, 400); return; }
 
-    const order = await confirmPaidSession(session, req.user!, String(checkout.payment_intent || ''));
+    const order = await confirmPaidSession(session, String(checkout.payment_intent || ''));
     sendSuccess(res, 'Payment verified. Order confirmed.', { orderId: order._id, orderNumber: order.orderId });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * Let a guest open the order they just placed, using the token issued at
+ * checkout (also included in their confirmation email link). Matching on the
+ * token — not just the id — keeps orders from being enumerable.
+ */
+export const getGuestOrder = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const token = String(req.query.token || '');
+    if (!token) { sendError(res, 'Order not found', 404); return; }
+
+    const order = await Order.findOne({ _id: req.params.id, isGuestOrder: true })
+      .select('+guestToken')
+      .populate('items.product', 'name slug images salePrice mrp');
+
+    if (!order || !order.guestToken || order.guestToken !== token) {
+      sendError(res, 'Order not found', 404); return;
+    }
+
+    const plain = order.toObject();
+    delete (plain as { guestToken?: string }).guestToken;
+    sendSuccess(res, 'Order fetched', plain);
   } catch (err) {
     next(err);
   }

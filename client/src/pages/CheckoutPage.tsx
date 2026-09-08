@@ -25,7 +25,7 @@ export default function CheckoutPage() {
   useSeo({ title: 'Checkout', noIndex: true });
 
   const navigate = useNavigate();
-  const { user, fetchMe } = useAuthStore();
+  const { user, isAuthenticated, fetchMe } = useAuthStore();
   const { items, couponCode, couponDiscount, setCoupon, clearCoupon, clearCart } = useCartStore();
   const subtotal = useCartStore(selectSubtotal); // INR
   const rate = useCurrencyStore((s) => s.rate);
@@ -43,7 +43,10 @@ export default function CheckoutPage() {
 
   // Inline add-address form (no need to leave checkout).
   const emptyAddr = { label: 'Home', fullName: '', phone: '', email: '', line1: '', line2: '', city: '', state: '', pincode: '', country: 'India', isDefault: false };
-  const [showAddrForm, setShowAddrForm] = useState(false);
+  const [showAddrForm, setShowAddrForm] = useState(!useAuthStore.getState().isAuthenticated);
+  // Guests type their address straight into the form and give an email for the
+  // order confirmation — there is no saved-address list to pick from.
+  const [guestEmail, setGuestEmail] = useState('');
   const [addrForm, setAddrForm] = useState(emptyAddr);
   const [savingAddr, setSavingAddr] = useState(false);
 
@@ -62,8 +65,11 @@ export default function CheckoutPage() {
     } catch { /* interceptor toasts */ } finally { setSavingAddr(false); }
   };
 
-  // Currency + region follow the SELECTED ADDRESS (this is what the server charges).
-  const addr = user?.addresses.find((a) => a._id === selectedAddress);
+  // Currency + region follow the address the order will actually ship to —
+  // the saved one for members, the in-progress form for guests.
+  const addr = isAuthenticated
+    ? user?.addresses.find((a) => a._id === selectedAddress)
+    : (addrForm.line1 ? addrForm : undefined);
   const region = regionOf(addr?.country);
   const currency: 'INR' | 'USD' = region === 'IN' ? 'INR' : 'USD';
   const isUSA = currency === 'USD';
@@ -87,7 +93,7 @@ export default function CheckoutPage() {
     shippingApi.quote(addr.country || 'India', addr.state || '', subtotal)
       .then(({ data }) => setShipping(data.data))
       .catch(() => setShipping(null));
-  }, [addr?._id, addr?.country, addr?.state, subtotal]);
+  }, [addr?.country, addr?.state, addr?.pincode, subtotal]);
 
   // Default payment method to the one valid for this address's currency.
   useEffect(() => {
@@ -122,28 +128,50 @@ export default function CheckoutPage() {
   };
 
   const handlePlaceOrder = async () => {
-    if (!selectedAddress) { toast.error('Please select a delivery address'); return; }
     if (items.length === 0) { toast.error('Your cart is empty'); return; }
     if (!paymentMethod) { toast.error('Select a payment method'); return; }
 
+    if (isAuthenticated) {
+      if (!selectedAddress) { toast.error('Please select a delivery address'); return; }
+    } else {
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(guestEmail)) { toast.error('Enter a valid email for your order confirmation'); return; }
+      const need = ['fullName', 'phone', 'line1', 'city', 'state', 'pincode'] as const;
+      if (need.some((k) => !addrForm[k]?.trim())) { toast.error('Fill in your complete delivery address'); return; }
+    }
+
     setPlacing(true);
     try {
-      const { data } = await orderApi.createOrder({
-        addressId: selectedAddress,
-        paymentMethod,
-        couponCode: couponCode || undefined,
-      });
+      // Members check out their server cart by address id; guests send their
+      // email, address and the items they built up locally.
+      const payload = isAuthenticated
+        ? { addressId: selectedAddress, paymentMethod, couponCode: couponCode || undefined }
+        : {
+            email: guestEmail.trim(),
+            address: addrForm,
+            items: items.map((i) => ({ productId: i.product._id, variantSku: i.variantSku, quantity: i.quantity })),
+            paymentMethod,
+            couponCode: couponCode || undefined,
+          };
+      const { data } = await orderApi.createOrder(payload);
 
       if (paymentMethod === 'cod') {
         await clearCart();
         toast.success('Order placed successfully!');
-        navigate(`/orders/${data.data.orderId}`);
+        navigate(
+          isAuthenticated
+            ? `/orders/${data.data.orderId}`
+            : `/orders/guest/${data.data.orderId}?token=${encodeURIComponent(data.data.guestToken || '')}`
+        );
         return;
       }
 
       // Online → hosted gateway. Stash the SESSION so the return page can verify.
       if (data.data.url && data.data.sessionId) {
-        localStorage.setItem('pendingPayment', JSON.stringify({ sessionId: data.data.sessionId, provider: data.data.provider }));
+        localStorage.setItem('pendingPayment', JSON.stringify({
+          sessionId: data.data.sessionId,
+          provider: data.data.provider,
+          sessionToken: data.data.sessionToken, // guests only — proves session ownership
+        }));
         window.location.href = data.data.url;
         return;
       }
@@ -165,14 +193,41 @@ export default function CheckoutPage() {
             <section className="bg-white border border-brand-border p-6">
               <div className="flex items-center justify-between mb-5">
                 <h2 className="font-heading text-lg font-semibold">Delivery Address</h2>
-                {(user?.addresses.length ?? 0) > 0 && (
+                {isAuthenticated && (user?.addresses.length ?? 0) > 0 && (
                   <button onClick={() => setShowAddrForm((s) => !s)} className="inline-flex items-center gap-1.5 font-body text-xs font-semibold text-primary hover:text-primary-dark transition-colors">
                     {showAddrForm ? <><X size={14} /> Cancel</> : <><Plus size={14} /> Add New</>}
                   </button>
                 )}
               </div>
 
-              {user?.addresses.length === 0 && !showAddrForm ? (
+              {/* Guests: contact email + a link to sign in instead. */}
+              {!isAuthenticated && (
+                <div className="mb-5">
+                  <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-lg bg-brand-bg px-4 py-3">
+                    <p className="font-body text-sm text-brand-muted">Checking out as a guest</p>
+                    <button
+                      type="button"
+                      onClick={() => navigate('/auth/login', { state: { from: '/checkout' } })}
+                      className="font-body text-xs font-semibold text-primary hover:text-primary-dark"
+                    >
+                      Sign in instead
+                    </button>
+                  </div>
+                  <label className="font-body text-xs font-semibold text-brand-text">Email address *</label>
+                  <input
+                    type="email"
+                    value={guestEmail}
+                    onChange={(e) => setGuestEmail(e.target.value)}
+                    placeholder="you@example.com"
+                    className="mt-1.5 w-full border border-brand-border bg-white px-3 py-2.5 font-body text-sm outline-none transition-colors focus:border-primary"
+                  />
+                  <p className="mt-1 font-body text-[11px] text-brand-muted">
+                    We&rsquo;ll send your order confirmation and tracking link here.
+                  </p>
+                </div>
+              )}
+
+              {isAuthenticated && user?.addresses.length === 0 && !showAddrForm ? (
                 <div className="text-center py-6">
                   <p className="font-body text-sm text-brand-muted mb-3">No saved addresses</p>
                   <button onClick={() => setShowAddrForm(true)} className="btn-outline text-sm">
@@ -204,7 +259,7 @@ export default function CheckoutPage() {
 
               {/* Inline add-address form */}
               {showAddrForm && (
-                <form onSubmit={saveAddress} className="mt-4 border-2 border-primary/30 rounded-xl p-4 space-y-3">
+                <form onSubmit={isAuthenticated ? saveAddress : (e) => e.preventDefault()} className="mt-4 border-2 border-primary/30 rounded-xl p-4 space-y-3">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {([
                       { k: 'label', ph: 'Label (Home/Work)', col: 1 },
@@ -224,14 +279,18 @@ export default function CheckoutPage() {
                         className={`${col === 2 ? 'sm:col-span-2' : ''} w-full px-3.5 py-2.5 bg-brand-surface border border-brand-border rounded-lg text-brand-text text-sm outline-none focus:border-primary transition-colors placeholder:text-brand-muted/60`} />
                     ))}
                   </div>
-                  <label className="flex items-center gap-2.5 cursor-pointer select-none">
-                    <input type="checkbox" checked={addrForm.isDefault} onChange={(e) => setAddrForm({ ...addrForm, isDefault: e.target.checked })} className="w-4 h-4 accent-primary" />
-                    <span className="font-body text-sm text-brand-text">Set as default</span>
-                  </label>
-                  <div className="flex justify-end gap-2">
-                    <button type="button" onClick={() => setShowAddrForm(false)} className="btn-outline text-sm rounded-lg">Cancel</button>
-                    <button type="submit" disabled={savingAddr} className="btn-primary text-sm rounded-lg">{savingAddr ? 'Saving…' : 'Save Address'}</button>
-                  </div>
+                  {isAuthenticated && (
+                    <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                      <input type="checkbox" checked={addrForm.isDefault} onChange={(e) => setAddrForm({ ...addrForm, isDefault: e.target.checked })} className="w-4 h-4 accent-primary" />
+                      <span className="font-body text-sm text-brand-text">Set as default</span>
+                    </label>
+                  )}
+                  {isAuthenticated && (
+                    <div className="flex justify-end gap-2">
+                      <button type="button" onClick={() => setShowAddrForm(false)} className="btn-outline text-sm rounded-lg">Cancel</button>
+                      <button type="submit" disabled={savingAddr} className="btn-primary text-sm rounded-lg">{savingAddr ? 'Saving…' : 'Save Address'}</button>
+                    </div>
+                  )}
                 </form>
               )}
             </section>

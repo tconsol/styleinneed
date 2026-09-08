@@ -328,6 +328,38 @@ export const deleteProductImage = async (req: Request, res: Response, next: Next
   }
 };
 
+/**
+ * Type-ahead suggestions for the header search box.
+ *
+ * Uses a prefix regex rather than the text index: a text index only matches
+ * whole words, so "sar" wouldn't find "saree" while the user is still typing.
+ * The query is escaped before being embedded in the regex.
+ */
+export const suggestProducts = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const q = String(req.query.q || '').trim();
+    if (q.length < 2) { sendSuccess(res, 'Suggestions', { products: [], categories: [] }); return; }
+
+    const safe = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const rx = new RegExp(safe, 'i');
+
+    const [products, categories] = await Promise.all([
+      Product.find({ isActive: true, name: rx })
+        .select('name slug images salePrice usdSalePrice mrp category')
+        .populate('category', 'name slug')
+        .sort('-ratings.count')
+        .limit(6)
+        .lean(),
+      Category.find({ isActive: true, name: rx }).select('name slug').limit(4).lean(),
+    ]);
+
+    res.setHeader('Cache-Control', 'public, max-age=60');
+    sendSuccess(res, 'Suggestions', { products, categories });
+  } catch (err) {
+    next(err);
+  }
+};
+
 export const searchProducts = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { q, page, limit } = req.query as Record<string, string>;

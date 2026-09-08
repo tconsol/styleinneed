@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { Heart, ShoppingBag, Star } from 'lucide-react';
 import type { Product } from '../../types';
 import { useMoney } from '../../hooks/useMoney';
@@ -15,7 +15,6 @@ interface Props {
 export default function ProductCard({ product }: Props) {
   const [imgIdx, setImgIdx] = useState(0);
   const [imgLoaded, setImgLoaded] = useState(false);
-  const navigate = useNavigate();
   const { isAuthenticated } = useAuthStore();
   const { addItem } = useCartStore();
   const { toggle, isWishlisted } = useWishlistStore();
@@ -29,12 +28,9 @@ export default function ProductCard({ product }: Props) {
 
   const handleAddToCart = async (e: React.MouseEvent) => {
     e.preventDefault();
-    if (!isAuthenticated) {
-      navigate('/auth/login', { state: { from: window.location.pathname } });
-      return;
-    }
+    // Guests can add to cart; only the wishlist needs an account.
     if (!defaultVariant) return;
-    await addItem(product._id, defaultVariant.sku);
+    await addItem(product._id, defaultVariant.sku, 1, product);
   };
 
   const handleWishlist = async (e: React.MouseEvent) => {

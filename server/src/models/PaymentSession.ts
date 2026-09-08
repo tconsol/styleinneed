@@ -19,6 +19,8 @@ export interface IPaymentSession extends Document {
   provider: 'razorpay' | 'stripe';
   razorpayLinkId?: string;
   stripeSessionId?: string;
+  isGuest: boolean;
+  guestToken?: string; // required to consume a guest session (ids are guessable)
   status: 'pending' | 'consumed';
   order?: Types.ObjectId; // set once consumed
   expiresAt: Date;
@@ -71,6 +73,8 @@ const paymentSessionSchema = new Schema<IPaymentSession>(
     provider: { type: String, enum: ['razorpay', 'stripe'], required: true },
     razorpayLinkId: String,
     stripeSessionId: String,
+    isGuest: { type: Boolean, default: false },
+    guestToken: { type: String, select: false },
     status: { type: String, enum: ['pending', 'consumed'], default: 'pending' },
     order: { type: Schema.Types.ObjectId, ref: 'Order' },
     // TTL: unpaid sessions auto-delete ~1h after creation.

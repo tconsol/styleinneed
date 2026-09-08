@@ -16,6 +16,9 @@ export const productApi = {
   searchProducts: (q: string, page = 1, limit = 20) =>
     client.get('/products/search', { params: { q, page, limit } }),
 
+  /** Type-ahead suggestions for the header search box. */
+  suggest: (q: string) => client.get('/products/suggest', { params: { q } }),
+
   getProductTypes: () => client.get('/catalog/product-types'),
 
   // filterableOnly=true → just the filter facets (used by the listing sidebar);

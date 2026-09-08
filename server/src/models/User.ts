@@ -34,6 +34,9 @@ const userSchema = new Schema<IUser>(
     // Extra admin-panel features granted to a provider login (feature keys from
     // config/providerFeatures.ts). Ignored for other roles — admins have all.
     permissions: { type: [String], default: [] },
+    // Auto-provisioned by guest checkout: holds the order history for an email
+    // that never registered. Flipped to false if they later sign up.
+    isGuest: { type: Boolean, default: false },
     role: {
       type: String,
       enum: ['customer', 'admin', 'provider'],

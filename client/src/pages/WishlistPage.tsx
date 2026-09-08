@@ -22,7 +22,7 @@ export default function WishlistPage() {
     if (!isAuthenticated) { navigate('/auth/login', { state: { from: '/wishlist' } }); return; }
     const variant = p.variants?.find((v) => v.stock > 0) || p.variants?.[0];
     if (!variant) { toast.error('Out of stock'); return; }
-    await addItem(p._id, variant.sku);
+    await addItem(p._id, variant.sku, 1, p);
     openCart();
   };
 

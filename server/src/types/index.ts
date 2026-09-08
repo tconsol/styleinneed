@@ -10,6 +10,7 @@ export interface IUser extends Document {
   plainPassword?: string;
   providerRef?: Types.ObjectId;
   permissions: string[]; // granted admin features (provider logins only)
+  isGuest: boolean;      // created by guest checkout, never signed up
   role: 'customer' | 'admin' | 'provider';
   isEmailVerified: boolean;
   isActive: boolean;
@@ -121,6 +122,8 @@ export interface IOrder extends Document {
   razorpayOrderId?: string;
   razorpayPaymentId?: string;
   stripePaymentIntentId?: string;
+  isGuestOrder: boolean;
+  guestToken?: string;   // unguessable handle so a guest can view their own order
   status: 'pending' | 'confirmed' | 'packed' | 'shipped' | 'delivered' | 'returned' | 'cancelled';
   statusHistory: { status: string; note?: string; at: Date }[];
   shiprocketOrderId?: string;

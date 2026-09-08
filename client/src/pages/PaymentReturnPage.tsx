@@ -31,24 +31,30 @@ export default function PaymentReturnPage() {
       // Provider + session stashed before the redirect.
       let provider: 'razorpay' | 'stripe' = 'razorpay';
       let sid = sessionId;
+      let sessionToken: string | undefined; // guests only
       try {
         const pending = JSON.parse(localStorage.getItem('pendingPayment') || '{}');
         if (pending.provider) provider = pending.provider;
         if (!sid && pending.sessionId) sid = pending.sessionId;
+        if (pending.sessionToken) sessionToken = pending.sessionToken;
       } catch { /* ignore */ }
 
       if (!sid) { setState('failed'); return; }
 
       try {
         const { data } = provider === 'stripe'
-          ? await orderApi.verifyStripePayment({ sessionId: sid })
-          : await orderApi.verifyPayment({ sessionId: sid });
+          ? await orderApi.verifyStripePayment({ sessionId: sid, sessionToken })
+          : await orderApi.verifyPayment({ sessionId: sid, sessionToken });
         localStorage.removeItem('pendingPayment');
         await clearCart();
         setState('success');
         toast.success('Payment confirmed!');
         const orderId = data?.data?.orderId;
-        setTimeout(() => navigate(orderId ? `/orders/${orderId}` : '/orders'), 1200);
+        // A guest has no account order list — send them to the token-scoped view.
+        const dest = !orderId ? '/orders'
+          : sessionToken ? `/orders/guest/${orderId}?token=${encodeURIComponent(sessionToken)}`
+          : `/orders/${orderId}`;
+        setTimeout(() => navigate(dest), 1200);
       } catch {
         setState('failed');
       }
