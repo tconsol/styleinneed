@@ -103,9 +103,12 @@ export default function Header({ isCheckout = false }: { isCheckout?: boolean })
   const activeMega = NAV.find((n) => n.label === hoveredNav && n.mega);
 
   const isHome = location.pathname === '/';
-  // A transparent header can't stay transparent while the mega menu is open —
-  // the panel below it is solid, so the strip above would look detached.
-  const transparent = isHome && !scrolled && !hoveredNav;
+  const atTopOfHome = isHome && !scrolled;
+  // The mega menu is dark glass, so while it's open the header takes the same
+  // treatment — otherwise a light strip would sit on top of a dark panel.
+  const menuOpen = !!hoveredNav;
+  // True whenever the header sits on a dark backdrop and needs light text.
+  const transparent = atTopOfHome || menuOpen;
 
   // Keep --topbar-height in sync with the REAL header height (announcement bar
   // can wrap to 2 lines on small screens, making the fixed header taller than
@@ -131,9 +134,11 @@ export default function Header({ isCheckout = false }: { isCheckout?: boolean })
       <header
         onMouseLeave={() => setHoveredNav(null)}
         className={`relative transition-all duration-500 ${
-          transparent
-            ? 'bg-transparent'
-            : 'bg-brand-bg/95 backdrop-blur-md shadow-[0_1px_0_rgba(200,169,126,0.15)]'
+          menuOpen
+            ? 'bg-black/70 backdrop-blur-[80px] backdrop-saturate-150'
+            : atTopOfHome
+              ? 'bg-transparent'
+              : 'bg-brand-bg/95 backdrop-blur-md shadow-[0_1px_0_rgba(200,169,126,0.15)]'
         }`}
       >
         <div className="container-custom">
