@@ -20,6 +20,7 @@ import { primaryClientUrl } from '../middleware/security';
 import { computeOrderPricing, regionOf, PricedLine } from '../utils/pricing';
 import { getBalance, debit, refundToWallet, credit } from '../utils/wallet';
 import { rewardReferralOnFirstOrder } from '../utils/referrals';
+import { reserveStock, releaseStock, StockLine } from '../utils/stock';
 import logger from '../utils/logger';
 import { IOrder, IUser, IAddress } from '../types';
 
@@ -198,6 +199,8 @@ const fulfillOrder = async (
     isGuestOrder?: boolean;
     guestToken?: string;
     walletCreditUsed?: number;
+    /** True when stock was already taken at reservation time. */
+    stockReserved?: boolean;
   }
 ): Promise<IOrder> => {
   const user = data.user!;
@@ -223,16 +226,20 @@ const fulfillOrder = async (
 
   pushStatus(order, 'confirmed', data.paymentMethod === 'cod' ? 'Order placed (Cash on Delivery)' : 'Payment received, order confirmed');
 
+  // Online checkouts already took the stock when the payment session was
+  // created (see reserveStock) — decrementing again here would double-count.
   for (const item of order.items) {
-    await Product.updateOne(
-      { _id: item.product, 'variants.sku': item.variant.sku },
-      { $inc: { 'variants.$.stock': -item.quantity } }
-    );
-    emitEvent(SOCKET_EVENTS.stockUpdated, { productId: String(item.product), sku: item.variant.sku });
+    if (!data.stockReserved) {
+      await Product.updateOne(
+        { _id: item.product, 'variants.sku': item.variant.sku },
+        { $inc: { 'variants.$.stock': -item.quantity } }
+      );
+      emitEvent(SOCKET_EVENTS.stockUpdated, { productId: String(item.product), sku: item.variant.sku });
+    }
     // Best-effort admin alert; never blocks or fails the order.
     void checkLowStock(String(item.product), item.variant.sku, item.quantity);
   }
-  void invalidateCache('/api/v1/products');
+  if (!data.stockReserved) void invalidateCache('/api/v1/products');
 
   if (order.coupon) await Coupon.findByIdAndUpdate(order.coupon, { $inc: { usedCount: 1 } });
 
@@ -375,6 +382,24 @@ export const createOrder = async (req: AuthRequest, res: Response, next: NextFun
       return;
     }
 
+    // Hold the stock for the duration of the payment attempt. Without this two
+    // shoppers can both pass the availability check and both pay for the last
+    // unit, since the decrement would otherwise only happen after payment.
+    const stockLines: StockLine[] = pricing.items.map((i) => ({
+      product: String(i.product), variantSku: i.variant.sku, quantity: i.quantity,
+    }));
+    const reserved = await reserveStock(stockLines);
+    if (!reserved.ok) {
+      await releaseCredit();
+      sendError(res, 'Sorry — one of your items just sold out. Please review your cart.', 409);
+      return;
+    }
+    // Anything that fails from here on must put the stock back.
+    const releaseAll = async () => {
+      await releaseStock(stockLines);
+      await releaseCredit();
+    };
+
     // Guests get an unguessable token; without it a session id (a sequential-ish
     // ObjectId) would be enough to consume someone else's checkout.
     const sessionToken = isGuest ? crypto.randomBytes(24).toString('hex') : undefined;
@@ -430,7 +455,7 @@ export const createOrder = async (req: AuthRequest, res: Response, next: NextFun
       }
     } catch (gwErr) {
       await PaymentSession.deleteOne({ _id: session._id }).catch(() => {});
-      await releaseCredit();
+      await releaseAll();
       logger.error('Payment gateway error', gwErr);
       sendError(res, 'Could not start payment. The payment gateway is misconfigured or unavailable — please try again or contact support.', 502);
     }
@@ -447,11 +472,29 @@ const confirmPaidSession = async (session: IPaymentSession, paymentRef?: string)
   // The session records who it belongs to — for a guest that's the
   // auto-provisioned account, so this works with or without a login.
   const user = await User.findById(session.user);
+
+  // A payment that lands just after the abandonment sweep ran: its stock and
+  // credit holds have already been handed back. Re-apply them so a late but
+  // genuine payment still produces a correct order rather than free goods.
+  const holdsReleased = session.creditReleased;
+  if (holdsReleased && session.walletCreditUsed > 0) {
+    const settings = await getSettings();
+    const inr = session.currency === 'USD'
+      ? session.walletCreditUsed * (settings.usdExchangeRate || 83)
+      : session.walletCreditUsed;
+    const retaken = await debit(session.user, inr, 'spend', 'Applied to a late-confirmed order');
+    if (!retaken.ok) {
+      logger.warn(`Session ${session._id} confirmed after its credit was released and re-spent; order total was already discounted.`);
+    }
+  }
   const order = await fulfillOrder({
     user: user || undefined,
     isGuestOrder: session.isGuest,
     guestToken: session.isGuest ? session.guestToken : undefined,
     walletCreditUsed: session.walletCreditUsed || 0,
+    // If the sweep already gave the stock back, let fulfilment decrement it
+    // again so the count nets out correctly.
+    stockReserved: !holdsReleased,
     pricing: {
       region: regionOf(session.shippingAddress.country),
       currency: session.currency,

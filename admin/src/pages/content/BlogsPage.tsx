@@ -1,14 +1,16 @@
 ﻿import { useEffect, useState } from 'react';
-import { Plus, Edit2, Trash2, FileText, Eye } from 'lucide-react';
+import { Plus, Edit2, Trash2, FileText, Eye, Upload, ImageIcon, X } from 'lucide-react';
 import Modal from '../../components/common/Modal';
 import Select from '../../components/common/Select';
-import { blogApi } from '../../api';
+import { blogApi, cmsApi } from '../../api';
+import ImageSpecHint from '../../components/common/ImageSpecHint';
+import { IMAGE_SPECS, checkRatio, readImageSize, type RatioCheck } from '../../config/imageSpecs';
 import type { Blog } from '../../types';
 import { formatDate } from '../../utils/format';
 import toast from 'react-hot-toast';
 
 const CATEGORIES = ['Style Guide', 'Festival Fashion', 'Fashion Education', 'Wedding Fashion', 'How-To', 'Trend Report'];
-const empty = { title: '', excerpt: '', content: '', category: 'Style Guide', tags: '', isPublished: false };
+const empty = { title: '', excerpt: '', content: '', category: 'Style Guide', tags: '', coverImage: '', isPublished: false };
 
 export default function BlogsPage() {
   const [blogs, setBlogs] = useState<Blog[]>([]);
@@ -17,6 +19,20 @@ export default function BlogsPage() {
   const [editing, setEditing] = useState<Blog | null>(null);
   const [form, setForm] = useState(empty);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [imgCheck, setImgCheck] = useState<RatioCheck | null>(null);
+
+  const uploadCover = async (files: FileList | null) => {
+    if (!files?.[0]) return;
+    const size = await readImageSize(files[0]);
+    setImgCheck(checkRatio(IMAGE_SPECS.blog, size.width, size.height));
+    setUploading(true);
+    try {
+      const fd = new FormData(); fd.append('image', files[0]);
+      const { data } = await cmsApi.uploadImage(fd);
+      setForm((f) => ({ ...f, coverImage: data.data.url }));
+    } catch { /* interceptor */ } finally { setUploading(false); }
+  };
 
   const load = async () => {
     setLoading(true);
@@ -26,7 +42,8 @@ export default function BlogsPage() {
 
   const openEdit = (b: Blog) => {
     setEditing(b);
-    setForm({ title: b.title, excerpt: b.excerpt, content: b.content, category: b.category, tags: b.tags?.join(', ') || '', isPublished: b.isPublished });
+    setForm({ title: b.title, excerpt: b.excerpt, content: b.content, category: b.category, tags: b.tags?.join(', ') || '', coverImage: b.coverImage || '', isPublished: b.isPublished });
+    setImgCheck(null);
     setModal(true);
   };
 
@@ -35,6 +52,7 @@ export default function BlogsPage() {
     const payload = { ...form, tags: form.tags.split(',').map((t) => t.trim()).filter(Boolean) };
     try {
       if (editing) { await blogApi.update(editing._id, payload); toast.success('Post updated'); }
+      else { await blogApi.create(payload); toast.success('Post created'); }
       setModal(false); load();
     } catch {} finally { setSaving(false); }
   };
@@ -47,7 +65,7 @@ export default function BlogsPage() {
             <h1 className="text-[15px] font-bold text-brand-text">Blog Posts</h1>
             <p className="text-[10px] text-brand-muted mt-0.5">{blogs.length} posts total</p>
           </div>
-          <button onClick={() => { setEditing(null); setForm(empty); setModal(true); }} className="btn-primary"><Plus size={14} /> New Post</button>
+          <button onClick={() => { setEditing(null); setForm(empty); setImgCheck(null); setModal(true); }} className="btn-primary"><Plus size={14} /> New Post</button>
         </div>
 
         <div className="bg-white rounded-2xl overflow-hidden" style={{ border: '1px solid var(--c-border)', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
@@ -123,6 +141,20 @@ export default function BlogsPage() {
           </div>
           <div><label className="input-label">Excerpt *</label><textarea value={form.excerpt} onChange={(e) => setForm({ ...form, excerpt: e.target.value })} rows={2} className="input-field resize-none" required /></div>
           <div><label className="input-label">Content (HTML) *</label><textarea value={form.content} onChange={(e) => setForm({ ...form, content: e.target.value })} rows={8} className="input-field resize-y font-mono text-xs" required /></div>
+          <div>
+            <label className="input-label">Cover Image *</label>
+            <div className="flex items-center gap-3">
+              <div className="w-32 h-20 rounded-lg overflow-hidden flex items-center justify-center flex-shrink-0" style={{ background: 'var(--c-bg)', border: '1px solid var(--c-border)' }}>
+                {form.coverImage ? <img src={form.coverImage} alt="" className="w-full h-full object-cover" /> : <ImageIcon size={20} className="text-brand-border" />}
+              </div>
+              <label className="btn-outline text-[12px] cursor-pointer">
+                <input type="file" accept="image/*" className="hidden" onChange={(e) => { uploadCover(e.target.files); e.currentTarget.value = ''; }} />
+                {uploading ? 'Uploading…' : <><Upload size={13} /> {form.coverImage ? 'Replace' : 'Upload'}</>}
+              </label>
+              {form.coverImage && <button type="button" onClick={() => { setForm({ ...form, coverImage: '' }); setImgCheck(null); }} className="text-brand-muted hover:text-red-500"><X size={16} /></button>}
+            </div>
+            <ImageSpecHint spec="blog" check={imgCheck} />
+          </div>
           <div><label className="input-label">Tags (comma separated)</label><input value={form.tags} onChange={(e) => setForm({ ...form, tags: e.target.value })} className="input-field" placeholder="fashion, saree, style" /></div>
           <label className="flex items-center gap-2 cursor-pointer select-none">
             <input type="checkbox" checked={form.isPublished} onChange={(e) => setForm({ ...form, isPublished: e.target.checked })} className="accent-primary w-4 h-4" />
@@ -130,8 +162,9 @@ export default function BlogsPage() {
           </label>
           <div className="flex gap-2">
             <button type="button" onClick={() => setModal(false)} className="btn-outline flex-1 justify-center">Cancel</button>
-            {editing && <button type="submit" disabled={saving} className="btn-primary flex-1 justify-center">{saving ? 'Saving...' : 'Update Post'}</button>}
-            {!editing && <span className="flex-1 text-[11px] text-brand-muted self-center">Full post creation requires image upload — edit existing posts here.</span>}
+            <button type="submit" disabled={saving || !form.coverImage} className="btn-primary flex-1 justify-center disabled:opacity-50">
+              {saving ? 'Saving...' : editing ? 'Update Post' : 'Create Post'}
+            </button>
           </div>
         </form>
       </Modal>

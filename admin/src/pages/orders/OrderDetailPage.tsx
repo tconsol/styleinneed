@@ -53,6 +53,26 @@ export default function OrderDetailPage() {
   const [newStatus, setNewStatus] = useState('');
   const [awbCode, setAwbCode] = useState('');
   const [trackingUrl, setTrackingUrl] = useState('');
+  const [booking, setBooking] = useState(false);
+
+  const bookShipment = async () => {
+    if (!order) return;
+    setBooking(true);
+    try {
+      const { data } = await orderApi.bookShipment(order._id);
+      // A booking can succeed while courier assignment doesn't — say which.
+      if (data.data?.warning) toast(data.data.warning, { icon: '⚠️' });
+      else toast.success('Shipment booked');
+      setAwbCode(data.data?.awbCode || '');
+      setTrackingUrl(data.data?.trackingUrl || '');
+      setOrder((prev) => prev ? {
+        ...prev,
+        shiprocketOrderId: data.data?.shiprocketOrderId,
+        awbCode: data.data?.awbCode,
+        trackingUrl: data.data?.trackingUrl,
+      } : null);
+    } catch { /* interceptor toasts the reason */ } finally { setBooking(false); }
+  };
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -604,6 +624,23 @@ export default function OrderDetailPage() {
               <button onClick={handleUpdateStatus} disabled={saving} className="btn-primary w-full justify-center">
                 {saving ? 'Saving...' : 'Update Order'}
               </button>
+
+              {/* Shiprocket — books the shipment and fills in the AWB for you */}
+              {!order.shiprocketOrderId ? (
+                <button onClick={bookShipment} disabled={booking}
+                  className="btn-outline w-full justify-center disabled:opacity-60">
+                  {booking
+                    ? <><span className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin" /> Booking…</>
+                    : <><Truck size={14} /> Book Shiprocket Shipment</>}
+                </button>
+              ) : (
+                <div className="rounded-lg px-3 py-2.5 text-[11px]" style={{ background: 'var(--c-bg)', border: '1px solid var(--c-border)' }}>
+                  <p className="font-semibold text-brand-text">Shiprocket #{order.shiprocketOrderId}</p>
+                  <p className="text-brand-muted mt-0.5">
+                    {order.awbCode ? `AWB ${order.awbCode}` : 'No courier assigned yet'}
+                  </p>
+                </div>
+              )}
               <button onClick={() => void handleDelete()}
                 className="w-full justify-center inline-flex items-center gap-1.5 py-2.5 rounded-lg border border-red-200 text-red-500 text-[12px] font-semibold hover:bg-red-50 transition-colors">
                 <Trash2 size={13} /> Delete Order

@@ -21,6 +21,7 @@ import { useCurrencyStore } from '../stores/currencyStore';
 import { usePromotionStore, promoFor } from '../stores/promotionStore';
 import { useRecentlyViewedStore } from '../stores/recentlyViewedStore';
 import RecentlyViewed from '../components/common/RecentlyViewed';
+import WriteReview from '../components/product/WriteReview';
 import toast from 'react-hot-toast';
 
 export default function ProductDetailPage() {
@@ -460,6 +461,14 @@ export default function ProductDetailPage() {
                 )}
                 {tab === 'reviews' && (
                   <div className="space-y-5">
+                    <WriteReview
+                      productId={product._id}
+                      onSubmitted={() => {
+                        reviewApi.getProductReviews(product._id)
+                          .then(({ data }) => setReviews(data.data || []))
+                          .catch(() => {});
+                      }}
+                    />
                     {reviews.length === 0 ? (
                       <p className="font-body text-sm text-brand-muted">No reviews yet. Be the first to review!</p>
                     ) : reviews.map((r) => (

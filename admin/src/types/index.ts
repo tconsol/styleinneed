@@ -158,6 +158,7 @@ export interface Order {
   razorpayOrderId?: string;
   razorpayPaymentId?: string;
   awbCode?: string;
+  shiprocketOrderId?: string;
   trackingUrl?: string;
   createdAt: string;
 }

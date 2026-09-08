@@ -15,6 +15,8 @@ import { emitEvent, SOCKET_EVENTS } from '../config/socket';
 import { invalidateCache } from '../middleware/cache';
 import { sendPushToUser, getStatusPushContent } from '../services/push.service';
 import { toCsv, sendCsv, dateStamp } from '../utils/csv';
+import { createShiprocketOrder, generateAWB, trackShipment } from '../services/shiprocket.service';
+import logger from '../utils/logger';
 
 export const getDashboardStats = async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
@@ -308,6 +310,117 @@ export const exportCustomers = async (req: Request, res: Response, next: NextFun
     sendCsv(res, `customers-${dateStamp()}.csv`, csv);
   } catch (err) {
     next(err);
+  }
+};
+
+/**
+ * Hand an order to Shiprocket and (optionally) assign a courier AWB.
+ *
+ * India-only, and refuses an order that already has a booking so a double click
+ * can't create two shipments for the same order. Any AWB step failure is
+ * reported but does NOT roll back the booking — the shipment exists at that
+ * point and the admin can assign a courier from Shiprocket directly.
+ */
+export const bookShipment = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    if (!process.env.SHIPROCKET_EMAIL || !process.env.SHIPROCKET_PASSWORD) {
+      sendError(res, 'Shiprocket is not configured. Add SHIPROCKET_EMAIL and SHIPROCKET_PASSWORD.', 400);
+      return;
+    }
+
+    const order = await Order.findById(req.params.id).populate('items.product', 'name');
+    if (!order) { sendError(res, 'Order not found', 404); return; }
+    if (order.shiprocketOrderId) { sendError(res, 'This order already has a shipment booked', 400); return; }
+    if ((order.shippingAddress.country || 'India').toLowerCase() !== 'india') {
+      sendError(res, 'Shiprocket handles India deliveries only', 400); return;
+    }
+    if (['cancelled', 'returned'].includes(order.status)) {
+      sendError(res, 'Cannot ship a cancelled or returned order', 400); return;
+    }
+
+    const addr = order.shippingAddress;
+    const booking = await createShiprocketOrder({
+      orderId: order.orderId,
+      orderDate: new Date(order.createdAt).toISOString().slice(0, 10),
+      customerName: addr.fullName,
+      customerEmail: addr.email || '',
+      customerPhone: addr.phone,
+      address: [addr.line1, addr.line2].filter(Boolean).join(', '),
+      city: addr.city,
+      state: addr.state,
+      pincode: addr.pincode,
+      items: order.items.map((i) => ({
+        name: (i.product as unknown as { name?: string })?.name || i.variant.sku,
+        sku: i.variant.sku,
+        units: i.quantity,
+        sellingPrice: i.price,
+      })),
+      paymentMethod: order.paymentMethod,
+      subtotal: order.subtotal,
+      shippingCharge: order.shippingCharge,
+    }) as { order_id?: number; shipment_id?: number };
+
+    order.shiprocketOrderId = String(booking.order_id ?? '');
+    const shipmentId = booking.shipment_id;
+
+    // Assigning a courier can legitimately fail (no serviceable courier yet);
+    // the booking still stands, so surface it rather than treating it as fatal.
+    let awbWarning: string | undefined;
+    if (shipmentId && req.body.courierId) {
+      try {
+        const awb = await generateAWB(Number(shipmentId), Number(req.body.courierId)) as {
+          response?: { data?: { awb_code?: string; courier_name?: string } };
+        };
+        const code = awb?.response?.data?.awb_code;
+        if (code) {
+          order.awbCode = code;
+          order.trackingUrl = `https://shiprocket.co/tracking/${code}`;
+        } else {
+          awbWarning = 'Shipment booked, but no AWB was returned.';
+        }
+      } catch (err) {
+        logger.warn(`AWB assignment failed for order ${order.orderId}:`, err);
+        awbWarning = 'Shipment booked, but the courier could not be assigned. Assign one in Shiprocket.';
+      }
+    }
+
+    await order.save();
+
+    await AuditLog.create({
+      user: req.user!._id,
+      action: 'BOOK_SHIPMENT',
+      resource: 'order',
+      resourceId: order._id.toString(),
+      changes: { orderId: order.orderId, shiprocketOrderId: order.shiprocketOrderId, awbCode: order.awbCode },
+    });
+
+    sendSuccess(res, awbWarning || 'Shipment booked', {
+      shiprocketOrderId: order.shiprocketOrderId,
+      shipmentId,
+      awbCode: order.awbCode,
+      trackingUrl: order.trackingUrl,
+      warning: awbWarning,
+    });
+  } catch (err) {
+    // Never let an upstream 401 from Shiprocket reach the client as a 401 —
+    // the admin panel would read it as their own session expiring.
+    logger.error('Shiprocket booking failed', err);
+    sendError(res, 'Could not book the shipment with Shiprocket. Check the credentials and pickup location.', 502);
+  }
+};
+
+/** Live courier tracking for an order that has an AWB. */
+export const getShipmentTracking = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const order = await Order.findById(req.params.id).select('awbCode orderId').lean();
+    if (!order) { sendError(res, 'Order not found', 404); return; }
+    if (!order.awbCode) { sendError(res, 'No AWB on this order yet', 400); return; }
+
+    const tracking = await trackShipment(order.awbCode);
+    sendSuccess(res, 'Tracking', tracking);
+  } catch (err) {
+    logger.error('Shiprocket tracking failed', err);
+    sendError(res, 'Could not fetch tracking from Shiprocket', 502);
   }
 };
 

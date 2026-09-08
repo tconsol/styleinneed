@@ -72,6 +72,8 @@ export const orderApi = {
   updateStatus: (id: string, data: object) => client.patch(`/admin/orders/${id}/status`, data),
   delete: (id: string) => client.delete(`/admin/orders/${id}`),
   exportCsv: (params?: object) => client.get('/admin/orders/export', { params, responseType: 'blob' }),
+  bookShipment: (id: string, data?: object) => client.post(`/admin/orders/${id}/ship`, data || {}),
+  getTracking: (id: string) => client.get(`/admin/orders/${id}/tracking`),
 };
 
 export const customerApi = {
@@ -106,7 +108,7 @@ export const promotionApi = {
 export const blogApi = {
   getAll: (params?: object) => client.get('/blogs', { params }),
   getBySlug: (slug: string) => client.get(`/blogs/${slug}`),
-  create: (data: FormData) => client.post('/blogs', data, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  create: (data: object) => client.post('/blogs', data),
   update: (id: string, data: object) => client.patch(`/blogs/${id}`, data),
   delete: (id: string) => client.delete(`/blogs/${id}`),
 };

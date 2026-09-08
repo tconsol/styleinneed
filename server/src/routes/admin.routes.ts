@@ -4,6 +4,7 @@ import {
   getUsers, getUserById, updateUserRole, deleteUser, getAuditLogs,
   getAllOrders, getAdminOrderById, updateOrderStatus, deleteOrder,
   getAdminProducts, getAdminProductById, exportOrders, exportCustomers,
+  bookShipment, getShipmentTracking,
 } from '../controllers/admin.controller';
 import { protect, isAdminOrManager, isSuperAdmin, isProviderOrAdmin, adminOrFeature } from '../middleware/auth';
 
@@ -28,6 +29,8 @@ router.get('/orders', adminOrFeature('orders'), getAllOrders);
 router.get('/orders/export', adminOrFeature('orders'), exportOrders);
 router.get('/orders/:id', adminOrFeature('orders'), getAdminOrderById);
 router.patch('/orders/:id/status', adminOrFeature('orders'), updateOrderStatus);
+router.post('/orders/:id/ship', adminOrFeature('orders'), bookShipment);
+router.get('/orders/:id/tracking', adminOrFeature('orders'), getShipmentTracking);
 router.delete('/orders/:id', isAdminOrManager, deleteOrder);
 
 router.get('/audit-logs', isAdminOrManager, getAuditLogs);
