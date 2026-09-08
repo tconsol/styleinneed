@@ -50,7 +50,13 @@ export default function CollectionsPage() {
     } catch { /* interceptor */ } finally { setUploading(false); }
   };
 
-  const openNew = () => { setEditing(null); setForm(empty); setImgCheck(null); setModal(true); };
+  // Next position in the list, filled into the form straight away so the number
+  // is visible (and editable) instead of only appearing after saving.
+  const nextSortOrder = collections.length
+    ? Math.max(...collections.map((c) => c.sortOrder ?? 0)) + 1
+    : 0;
+
+  const openNew = () => { setEditing(null); setForm({ ...empty, sortOrder: nextSortOrder }); setImgCheck(null); setModal(true); };
   const openEdit = (c: Collection) => { setEditing(c); setForm({ name: c.name, description: c.description || '', image: c.image || '', isActive: c.isActive, isFeatured: c.isFeatured, sortOrder: c.sortOrder }); setImgCheck(null); setModal(true); };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -159,7 +165,12 @@ export default function CollectionsPage() {
             <label className="input-label">Sort Order</label>
             <input type="number" value={form.sortOrder}
               onChange={(e) => setForm({ ...form, sortOrder: e.target.value === '' ? '' : Number(e.target.value) })}
-              className="input-field" min="0" placeholder={editing ? '' : 'Auto — added to the end'} />
+              className="input-field" min="0" />
+            {!editing && (
+              <p className="text-[10px] text-brand-muted mt-1">
+                Next free position — change it to place this collection elsewhere.
+              </p>
+            )}
           </div>
           <div className="flex gap-4">
             <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={form.isActive} onChange={(e) => setForm({ ...form, isActive: e.target.checked })} className="accent-primary w-4 h-4" /><span className="text-[12px] font-medium">Active</span></label>
