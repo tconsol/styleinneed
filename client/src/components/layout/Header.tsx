@@ -129,10 +129,13 @@ export default function Header({ isCheckout = false }: { isCheckout?: boolean })
   return (
     <>
       {/* Single fixed container: announcement bar + nav */}
-      <div ref={topbarRef} className="fixed top-0 left-0 right-0 z-50">
+      <div
+        ref={topbarRef}
+        onMouseLeave={() => setHoveredNav(null)}
+        className="fixed top-0 left-0 right-0 z-50"
+      >
         {!isCheckout && <AnnouncementBar />}
       <header
-        onMouseLeave={() => setHoveredNav(null)}
         className={`relative transition-all duration-500 ${
           menuOpen
             ? 'bg-black/70 backdrop-blur-[80px] backdrop-saturate-150'
@@ -268,8 +271,15 @@ export default function Header({ isCheckout = false }: { isCheckout?: boolean })
           </div>
         </div>
 
-        {/* Mega menu — rendered here (not inside a nav item) so it can span the
-            full header width; the header's onMouseLeave closes it. */}
+      </header>
+
+        {/* Mega menu — a SIBLING of <header>, not a child.
+            An element with backdrop-filter becomes a backdrop root, so a nested
+            backdrop-filter can only sample its parent instead of the page: while
+            the header was blurring, the menu inside it came out sharp. As
+            siblings both sample the page and both actually blur.
+            Absolutely positioned so opening it never changes the measured
+            --topbar-height. */}
         <AnimatePresence>
           {activeMega && (
             <MegaMenu
@@ -283,7 +293,6 @@ export default function Header({ isCheckout = false }: { isCheckout?: boolean })
             />
           )}
         </AnimatePresence>
-      </header>
       </div>{/* end fixed top container */}
 
       {/* Search Overlay */}
