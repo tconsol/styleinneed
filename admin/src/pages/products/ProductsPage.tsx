@@ -1,10 +1,11 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Search, Edit, Trash2, Eye, RotateCcw, Upload, CheckCircle2, XCircle, X, ScanEye } from 'lucide-react';
+import { Plus, Edit, Trash2, Eye, RotateCcw, Upload, CheckCircle2, XCircle, X, ScanEye } from 'lucide-react';
 import DataTable from '../../components/common/DataTable';
 import StatusToggle from '../../components/common/StatusToggle';
 import { useConfirm } from '../../components/common/ConfirmDialog';
 import BulkUploadModal from './BulkUploadModal';
+import ProductFilterBar, { EMPTY_FILTERS, type ProductFilters } from './ProductFilterBar';
 import ProductDetailsModal from './ProductDetailsModal';
 import { productApi } from '../../api';
 import type { Product, Pagination } from '../../types';
@@ -15,7 +16,9 @@ export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [pagination, setPagination] = useState<Pagination>({ page: 1, limit: 20, total: 0, pages: 1 });
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
+  const [filters, setFilters] = useState<ProductFilters>(EMPTY_FILTERS);
+  // Debounced copy — typing in the search box shouldn't fire a request per key.
+  const [applied, setApplied] = useState<ProductFilters>(EMPTY_FILTERS);
   const [page, setPage] = useState(1);
   const [bulkOpen, setBulkOpen] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -53,11 +56,41 @@ export default function ProductsPage() {
   const fetch = useCallback(async () => {
     setLoading(true);
     try {
-      const { data } = await productApi.getAll({ page, limit: 20, search: search || undefined });
+      const { data } = await productApi.getAll({
+        page,
+        limit: 20,
+        sort: applied.sort,
+        // Blank values are dropped so the query string stays readable and the
+        // server never has to distinguish "" from "not sent".
+        ...Object.fromEntries(
+          Object.entries(applied).filter(([k, v]) => k !== 'sort' && v !== '')
+        ),
+      });
       setProducts(data.data || []);
       if (data.pagination) setPagination(data.pagination);
     } catch {} finally { setLoading(false); }
-  }, [page, search]);
+  }, [page, applied]);
+
+  /**
+   * Text fields are debounced; a dropdown or chip change applies immediately.
+   * Without the split, picking a category would sit idle for 350ms and feel
+   * broken, while typing would fire a request per keystroke.
+   */
+  useEffect(() => {
+    const typed = filters.search !== applied.search
+      || filters.minPrice !== applied.minPrice
+      || filters.maxPrice !== applied.maxPrice;
+    const delay = typed ? 350 : 0;
+
+    const t = setTimeout(() => {
+      setApplied((prev) => {
+        if (JSON.stringify(prev) === JSON.stringify(filters)) return prev;
+        setPage(1);
+        return filters;
+      });
+    }, delay);
+    return () => clearTimeout(t);
+  }, [filters, applied]);
 
   useEffect(() => { fetch(); }, [fetch]);
 
@@ -151,6 +184,18 @@ export default function ProductsPage() {
       },
     },
     {
+      key: 'sold',
+      header: 'Sold',
+      render: (p: Product) => {
+        // Units from settled orders. Zero is shown as a dash so a genuine
+        // best-seller stands out against the long tail.
+        const sold = (p as Product & { sold?: number }).sold || 0;
+        return sold > 0
+          ? <span className="font-body text-[11px] font-semibold" style={{ color: 'var(--c-success)' }}>{sold}</span>
+          : <span className="font-body text-[11px] text-brand-muted">—</span>;
+      },
+    },
+    {
       key: 'status',
       header: 'Status',
       render: (p: Product) => <StatusToggle isActive={p.isActive} onToggle={() => void handleToggleStatus(p)} />,
@@ -198,15 +243,9 @@ export default function ProductsPage() {
   return (
     <>
     <div className="space-y-5">
-      <div className="flex items-center justify-between">
-        <div className="relative">
-          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-muted" />
-          <input
-            value={search}
-            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-            placeholder="Search products..."
-            className="input-field pl-8 w-64 text-sm"
-          />
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div className="flex-1 min-w-[280px]">
+          <ProductFilterBar value={filters} onChange={setFilters} total={pagination.total} />
         </div>
         <div className="flex items-center gap-2">
           <button onClick={() => setBulkOpen(true)} className="btn-outline">

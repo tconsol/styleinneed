@@ -23,6 +23,7 @@ const CollectionsPage = lazy(() => import('./pages/catalog/CollectionsPage'));
 const ProductTypesPage = lazy(() => import('./pages/catalog/ProductTypesPage'));
 const AttributesPage = lazy(() => import('./pages/catalog/AttributesPage'));
 const SizeChartsPage = lazy(() => import('./pages/catalog/SizeChartsPage'));
+const InventoryPage = lazy(() => import('./pages/catalog/InventoryPage'));
 const CustomersPage = lazy(() => import('./pages/customers/CustomersPage'));
 const CustomerDetailPage = lazy(() => import('./pages/customers/CustomerDetailPage'));
 const CouponsPage = lazy(() => import('./pages/coupons/CouponsPage'));
@@ -39,13 +40,16 @@ const ProvidersPage = lazy(() => import('./pages/providers/ProvidersPage'));
 const PushNotificationsPage = lazy(() => import('./pages/marketing/PushNotificationsPage'));
 const GiftCardsPage = lazy(() => import('./pages/marketing/GiftCardsPage'));
 const EmailMarketingPage = lazy(() => import('./pages/marketing/EmailMarketingPage'));
+const WhatsAppMarketingPage = lazy(() => import('./pages/marketing/WhatsAppMarketingPage'));
 const StaffPage = lazy(() => import('./pages/team/StaffPage'));
 const RolesPage = lazy(() => import('./pages/team/RolesPage'));
 const RoleFormPage = lazy(() => import('./pages/team/RoleFormPage'));
 const SettingsPage = lazy(() => import('./pages/settings/SettingsPage'));
+const SystemHealthPage = lazy(() => import('./pages/settings/SystemHealthPage'));
 const ShippingRatesPage = lazy(() => import('./pages/settings/ShippingRatesPage'));
 const ChangePasswordPage = lazy(() => import('./pages/ChangePasswordPage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
+const SecurityPage = lazy(() => import('./pages/SecurityPage'));
 const ThemesPage = lazy(() => import('./pages/settings/ThemesPage'));
 
 const queryClient = new QueryClient({ defaultOptions: { queries: { staleTime: 60_000, retry: 1 } } });
@@ -115,6 +119,7 @@ export default function App() {
               <Route path="/product-types" element={<ProductTypesPage />} />
               <Route path="/attributes" element={<AttributesPage />} />
               <Route path="/size-charts" element={<SizeChartsPage />} />
+              <Route path="/inventory" element={<InventoryPage />} />
               <Route path="/customers" element={<CustomersPage />} />
               <Route path="/customers/:id" element={<CustomerDetailPage />} />
               <Route path="/coupons" element={<CouponsPage />} />
@@ -131,15 +136,18 @@ export default function App() {
               <Route path="/push-notifications" element={<PushNotificationsPage />} />
               <Route path="/gift-cards" element={<GiftCardsPage />} />
               <Route path="/email-marketing" element={<EmailMarketingPage />} />
+              <Route path="/whatsapp-marketing" element={<WhatsAppMarketingPage />} />
               <Route path="/staff" element={<StaffPage />} />
               <Route path="/roles" element={<RolesPage />} />
               <Route path="/roles/new" element={<RoleFormPage />} />
               <Route path="/roles/:id/edit" element={<RoleFormPage />} />
               <Route path="/settings" element={<SettingsPage />} />
+              <Route path="/system-health" element={<SystemHealthPage />} />
               <Route path="/shipping-rates" element={<ShippingRatesPage />} />
               <Route path="/themes" element={<ThemesPage />} />
               <Route path="/change-password" element={<ChangePasswordPage />} />
               <Route path="/profile" element={<ProfilePage />} />
+              <Route path="/security" element={<SecurityPage />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Route>
           </Routes>

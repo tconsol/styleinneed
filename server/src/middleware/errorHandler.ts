@@ -32,6 +32,16 @@ export const errorHandler = (
     message = 'Invalid ID format';
   }
 
+  // Upload failures are the caller's problem, not a server fault. Multer throws
+  // for a rejected type or an oversized file, and without this they surfaced as
+  // a 500 with a message that read like a crash.
+  if (err.name === 'MulterError') {
+    statusCode = 400;
+    message = (err as NodeJS.ErrnoException).code === 'LIMIT_FILE_SIZE'
+      ? 'That file is too large'
+      : err.message;
+  }
+
   if ((err as NodeJS.ErrnoException).code === '11000') {
     statusCode = 409;
     message = 'Duplicate field value';

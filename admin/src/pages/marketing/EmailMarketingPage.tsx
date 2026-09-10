@@ -1,21 +1,22 @@
 import { useEffect, useState, useCallback } from 'react';
 import {
   Mails, Users, ShoppingCart, Mail, Search, Send, Download,
-  Upload, ImageIcon, X, Info,
+  Upload, ImageIcon, X, Info, UploadCloud, FileSpreadsheet,
 } from 'lucide-react';
 import Select from '../../components/common/Select';
 import { useConfirm } from '../../components/common/ConfirmDialog';
 import ImageSpecHint from '../../components/common/ImageSpecHint';
+import ContactImportModal from '../../components/marketing/ContactImportModal';
 import { IMAGE_SPECS, checkRatio, readImageSize, type RatioCheck } from '../../config/imageSpecs';
 import { emailMarketingApi, ctaLinkApi, cmsApi } from '../../api';
 import { downloadBlob, stampedName } from '../../utils/download';
 import toast from 'react-hot-toast';
 
-type Source = 'registrations' | 'orders' | 'newsletter';
+type Source = 'registrations' | 'orders' | 'newsletter' | 'imported';
 
 interface Contact { email: string; sources: Source[] }
 interface Stats {
-  registrations: number; orders: number; newsletter: number;
+  registrations: number; orders: number; newsletter: number; imported: number;
   total: number; inMultipleSources: number; unsubscribed: number;
 }
 interface CtaLink { _id: string; label: string; url: string; group: string }
@@ -24,6 +25,7 @@ const SOURCE_META: Record<Source, { label: string; icon: typeof Users; hint: str
   registrations: { label: 'Registrations', icon: Users, hint: 'Signed-up accounts' },
   orders: { label: 'Orders', icon: ShoppingCart, hint: 'Addresses used at checkout' },
   newsletter: { label: 'Newsletter', icon: Mail, hint: 'Active subscribers' },
+  imported: { label: 'Imported', icon: FileSpreadsheet, hint: 'Uploaded from a sheet' },
 };
 
 const EMPTY_CAMPAIGN = {
@@ -45,6 +47,7 @@ export default function EmailMarketingPage() {
   const [uploading, setUploading] = useState(false);
   const [imgCheck, setImgCheck] = useState<RatioCheck | null>(null);
   const [exporting, setExporting] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const confirm = useConfirm();
 
   const load = useCallback(() => {
@@ -128,18 +131,30 @@ export default function EmailMarketingPage() {
         <div>
           <h1 className="text-[15px] font-bold text-brand-text">Email Marketing</h1>
           <p className="text-[10px] text-brand-muted mt-0.5">
-            One audience built from registrations, orders and newsletter sign-ups — deduplicated
+            One audience built from registrations, orders, newsletter sign-ups and imports — deduplicated
           </p>
         </div>
-        <button onClick={exportCsv} disabled={exporting} className="btn-outline disabled:opacity-50">
-          {exporting
-            ? <><span className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin" /> Exporting…</>
-            : <><Download size={14} /> Export CSV</>}
-        </button>
+        <div className="flex gap-2">
+          <button onClick={() => setImportOpen(true)} className="btn-outline">
+            <UploadCloud size={14} /> Import emails
+          </button>
+          <button onClick={exportCsv} disabled={exporting} className="btn-outline disabled:opacity-50">
+            {exporting
+              ? <><span className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin" /> Exporting…</>
+              : <><Download size={14} /> Export CSV</>}
+          </button>
+        </div>
       </div>
 
+      <ContactImportModal
+        open={importOpen} onClose={() => setImportOpen(false)} kind="email"
+        downloadTemplate={emailMarketingApi.importTemplate}
+        upload={emailMarketingApi.importContacts}
+        onImported={load}
+      />
+
       {/* Source counts */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
         {(Object.keys(SOURCE_META) as Source[]).map((s) => {
           const meta = SOURCE_META[s];
           const Icon = meta.icon;
@@ -179,7 +194,7 @@ export default function EmailMarketingPage() {
         <p className="flex items-start gap-1.5 text-[11px] text-brand-muted">
           <Info size={13} className="flex-shrink-0 mt-px" />
           <span>
-            {stats.registrations + stats.orders + stats.newsletter} entries across the three sources collapse to{' '}
+            {stats.registrations + stats.orders + stats.newsletter + (stats.imported || 0)} entries across all sources collapse to{' '}
             <b className="text-brand-text">{stats.total} unique addresses</b>
             {stats.inMultipleSources > 0 && <> — {stats.inMultipleSources} appear in more than one</>}.
             {stats.unsubscribed > 0 && <> {stats.unsubscribed} unsubscribed address(es) are excluded from every send.</>}

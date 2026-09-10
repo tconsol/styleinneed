@@ -1,15 +1,17 @@
-import { Menu, ArrowLeft } from 'lucide-react';
+import { Menu, ArrowLeft, Search } from 'lucide-react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import ThemeSwitcher from './ThemeSwitcher';
 import { useAuthStore } from '../../stores/authStore';
 
-interface Props { onMenuClick: () => void; title: string; }
+interface Props { onMenuClick: () => void; title: string; onSearchClick: () => void; }
 
-export default function Topbar({ onMenuClick, title }: Props) {
+export default function Topbar({ onMenuClick, title, onSearchClick }: Props) {
   const { user } = useAuthStore();
   const navigate = useNavigate();
   const location = useLocation();
   const isRoot = location.pathname === '/'; // no back button on the dashboard
+  // Label the chord the way this OS writes it.
+  const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform || '');
 
   return (
     <header className="h-14 flex items-center justify-between px-5"
@@ -37,6 +39,21 @@ export default function Topbar({ onMenuClick, title }: Props) {
       </div>
 
       <div className="flex items-center gap-3">
+        {/* Command palette trigger. Shows its own shortcut so the keyboard
+            route is discoverable rather than hidden. */}
+        <button onClick={onSearchClick} title="Search pages (Ctrl+K)"
+          className="flex items-center gap-2 h-8 rounded-lg transition-colors px-2.5 sm:pr-2 sm:pl-3"
+          style={{ background: 'var(--c-input)', border: '1px solid var(--c-border)', color: 'var(--c-muted)' }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--c-primary)'; }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--c-border)'; }}>
+          <Search size={14} />
+          <span className="hidden sm:block text-[12px]">Search…</span>
+          <kbd className="hidden sm:block text-[10px] font-mono px-1.5 py-0.5 rounded"
+            style={{ background: 'var(--c-surface)', border: '1px solid var(--c-border)' }}>
+            {isMac ? '⌘K' : 'Ctrl K'}
+          </kbd>
+        </button>
+
         {/* Quick theme picker */}
         <ThemeSwitcher />
 

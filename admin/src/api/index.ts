@@ -1,7 +1,8 @@
 import client from './client';
 
 export const authApi = {
-  login: (email: string, password: string) => client.post('/auth/login', { email, password }),
+  login: (email: string, password: string, totp?: string) =>
+    client.post('/auth/login', { email, password, ...(totp ? { totp } : {}) }),
   logout: (refreshToken: string) => client.post('/auth/logout', { refreshToken }),
   getMe: () => client.get('/auth/me'),
   updateProfile: (data: { name?: string; phone?: string }) => client.patch('/auth/me', data),
@@ -11,15 +12,27 @@ export const authApi = {
     client.patch('/auth/change-password', { currentPassword, newPassword }),
 };
 
+export const twoFactorApi = {
+  status: () => client.get('/auth/2fa/status'),
+  setup: () => client.post('/auth/2fa/setup'),
+  enable: (token: string) => client.post('/auth/2fa/enable', { token }),
+  disable: (password: string, token: string) => client.post('/auth/2fa/disable', { password, token }),
+  regenerateRecoveryCodes: (token: string) => client.post('/auth/2fa/recovery-codes', { token }),
+};
+
 export const dashboardApi = {
   getStats: () => client.get('/admin/dashboard'),
   getRevenue: (period?: string) => client.get('/admin/analytics/revenue', { params: { period } }),
   getTopProducts: () => client.get('/admin/analytics/top-products'),
+  getCustomerAnalytics: () => client.get('/admin/analytics/customers'),
+  getInsights: (days?: number) => client.get('/admin/analytics/insights', { params: { days } }),
+  getSystemHealth: () => client.get('/admin/system-health'),
 };
 
 export const productApi = {
   getAll: (params?: object) => client.get('/admin/products', { params }),
   getById: (id: string) => client.get(`/admin/products/${id}`),
+  getFilterOptions: () => client.get('/admin/products/filters'),
   create: (data: object) => client.post('/products', data),
   update: (id: string, data: object) => client.patch(`/products/${id}`, data),
   delete: (id: string) => client.delete(`/products/${id}`),
@@ -140,10 +153,20 @@ export const returnApi = {
   retryRefund: (id: string) => client.post(`/returns/${id}/refund/retry`),
 };
 
+export const inventoryApi = {
+  list: (params?: object) => client.get('/inventory', { params }),
+  summary: () => client.get('/inventory/summary'),
+  adjust: (data: object) => client.post('/inventory/adjust', data),
+};
+
 export const emailMarketingApi = {
   getAudience: (params?: object) => client.get('/email-marketing/audience', { params }),
   exportAudience: () => client.get('/email-marketing/audience/export', { responseType: 'blob' }),
   send: (data: object) => client.post('/email-marketing/send', data),
+  importTemplate: () => client.get('/email-marketing/import/template', { responseType: 'blob' }),
+  importContacts: (form: FormData) => client.post('/email-marketing/import', form, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  listImported: (params?: object) => client.get('/email-marketing/imported', { params }),
+  deleteImported: (data: object) => client.delete('/email-marketing/imported', { data }),
 };
 
 export const staffApi = {
@@ -156,13 +179,41 @@ export const staffApi = {
   create: (data: object) => client.post('/staff', data),
   update: (id: string, data: object) => client.patch(`/staff/${id}`, data),
   resetPassword: (id: string, data?: object) => client.post(`/staff/${id}/reset-password`, data || {}),
+  resetTwoFactor: (id: string) => client.post(`/staff/${id}/reset-2fa`),
   remove: (id: string) => client.delete(`/staff/${id}`),
+};
+
+export const whatsappApi = {
+  getAudience: (params?: object) => client.get('/whatsapp/audience', { params }),
+  exportAudience: (params?: object) => client.get('/whatsapp/audience/export', { params, responseType: 'blob' }),
+  importTemplate: () => client.get('/whatsapp/import/template', { responseType: 'blob' }),
+  importContacts: (form: FormData) => client.post('/whatsapp/import', form, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  listImported: (params?: object) => client.get('/whatsapp/imported', { params }),
+  deleteImported: (data: object) => client.delete('/whatsapp/imported', { data }),
+  sendTest: (data: object) => client.post('/whatsapp/test', data),
+  send: (data: object) => client.post('/whatsapp/send', data),
+  metaTemplates: () => client.get('/whatsapp/meta-templates'),
+  listTemplates: (params?: object) => client.get('/whatsapp/templates', { params }),
+  createTemplate: (data: object) => client.post('/whatsapp/templates', data),
+  updateTemplate: (id: string, data: object) => client.patch(`/whatsapp/templates/${id}`, data),
+  deleteTemplate: (id: string) => client.delete(`/whatsapp/templates/${id}`),
+  duplicateTemplate: (id: string) => client.post(`/whatsapp/templates/${id}/duplicate`),
+  uploadMedia: (form: FormData) => client.post('/whatsapp/media', form, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  listCampaigns: (params?: object) => client.get('/whatsapp/campaigns', { params }),
+  deleteCampaign: (id: string) => client.delete(`/whatsapp/campaigns/${id}`),
+  deleteCampaigns: (data: object) => client.delete('/whatsapp/campaigns', { data }),
+  getCampaign: (id: string) => client.get(`/whatsapp/campaigns/${id}`),
+  listOptOuts: (params?: object) => client.get('/whatsapp/opt-outs', { params }),
+  addOptOuts: (data: object) => client.post('/whatsapp/opt-outs', data),
+  removeOptOuts: (ids: string[]) => client.delete('/whatsapp/opt-outs', { data: { ids } }),
 };
 
 export const walletApi = {
   listGiftCards: (params?: object) => client.get('/wallet/gift-cards', { params }),
+  listRecipients: (params?: object) => client.get('/wallet/gift-cards/recipients', { params }),
   createGiftCards: (data: object) => client.post('/wallet/gift-cards', data),
   deactivateGiftCard: (id: string) => client.patch(`/wallet/gift-cards/${id}/deactivate`),
+  resendGiftCard: (id: string, email?: string) => client.post(`/wallet/gift-cards/${id}/resend`, email ? { email } : {}),
   adjust: (data: object) => client.post('/wallet/adjust', data),
   getUserWallet: (id: string) => client.get(`/wallet/user/${id}`),
 };

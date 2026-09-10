@@ -74,9 +74,29 @@ function RegisterForm() {
     if (form.password.length < 8) { toast.error('Password must be at least 8 characters'); return; }
     setLoading(true);
     try {
-      await authApi.register({ name: form.name, email: form.email, password: form.password, phone: form.phone || undefined, referralCode: form.referralCode.trim() || undefined });
-      toast.success('Account created! Check your email for the verification OTP.');
-      navigate('/auth/verify-email', { state: { email: form.email } });
+      const { data } = await authApi.register({
+        name: form.name, email: form.email, password: form.password,
+        phone: form.phone || undefined,
+        referralCode: form.referralCode.trim() || undefined,
+      });
+
+      // The server decides the channel: WhatsApp when the number has an
+      // account, email otherwise. It reports back which one actually carried
+      // the code so we don't send people looking in the wrong place.
+      const channel = data.data?.otpChannel === 'whatsapp' ? 'whatsapp' : 'email';
+      const whatsappFailed = !!data.data?.whatsappFailed;
+
+      if (whatsappFailed) {
+        toast('That number has no WhatsApp — we emailed your code instead.', { icon: '📧', duration: 5000 });
+      } else {
+        toast.success(channel === 'whatsapp'
+          ? 'Account created! Check WhatsApp for your code.'
+          : 'Account created! Check your email for the code.');
+      }
+
+      navigate('/auth/verify-email', {
+        state: { email: form.email, phone: form.phone, channel, whatsappFailed },
+      });
     } catch { /* error toast shown by api interceptor */ } finally { setLoading(false); }
   };
 

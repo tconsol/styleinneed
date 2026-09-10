@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import SectionHeader from '../common/SectionHeader';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
 import { productApi } from '../../api/product.api';
 import { cmsApi } from '../../api/misc.api';
 import { socket, SOCKET_EVENTS } from '../../lib/socket';
@@ -38,6 +38,36 @@ const featuredCount = (c: Record<string, string>, max = 12): number => {
 export default function ShopByCategory({ header }: { header?: SectionHeaderCms }) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [featured, setFeatured] = useState<FeaturedBanner[]>([]);
+
+  // Horizontal rail: arrows only render when there's something to scroll to,
+  // so a short category list doesn't show dead controls.
+  const railRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  const updateArrows = useCallback(() => {
+    const el = railRef.current;
+    if (!el) return;
+    setCanScrollLeft(el.scrollLeft > 8);
+    // 8px of slack absorbs sub-pixel rounding at the end of the track.
+    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 8);
+  }, []);
+
+  const scrollRail = (dir: 1 | -1) => {
+    const el = railRef.current;
+    if (!el) return;
+    el.scrollBy({ left: dir * Math.max(el.clientWidth * 0.8, 240), behavior: 'smooth' });
+  };
+
+  // Re-evaluate when the list loads or the viewport resizes.
+  useEffect(() => {
+    updateArrows();
+    const el = railRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(updateArrows);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [categories.length, updateArrows]);
 
   useEffect(() => {
     const loadCategories = () => {
@@ -88,16 +118,22 @@ export default function ShopByCategory({ header }: { header?: SectionHeaderCms }
           subtitle={header?.subtitle || 'Explore our curated collections across every style and occasion'}
         />
 
-        <div className="overflow-hidden sm:overflow-visible -mx-4 sm:mx-0">
-          <div className="flex gap-4 sm:gap-5 overflow-x-auto pb-4 scrollbar-hide snap-x snap-mandatory sm:grid sm:grid-cols-3 md:grid-cols-6 sm:overflow-visible sm:pb-0 px-4 sm:px-0">
-            {categories.slice(0, 12).map((cat, i) => (
+        {/* Every category, in one scroll rail. A fixed grid capped at 12 hid the
+            rest; arrows appear only when there's actually more to reach. */}
+        <div className="relative -mx-4 sm:mx-0">
+          <div
+            ref={railRef}
+            onScroll={updateArrows}
+            className="flex gap-4 sm:gap-5 overflow-x-auto pb-4 scrollbar-hide snap-x snap-mandatory px-4 sm:px-1 scroll-smooth"
+          >
+            {categories.map((cat, i) => (
               <motion.div
                 key={cat._id}
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                transition={{ duration: 0.4, delay: i * 0.06 }}
-                className="flex-shrink-0 snap-start w-[110px] xs:w-[120px] sm:w-auto"
+                transition={{ duration: 0.4, delay: Math.min(i, 8) * 0.06 }}
+                className="flex-shrink-0 snap-start w-[110px] xs:w-[120px]"
               >
                 <Link to={`/products?category=${cat.slug}`} className="group block text-center">
                   <div className="relative overflow-hidden rounded-full aspect-square mx-auto mb-3 bg-brand-border" style={{ maxWidth: '100px' }}>
@@ -114,6 +150,26 @@ export default function ShopByCategory({ header }: { header?: SectionHeaderCms }
               </motion.div>
             ))}
           </div>
+
+          {canScrollLeft && (
+            <button
+              onClick={() => scrollRail(-1)}
+              aria-label="Previous categories"
+              className="absolute left-1 top-[42px] hidden -translate-y-1/2 place-items-center rounded-full bg-brand-bg p-2.5 text-brand-text shadow-luxury ring-1 ring-brand-border transition-colors hover:bg-primary hover:text-white sm:grid"
+            >
+              <ChevronLeft size={18} />
+            </button>
+          )}
+          {canScrollRight && (
+            <button
+              onClick={() => scrollRail(1)}
+              aria-label="More categories"
+              className="absolute right-1 top-[42px] hidden -translate-y-1/2 place-items-center rounded-full bg-brand-bg p-2.5 text-brand-text shadow-luxury ring-1 ring-brand-border transition-colors hover:bg-primary hover:text-white sm:grid"
+            >
+              <ChevronRight size={18} />
+            </button>
+          )}
+        </div>
 
           {/* Featured grid — desktop */}
           {featured.length > 0 && (
@@ -142,7 +198,6 @@ export default function ShopByCategory({ header }: { header?: SectionHeaderCms }
               ))}
             </div>
           )}
-        </div>
 
         {/* Mobile featured */}
         {featured.length > 0 && (

@@ -62,6 +62,17 @@ const userSchema = new Schema<IUser>(
     emailChangeOtpExpiry: { type: Date, select: false },
     passwordResetToken: { type: String, select: false },
     passwordResetExpiry: { type: Date, select: false },
+    // Two-factor (TOTP) for staff logins. The secret is written at setup and
+    // only starts gating login once `twoFactorEnabled` flips, which needs a
+    // verified code — so a half-finished setup can never lock anyone out.
+    twoFactorSecret: { type: String, select: false },
+    twoFactorEnabled: { type: Boolean, default: false },
+    twoFactorRecoveryCodes: { type: [String], select: false },
+    twoFactorEnabledAt: { type: Date },
+    // Last accepted code + when, so the same code can't be replayed inside its
+    // own 30s step by anyone who observed it.
+    twoFactorLastCode: { type: String, select: false },
+    twoFactorLastUsedAt: { type: Date, select: false },
     pushToken: { type: String },
   },
   { timestamps: true }

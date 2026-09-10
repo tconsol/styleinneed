@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Package, Tag, Layers, ShoppingCart, Users,
   Ticket, Megaphone, Zap, FileText, Mail, Headphones,
   RotateCcw, FileEdit, BarChart2, ScrollText,
-  Star, LogOut, Settings, X, Shapes, SlidersHorizontal, Truck, BellRing, Ruler, Globe, UserCircle, KeyRound, Palette, Gift, UserCog, ShieldCheck, Mails,
+  Star, LogOut, Settings, X, Shapes, SlidersHorizontal, Truck, BellRing, Ruler, Globe, UserCircle, KeyRound, Palette, Gift, UserCog, ShieldCheck, Mails, Boxes, Lock, MessageCircle, Activity,
 } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
 import { useThemeStore } from '../../stores/themeStore';
@@ -17,6 +17,7 @@ export const NAV_ITEMS = [
   ]},
   { section: 'Catalog', items: [
     { label: 'Products', href: '/products', icon: Package },
+    { label: 'Inventory', href: '/inventory', icon: Boxes },
     { label: 'Product Types', href: '/product-types', icon: Shapes },
     { label: 'Attributes', href: '/attributes', icon: SlidersHorizontal },
     { label: 'Size Charts', href: '/size-charts', icon: Ruler },
@@ -37,6 +38,7 @@ export const NAV_ITEMS = [
     { label: 'Push Notifications', href: '/push-notifications', icon: BellRing },
     { label: 'Newsletter', href: '/newsletter', icon: Mail },
     { label: 'Email Marketing', href: '/email-marketing', icon: Mails },
+    { label: 'WhatsApp Marketing', href: '/whatsapp-marketing', icon: MessageCircle },
     { label: 'Gift Cards', href: '/gift-cards', icon: Gift },
   ]},
   { section: 'Content', items: [
@@ -49,9 +51,11 @@ export const NAV_ITEMS = [
     { label: 'Roles & Permissions', href: '/roles', icon: ShieldCheck },
   ]},
   { section: 'System', items: [
+    { label: 'Security', href: '/security', icon: Lock },
     { label: 'Support', href: '/support', icon: Headphones },
     { label: 'Themes', href: '/themes', icon: Palette },
     { label: 'Audit Logs', href: '/audit-logs', icon: ScrollText },
+    { label: 'System Health', href: '/system-health', icon: Activity },
   ]},
 ];
 
@@ -62,6 +66,7 @@ export const PROVIDER_BASE_NAV = [
   ]},
   { section: 'Account', items: [
     { label: 'My Profile', href: '/profile', icon: UserCircle },
+    { label: 'Security', href: '/security', icon: Lock },
     { label: 'Change Password', href: '/change-password', icon: KeyRound },
   ]},
 ];
@@ -74,6 +79,7 @@ export const FEATURE_NAV: Record<string, { label: string; href: string; icon: ty
   'product-types': { label: 'Product Types', href: '/product-types', icon: Shapes,            section: 'Catalog' },
   'attributes':    { label: 'Attributes',    href: '/attributes',    icon: SlidersHorizontal, section: 'Catalog' },
   'size-charts':   { label: 'Size Charts',   href: '/size-charts',   icon: Ruler,             section: 'Catalog' },
+  'inventory':     { label: 'Inventory',     href: '/inventory',     icon: Boxes,             section: 'Catalog' },
   'categories':    { label: 'Categories',    href: '/categories',    icon: Tag,               section: 'Catalog' },
   'collections':   { label: 'Collections',   href: '/collections',   icon: Layers,            section: 'Catalog' },
   'orders':        { label: 'Orders',        href: '/orders',        icon: ShoppingCart,      section: 'Commerce' },
@@ -86,6 +92,7 @@ export const FEATURE_NAV: Record<string, { label: string; href: string; icon: ty
   'announcements': { label: 'Announcements', href: '/announcements', icon: Megaphone,         section: 'Marketing' },
   'newsletter':    { label: 'Newsletter',    href: '/newsletter',    icon: Mail,              section: 'Marketing' },
   'email-marketing': { label: 'Email Marketing', href: '/email-marketing', icon: Mails,       section: 'Marketing' },
+  'whatsapp-marketing': { label: 'WhatsApp Marketing', href: '/whatsapp-marketing', icon: MessageCircle, section: 'Marketing' },
   'gift-cards':    { label: 'Gift Cards',    href: '/gift-cards',    icon: Gift,              section: 'Marketing' },
   'blogs':         { label: 'Blog',          href: '/blogs',         icon: FileText,          section: 'Content' },
   'cms':           { label: 'CMS Pages',     href: '/cms',           icon: FileEdit,          section: 'Content' },
@@ -107,6 +114,7 @@ export function buildStaffNav(role: string, permissions: string[] = []) {
     // Managers still need their own account pages.
     bySection.set('Account', [
       { label: 'My Profile', href: '/profile', icon: UserCircle },
+      { label: 'Security', href: '/security', icon: Lock },
       { label: 'Change Password', href: '/change-password', icon: KeyRound },
     ]);
   }

@@ -4,6 +4,7 @@ import {
   listRoles, createRole, updateRole, deleteRole,
   listStaff, createStaff, updateStaff, resetStaffPassword, deleteStaff,
 } from '../controllers/staff.controller';
+import { resetStaffTwoFactor } from '../controllers/twoFactor.controller';
 import { protect, isAdmin } from '../middleware/auth';
 
 const router = Router();
@@ -23,6 +24,8 @@ router.get('/', listStaff);
 router.post('/', createStaff);
 router.patch('/:id', updateStaff);
 router.post('/:id/reset-password', resetStaffPassword);
+// Lost device + lost recovery codes: only an admin can clear the second factor.
+router.post('/:id/reset-2fa', resetStaffTwoFactor);
 router.delete('/:id', deleteStaff);
 
 export default router;

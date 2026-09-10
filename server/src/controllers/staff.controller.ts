@@ -132,7 +132,7 @@ export const listStaff = async (req: Request, res: Response, next: NextFunction)
 
     const [staff, total] = await Promise.all([
       User.find(filter)
-        .select('name email phone role isActive isEmailVerified createdAt roleRef permissions')
+        .select('name email phone role isActive isEmailVerified createdAt roleRef permissions twoFactorEnabled')
         .populate('roleRef', 'name slug permissions isActive')
         .sort('-createdAt').skip(skip).limit(l).lean(),
       User.countDocuments(filter),

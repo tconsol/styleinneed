@@ -4,11 +4,22 @@ import type { AdminUser } from '../types';
 import { authApi } from '../api';
 import toast from 'react-hot-toast';
 
+/**
+ * `twoFactorRequired` means the password was right but a second factor is
+ * still owed — the sign-in form swaps to the code step rather than showing
+ * "invalid credentials".
+ */
+export interface LoginResult {
+  ok: boolean;
+  twoFactorRequired?: boolean;
+  message?: string;
+}
+
 interface AuthState {
   user: AdminUser | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<boolean>;
+  login: (email: string, password: string, totp?: string) => Promise<LoginResult>;
   logout: () => Promise<void>;
   fetchMe: () => Promise<void>;
   updateProfile: (data: { name?: string; phone?: string }) => Promise<boolean>;
@@ -24,26 +35,32 @@ export const useAuthStore = create<AuthState>()(
       isAuthenticated: false,
       isLoading: false,
 
-      login: async (email, password) => {
+      login: async (email, password, totp) => {
         set({ isLoading: true });
         try {
-          const { data } = await authApi.login(email, password);
+          const { data } = await authApi.login(email, password, totp);
           const { accessToken, refreshToken, user } = data.data;
 
           if (!STAFF_ROLES.includes(user.role)) {
             toast.error('Access denied. Staff account required.');
             set({ isLoading: false });
-            return false;
+            return { ok: false, message: 'Access denied. Staff account required.' };
           }
 
           localStorage.setItem('adminAccessToken', accessToken);
           localStorage.setItem('adminRefreshToken', refreshToken);
           set({ user, isAuthenticated: true, isLoading: false });
           toast.success(`Welcome, ${user.name}`);
-          return true;
-        } catch {
+          return { ok: true };
+        } catch (err) {
           set({ isLoading: false });
-          return false;
+          const body = (err as { response?: { data?: { message?: string; errors?: { twoFactorRequired?: boolean } } } })
+            .response?.data;
+          return {
+            ok: false,
+            twoFactorRequired: !!body?.errors?.twoFactorRequired,
+            message: body?.message,
+          };
         }
       },
 

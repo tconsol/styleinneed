@@ -4,7 +4,11 @@ import {
   forgotPassword, resetPassword, getMe, updateProfile, changePassword, manageAddresses, googleAuth,
   requestEmailChange, verifyEmailChange,
 } from '../controllers/auth.controller';
-import { protect } from '../middleware/auth';
+import {
+  getTwoFactorStatus, startTwoFactorSetup, enableTwoFactor,
+  disableTwoFactor, regenerateRecoveryCodes,
+} from '../controllers/twoFactor.controller';
+import { protect, isAnyStaff } from '../middleware/auth';
 import { authLimiter, otpLimiter } from '../middleware/security';
 import { validate } from '../middleware/validate';
 import Joi from 'joi';
@@ -21,6 +25,9 @@ const registerSchema = Joi.object({
 const loginSchema = Joi.object({
   email: Joi.string().email().required(),
   password: Joi.string().required(),
+  // Second factor: a 6-digit TOTP or an 8-character recovery code. Only
+  // required once the account has 2FA on, which login decides.
+  totp: Joi.string().trim().max(12).optional().allow(''),
 });
 
 const otpSchema = Joi.object({
@@ -44,5 +51,13 @@ router.post('/change-email/request', protect, authLimiter, requestEmailChange);
 router.post('/change-email/verify', protect, verifyEmailChange);
 router.patch('/change-password', protect, changePassword);
 router.post('/addresses', protect, manageAddresses);
+
+// Two-factor auth — staff only. Customers have no place to enter a code at
+// sign-in, so enrolling one would lock them out of the storefront.
+router.get('/2fa/status', protect, isAnyStaff, getTwoFactorStatus);
+router.post('/2fa/setup', protect, isAnyStaff, authLimiter, startTwoFactorSetup);
+router.post('/2fa/enable', protect, isAnyStaff, authLimiter, enableTwoFactor);
+router.post('/2fa/disable', protect, isAnyStaff, authLimiter, disableTwoFactor);
+router.post('/2fa/recovery-codes', protect, isAnyStaff, authLimiter, regenerateRecoveryCodes);
 
 export default router;

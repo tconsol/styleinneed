@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Edit2, Trash2, Search, UserCog, KeyRound, ShieldCheck, Copy, Check } from 'lucide-react';
+import { Plus, Edit2, Trash2, Search, UserCog, KeyRound, ShieldCheck, Copy, Check, ShieldOff } from 'lucide-react';
 import Modal from '../../components/common/Modal';
 import Select from '../../components/common/Select';
 import StatusToggle from '../../components/common/StatusToggle';
@@ -110,6 +110,20 @@ export default function StaffPage() {
     } catch { /* interceptor */ }
   };
 
+  const resetTwoFactor = async (m: StaffMember) => {
+    if (!(await confirm({
+      title: `Clear two-factor for ${m.name}?`,
+      message: 'Use this only when they have lost both their device and their recovery codes. '
+        + 'Their next sign-in needs the password alone until they enrol again.',
+      confirmText: 'Clear 2FA', danger: true,
+    }))) return;
+    try {
+      const { data } = await staffApi.resetTwoFactor(m._id);
+      toast.success(data.message || 'Two-factor cleared');
+      load();
+    } catch { /* interceptor */ }
+  };
+
   const remove = async (m: StaffMember) => {
     if (!(await confirm({
       title: `Remove ${m.name}?`,
@@ -158,15 +172,16 @@ export default function StaffPage() {
                 <th className="th text-left pl-5">Staff member</th>
                 <th className="th text-left" style={{ width: '180px' }}>Role</th>
                 <th className="th text-center" style={{ width: '90px' }}>Status</th>
+                <th className="th text-center" style={{ width: '80px' }}>2FA</th>
                 <th className="th text-left" style={{ width: '110px' }}>Added</th>
-                <th className="th text-center" style={{ width: '120px' }}>Actions</th>
+                <th className="th text-center" style={{ width: '150px' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={5} className="text-center py-12"><span className="w-6 h-6 border-2 border-brand-border border-t-primary rounded-full animate-spin inline-block" /></td></tr>
+                <tr><td colSpan={6} className="text-center py-12"><span className="w-6 h-6 border-2 border-brand-border border-t-primary rounded-full animate-spin inline-block" /></td></tr>
               ) : staff.length === 0 ? (
-                <tr><td colSpan={5} className="text-center py-16">
+                <tr><td colSpan={6} className="text-center py-16">
                   <UserCog size={32} className="mx-auto mb-2 text-brand-border" />
                   <p className="text-[11px] text-brand-muted">No staff accounts yet</p>
                 </td></tr>
@@ -205,6 +220,16 @@ export default function StaffPage() {
                           : <StatusToggle isActive={m.isActive} onToggle={() => void toggleActive(m)} />}
                       </div>
                     </td>
+                    <td className="px-3 py-3">
+                      <div className="flex justify-center">
+                        <span className="px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider"
+                          style={m.twoFactorEnabled
+                            ? { background: 'var(--c-success-soft)', color: 'var(--c-success)' }
+                            : { background: 'var(--c-warning-soft)', color: 'var(--c-warning)' }}>
+                          {m.twoFactorEnabled ? 'On' : 'Off'}
+                        </span>
+                      </div>
+                    </td>
                     <td className="px-3 py-3 text-[10px] text-brand-muted">{formatDate(m.createdAt)}</td>
                     <td className="px-3 py-3">
                       <div className="flex items-center justify-center gap-1">
@@ -216,6 +241,12 @@ export default function StaffPage() {
                           className="w-7 h-7 rounded-lg flex items-center justify-center text-brand-muted hover:text-primary transition-colors">
                           <KeyRound size={13} />
                         </button>
+                        {!isSelf && m.twoFactorEnabled && (
+                          <button onClick={() => resetTwoFactor(m)} title="Clear two-factor (lost device)"
+                            className="w-7 h-7 rounded-lg flex items-center justify-center text-brand-muted hover:text-primary transition-colors">
+                            <ShieldOff size={13} />
+                          </button>
+                        )}
                         {!isSelf && (
                           <button onClick={() => remove(m)} title="Remove"
                             className="w-7 h-7 rounded-lg flex items-center justify-center text-brand-muted hover:bg-red-50 hover:text-red-500 transition-colors">

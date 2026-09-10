@@ -1,7 +1,8 @@
 import { Response, NextFunction, Request } from 'express';
+import crypto from 'crypto';
 import Wallet from '../models/Wallet';
 import WalletTransaction from '../models/WalletTransaction';
-import GiftCard, { generateGiftCardCode } from '../models/GiftCard';
+import GiftCard, { generateGiftCardCode, generateGiftCardPin, MAX_PIN_ATTEMPTS } from '../models/GiftCard';
 import User from '../models/User';
 import AuditLog from '../models/AuditLog';
 import { getSettings } from '../models/Settings';
@@ -9,6 +10,10 @@ import { AuthRequest } from '../types';
 import { sendSuccess, sendError, getPagination } from '../utils/apiResponse';
 import { getBalance, credit, debit } from '../utils/wallet';
 import { ensureReferralCode } from '../utils/referrals';
+import { encryptSecret, decryptSecret } from '../utils/secretCrypto';
+import { sendGiftCardEmail } from '../services/email.service';
+import { getAppearance } from './settings.controller';
+import { primaryClientUrl } from '../middleware/security';
 
 /** Customer: balance + recent ledger entries. */
 export const getMyWallet = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
@@ -40,18 +45,48 @@ export const getMyWallet = async (req: AuthRequest, res: Response, next: NextFun
 export const redeemGiftCard = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const code = String(req.body.code || '').trim().toUpperCase();
+    const pin = String(req.body.pin || '').replace(/\D/g, '');
     if (!code) { sendError(res, 'Enter a gift card code', 400); return; }
 
-    const card = await GiftCard.findOne({ code });
+    const card = await GiftCard.findOne({ code }).select('+pin +pinAttempts');
     // Same message for "no such code" and "already used" so the endpoint can't
     // be used to enumerate which codes exist.
     const invalid = () => sendError(res, 'This gift card is not valid or has already been used', 400);
     if (!card || !card.isActive || card.isRedeemed) { invalid(); return; }
     if (card.expiresAt && card.expiresAt < new Date()) { sendError(res, 'This gift card has expired', 400); return; }
 
+    // Cards issued before PINs existed have none, and still redeem on the code
+    // alone — adding the field must not strand money already in circulation.
+    const expectedPin = decryptSecret(card.pin);
+    if (expectedPin) {
+      if (!pin) { sendError(res, 'Enter the PIN printed on your gift card', 400); return; }
+
+      const a = Buffer.from(pin);
+      const b = Buffer.from(expectedPin);
+      const ok = a.length === b.length && crypto.timingSafeEqual(a, b);
+
+      if (!ok) {
+        // Count the miss atomically and lock the card once the budget is gone,
+        // so a valid code can't be paired with a brute-forced PIN.
+        const after = await GiftCard.findOneAndUpdate(
+          { _id: card._id },
+          { $inc: { pinAttempts: 1 } },
+          { new: true, projection: { pinAttempts: 1 } }
+        );
+        const used = after?.pinAttempts ?? MAX_PIN_ATTEMPTS;
+        if (used >= MAX_PIN_ATTEMPTS) {
+          await GiftCard.updateOne({ _id: card._id }, { isActive: false });
+          sendError(res, 'Too many incorrect PINs — this card is now locked. Contact support.', 400);
+          return;
+        }
+        sendError(res, `Incorrect PIN. ${MAX_PIN_ATTEMPTS - used} attempt(s) left.`, 400);
+        return;
+      }
+    }
+
     const claimed = await GiftCard.findOneAndUpdate(
       { _id: card._id, isRedeemed: false, isActive: true },
-      { isRedeemed: true, redeemedBy: req.user!._id, redeemedAt: new Date() },
+      { isRedeemed: true, redeemedBy: req.user!._id, redeemedAt: new Date(), pinAttempts: 0 },
       { new: true }
     );
     if (!claimed) { invalid(); return; }
@@ -115,6 +150,40 @@ export const listGiftCards = async (req: Request, res: Response, next: NextFunct
   }
 };
 
+/**
+ * Registered customers, for the gift-card recipient picker.
+ *
+ * Deliberately gated on `gift-cards` rather than `customers`, and returns only
+ * the three fields the picker renders — issuing a card shouldn't require (or
+ * leak) the full customer record.
+ */
+export const listGiftCardRecipients = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { search, limit } = req.query as Record<string, string>;
+    const l = Math.min(Math.max(Number(limit) || 20, 1), 50);
+
+    const filter: Record<string, unknown> = { role: 'customer' };
+    if (search) {
+      // Escaped: a stray "(" or "*" typed in the search box would otherwise
+      // throw an invalid-regex error instead of just matching nothing.
+      const safe = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      filter.$or = [
+        { name: { $regex: safe, $options: 'i' } },
+        { email: { $regex: safe, $options: 'i' } },
+      ];
+    }
+
+    const [users, total] = await Promise.all([
+      User.find(filter).select('name email').sort('name').limit(l).lean(),
+      User.countDocuments(filter),
+    ]);
+
+    sendSuccess(res, 'Recipients', users, 200, { page: 1, limit: l, total, pages: 1 });
+  } catch (err) {
+    next(err);
+  }
+};
+
 export const createGiftCards = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const amount = Number(req.body.amount);
@@ -123,24 +192,134 @@ export const createGiftCards = async (req: AuthRequest, res: Response, next: Nex
 
     if (!amount || amount < 1) { sendError(res, 'Enter a gift card amount', 400); return; }
 
-    const docs = Array.from({ length: quantity }, () => ({
-      code: generateGiftCardCode(),
-      amount,
-      issuedTo,
-      note,
-      expiresAt: expiresAt ? new Date(`${expiresAt}T23:59:59`) : undefined,
-      createdBy: req.user!._id,
-    }));
-    const created = await GiftCard.insertMany(docs);
+    // Picking recipients issues one card each, so every code is tied to a
+    // named person. Without them it falls back to `quantity` blank cards.
+    const rawRecipients: unknown[] = Array.isArray(req.body.recipients) ? req.body.recipients : [];
+    const recipients: string[] = [...new Set(
+      rawRecipients.map((r) => String(r || '').trim().toLowerCase()).filter(Boolean)
+    )].slice(0, 100);
+
+    const expiry = expiresAt ? new Date(`${expiresAt}T23:59:59`) : undefined;
+    // The plain PIN exists only here and in the email — storage is encrypted.
+    const build = (to?: string) => {
+      const plainPin = generateGiftCardPin();
+      return {
+        plainPin,
+        doc: {
+          code: generateGiftCardCode(),
+          pin: encryptSecret(plainPin),
+          amount,
+          issuedTo: to,
+          note,
+          expiresAt: expiry,
+          createdBy: req.user!._id,
+        },
+      };
+    };
+
+    const built = recipients.length
+      ? recipients.map((to) => build(to))
+      : Array.from({ length: quantity }, () => build(issuedTo));
+
+    const created = await GiftCard.insertMany(built.map((b) => b.doc));
+    const count = created.length;
 
     await AuditLog.create({
       user: req.user!._id,
       action: 'CREATE_GIFT_CARDS',
       resource: 'giftcard',
-      changes: { quantity, amount, total: quantity * amount },
+      changes: { quantity: count, amount, total: count * amount, recipients: recipients.length || undefined },
     });
 
-    sendSuccess(res, `${quantity} gift card(s) created`, created, 201);
+    // Deliver to real addresses. Only the rows that actually reached someone
+    // get `emailSentAt`, so the admin can see who still needs their code.
+    let emailed = 0;
+    if (req.body.sendEmail !== false && recipients.length) {
+      const appearance = await getAppearance();
+      const base = primaryClientUrl();
+      const named = await User.find({ email: { $in: recipients } }).select('name email').lean();
+      const nameByEmail = new Map(named.map((u) => [u.email, u.name]));
+
+      const results = await Promise.allSettled(
+        created.map((card, i) => sendGiftCardEmail(card.issuedTo!, {
+          code: card.code,
+          pin: built[i].plainPin,
+          amount: card.amount,
+          recipientName: nameByEmail.get(card.issuedTo!),
+          note,
+          expiresAt: card.expiresAt,
+          ctaUrl: `${base}/wallet`,
+          theme: {
+            primary: appearance.primary, primaryDark: appearance.primaryDark,
+            bg: appearance.bg, surface: appearance.surface,
+            text: appearance.text, muted: appearance.muted, border: appearance.border,
+          },
+        }))
+      );
+
+      const deliveredIds = created.filter((_, i) => results[i].status === 'fulfilled').map((c) => c._id);
+      emailed = deliveredIds.length;
+      if (emailed) await GiftCard.updateMany({ _id: { $in: deliveredIds } }, { emailSentAt: new Date() });
+    }
+
+    const msg = emailed
+      ? `${count} gift card(s) created — ${emailed} emailed`
+      : `${count} gift card(s) created`;
+
+    // `insertMany` hands back the documents as constructed, so `select: false`
+    // does not apply — strip the secrets explicitly before they leave.
+    const safe = created.map((c) => {
+      const { pin: _pin, pinAttempts: _pinAttempts, ...rest } = c.toObject();
+      return rest;
+    });
+    sendSuccess(res, msg, safe, 201);
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * Re-send a card to its recipient — for "I lost the email". Works because the
+ * PIN is encrypted rather than hashed; a redeemed card is not re-sent, since
+ * its value is already spent.
+ */
+export const resendGiftCard = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const to = String(req.body.email || '').trim().toLowerCase();
+    const card = await GiftCard.findById(req.params.id).select('+pin');
+    if (!card) { sendError(res, 'Gift card not found', 404); return; }
+    if (card.isRedeemed) { sendError(res, 'This card has already been redeemed', 400); return; }
+    if (!card.isActive) { sendError(res, 'This card is not active', 400); return; }
+
+    const target = to || (card.issuedTo || '').trim().toLowerCase();
+    if (!target.includes('@')) {
+      sendError(res, 'This card has no email address on it — enter one to send it to', 400);
+      return;
+    }
+
+    const appearance = await getAppearance();
+    const recipient = await User.findOne({ email: target }).select('name').lean();
+
+    await sendGiftCardEmail(target, {
+      code: card.code,
+      pin: decryptSecret(card.pin) || undefined,
+      amount: card.amount,
+      recipientName: recipient?.name,
+      note: card.note,
+      expiresAt: card.expiresAt,
+      ctaUrl: `${primaryClientUrl()}/wallet`,
+      theme: {
+        primary: appearance.primary, primaryDark: appearance.primaryDark,
+        bg: appearance.bg, surface: appearance.surface,
+        text: appearance.text, muted: appearance.muted, border: appearance.border,
+      },
+    });
+
+    card.issuedTo = target;
+    card.emailSentAt = new Date();
+    await card.save();
+
+    sendSuccess(res, `Gift card sent to ${target}`, { emailSentAt: card.emailSentAt });
   } catch (err) {
     next(err);
   }

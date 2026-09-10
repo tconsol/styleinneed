@@ -11,6 +11,53 @@ import { primaryClientUrl } from '../middleware/security';
 import { encryptSecret } from '../utils/secretCrypto';
 import { findReferrer } from '../utils/referrals';
 import { effectivePermissions } from '../middleware/auth';
+import { verifyToken, consumeRecoveryCode, looksLikeRecoveryCode } from '../utils/totp';
+import { sendWhatsAppOtp, isWhatsAppConfigured } from '../services/whatsapp.service';
+import { normalisePhone, formatPhone } from '../utils/phone';
+import logger from '../utils/logger';
+
+/**
+ * Deliver a signup OTP, preferring WhatsApp when a number is given.
+ *
+ * WhatsApp is best-effort: a number with no WhatsApp account, an unconfigured
+ * integration, or any Meta rejection falls through to email. The caller is
+ * told which channel actually carried it so the UI can say so honestly rather
+ * than pointing the user at an app that never received anything.
+ */
+const deliverSignupOtp = async (
+  user: { name: string; email: string; phone?: string },
+  otp: string
+): Promise<{ channel: 'whatsapp' | 'email'; whatsappFailed: boolean; reason?: string }> => {
+  const destination = normalisePhone(user.phone);
+
+  if (destination && isWhatsAppConfigured()) {
+    const result = await sendWhatsAppOtp(destination, otp, user.name);
+    if (result.ok) return { channel: 'whatsapp', whatsappFailed: false };
+
+    logger.warn(`WhatsApp OTP failed for ${formatPhone(destination)} — falling back to email: ${result.error}`);
+    await sendOtpEmail(user.email, otp, user.name);
+    // Only claim "no WhatsApp" when the number itself was rejected. A bad key
+    // or a missing campaign is our problem, and blaming the user's number for
+    // it would be wrong.
+    // Only claim "no WhatsApp" when Meta rejected the number itself. An
+    // expired token or a bad template is our problem, not the customer's.
+    return {
+      channel: 'email',
+      whatsappFailed: result.kind === 'unreachable',
+      reason: result.error,
+    };
+  }
+
+  await sendOtpEmail(user.email, otp, user.name);
+  return { channel: 'email', whatsappFailed: false };
+};
+
+/** Wording that matches where the code actually went. */
+const otpMessage = (d: { channel: 'whatsapp' | 'email'; whatsappFailed: boolean }): string => {
+  if (d.channel === 'whatsapp') return 'Verification code sent to your WhatsApp.';
+  if (d.whatsappFailed) return 'That number does not have WhatsApp — we emailed your code instead.';
+  return 'Registration successful. Check your email for the code.';
+};
 
 export const register = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
@@ -39,8 +86,10 @@ export const register = async (req: Request, res: Response, next: NextFunction):
         if (referrer && String(referrer._id) !== String(existing._id)) existing.referredBy = referrer._id;
       }
       await existing.save();
-      await sendOtpEmail(email, otp, existing.name);
-      sendSuccess(res, 'Registration successful. Check email for OTP.', { userId: existing._id }, 201);
+      const d = await deliverSignupOtp(existing, otp);
+      sendSuccess(res, otpMessage(d), {
+        userId: existing._id, otpChannel: d.channel, whatsappFailed: d.whatsappFailed,
+      }, 201);
       return;
     }
 
@@ -51,9 +100,11 @@ export const register = async (req: Request, res: Response, next: NextFunction):
       name, email, password, phone, otp, otpExpiry,
       referredBy: referrer?._id,
     });
-    await sendOtpEmail(email, otp, name);
 
-    sendSuccess(res, 'Registration successful. Check email for OTP.', { userId: user._id }, 201);
+    const d = await deliverSignupOtp(user, otp);
+    sendSuccess(res, otpMessage(d), {
+      userId: user._id, otpChannel: d.channel, whatsappFailed: d.whatsappFailed,
+    }, 201);
   } catch (err) {
     next(err);
   }
@@ -63,7 +114,7 @@ export const verifyEmail = async (req: Request, res: Response, next: NextFunctio
   try {
     const { email, otp } = req.body;
 
-    const user = await User.findOne({ email }).select('+otp +otpExpiry');
+    const user = await User.findOne({ email }).select('+otp +otpExpiry +refreshTokens');
     if (!user) {
       sendError(res, 'User not found', 404);
       return;
@@ -82,9 +133,52 @@ export const verifyEmail = async (req: Request, res: Response, next: NextFunctio
     user.isEmailVerified = true;
     user.otp = undefined;
     user.otpExpiry = undefined;
+
+    /**
+     * Sign them straight in.
+     *
+     * Entering the emailed code already proves control of the address, so
+     * demanding the password again immediately afterwards adds no security —
+     * it only costs the customer a step at the least patient moment.
+     *
+     * Two exceptions get no session: a deactivated account, and one with a
+     * second factor set up (which a brand-new signup never has, but the check
+     * costs nothing and keeps this from becoming a way around 2FA).
+     */
+    const canAutoLogin = user.isActive && !user.twoFactorEnabled;
+
+    if (!canAutoLogin) {
+      await user.save();
+      sendSuccess(res, 'Email verified. Please sign in.', { autoLogin: false });
+      return;
+    }
+
+    const payload = { userId: user._id.toString(), role: user.role };
+    const accessToken = generateAccessToken(payload);
+    const refresh = generateRefreshToken(payload);
+
+    user.refreshTokens = [...(user.refreshTokens || []).slice(-4), refresh];
     await user.save();
 
-    sendSuccess(res, 'Email verified successfully');
+    await AuditLog.create({
+      user: user._id,
+      action: 'LOGIN',
+      resource: 'auth',
+      ip: req.ip,
+      userAgent: req.headers['user-agent'],
+    }).catch(() => {});
+
+    sendSuccess(res, 'Email verified — you are signed in', {
+      autoLogin: true,
+      accessToken,
+      refreshToken: refresh,
+      user: {
+        _id: user._id, name: user.name, email: user.email, role: user.role,
+        avatar: user.avatar, providerRef: user.providerRef,
+        twoFactorEnabled: !!user.twoFactorEnabled,
+        permissions: user.role === 'admin' ? [] : effectivePermissions(user),
+      },
+    });
   } catch (err) {
     next(err);
   }
@@ -112,8 +206,13 @@ export const resendOtp = async (req: Request, res: Response, next: NextFunction)
     user.otpExpiry = otpExpiry;
     await user.save();
 
-    await sendOtpEmail(email, otp, user.name);
-    sendSuccess(res, 'OTP resent successfully');
+    // `channel: 'email'` lets the client force email after a WhatsApp miss.
+    const forceEmail = req.body.channel === 'email';
+    const d = forceEmail
+      ? (await sendOtpEmail(email, otp, user.name), { channel: 'email' as const, whatsappFailed: false })
+      : await deliverSignupOtp(user, otp);
+
+    sendSuccess(res, otpMessage(d), { otpChannel: d.channel, whatsappFailed: d.whatsappFailed });
   } catch (err) {
     next(err);
   }
@@ -121,10 +220,10 @@ export const resendOtp = async (req: Request, res: Response, next: NextFunction)
 
 export const login = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { email, password } = req.body;
+    const { email, password, totp } = req.body;
 
     const user = await User.findOne({ email })
-      .select('+password +refreshTokens')
+      .select('+password +refreshTokens +twoFactorSecret +twoFactorRecoveryCodes +twoFactorLastCode +twoFactorLastUsedAt')
       .populate('roleRef', 'permissions isActive name');
     if (!user || !(await user.comparePassword(password))) {
       sendError(res, 'Invalid email or password', 401);
@@ -139,6 +238,38 @@ export const login = async (req: Request, res: Response, next: NextFunction): Pr
     if (!user.isActive) {
       sendError(res, 'Account is deactivated', 403);
       return;
+    }
+
+    // Second factor. The password is already correct at this point, so the
+    // client is told to collect a code — that disclosure is unavoidable and
+    // costs nothing an attacker who guessed the password doesn't already know.
+    if (user.twoFactorEnabled) {
+      const code = String(totp || '').trim();
+      if (!code) {
+        sendError(res, 'Enter the code from your authenticator app', 401, { twoFactorRequired: true });
+        return;
+      }
+
+      if (looksLikeRecoveryCode(code)) {
+        const remaining = consumeRecoveryCode(user.twoFactorRecoveryCodes, code);
+        if (!remaining) {
+          sendError(res, 'That code is not valid', 401, { twoFactorRequired: true });
+          return;
+        }
+        user.twoFactorRecoveryCodes = remaining; // single use
+      } else {
+        // A TOTP stays valid for its whole step, so refuse one already spent.
+        const replayed = user.twoFactorLastCode === code
+          && !!user.twoFactorLastUsedAt
+          && Date.now() - user.twoFactorLastUsedAt.getTime() < 90_000;
+
+        if (replayed || !(await verifyToken(user.twoFactorSecret, code))) {
+          sendError(res, 'That code is not valid', 401, { twoFactorRequired: true });
+          return;
+        }
+        user.twoFactorLastCode = code;
+        user.twoFactorLastUsedAt = new Date();
+      }
     }
 
     const payload = { userId: user._id.toString(), role: user.role };
@@ -162,6 +293,7 @@ export const login = async (req: Request, res: Response, next: NextFunction): Pr
       user: {
         _id: user._id, name: user.name, email: user.email, role: user.role,
         avatar: user.avatar, providerRef: user.providerRef,
+        twoFactorEnabled: !!user.twoFactorEnabled,
         // Drives which admin pages a scoped staff/provider login can open —
         // resolved from their role plus any direct grants.
         permissions: user.role === 'admin' ? [] : effectivePermissions(user),

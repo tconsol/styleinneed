@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowRight, Sparkles } from 'lucide-react';
 import { useMegaMenuProducts } from '../../hooks/useCatalog';
+import { thumb, thumbSrcSet } from '../../utils/image';
 import { useMoney } from '../../hooks/useMoney';
 import type { Category, Collection } from '../../types';
 
@@ -105,9 +106,13 @@ export default function MegaMenu({
                   >
                     {link.image ? (
                       <img
-                        src={link.image}
+                        src={thumb(link.image, 80)}
+                        srcSet={thumbSrcSet(link.image, 80, 160)}
+                        sizes="40px"
                         alt=""
-                        loading="lazy"
+                        width={40}
+                        height={40}
+                        decoding="async"
                         className="h-10 w-10 flex-shrink-0 rounded-full object-cover ring-1 ring-white/20"
                       />
                     ) : (
@@ -168,9 +173,16 @@ export default function MegaMenu({
                     >
                       <div className="aspect-product overflow-hidden rounded-lg bg-white/10">
                         <img
-                          src={p.images?.[0] || '/placeholder.jpg'}
+                          src={thumb(p.images?.[0], 240)}
+                          srcSet={thumbSrcSet(p.images?.[0], 240, 480)}
+                          sizes="240px"
                           alt={p.name}
-                          loading="lazy"
+                          width={240}
+                          height={320}
+                          // Not lazy: the panel only renders once it is open, so
+                          // lazy-loading would delay the fetch until after the
+                          // reveal and show empty tiles for a beat.
+                          decoding="async"
                           className="h-full w-full object-cover transition-transform duration-500 group-hover/card:scale-105"
                         />
                       </div>

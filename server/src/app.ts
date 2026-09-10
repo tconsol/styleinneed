@@ -29,6 +29,9 @@ import shippingRoutes from './routes/shipping.routes';
 import walletRoutes from './routes/wallet.routes';
 import staffRoutes from './routes/staff.routes';
 import emailMarketingRoutes from './routes/emailMarketing.routes';
+import inventoryRoutes from './routes/inventory.routes';
+import whatsappMarketingRoutes from './routes/whatsappMarketing.routes';
+import imageRoutes from './routes/image.routes';
 import { getSitemap, getRobots } from './controllers/seo.controller';
 
 const app = express();
@@ -37,6 +40,8 @@ const app = express();
 // Trust the first proxy hop so express-rate-limit reads the real client IP
 // instead of throwing a ValidationError.
 app.set('trust proxy', 1);
+
+const API_PREFIX = '/api/v1';
 
 applySecurityMiddleware(app);
 app.use(express.json({ limit: '10mb' }));
@@ -49,6 +54,13 @@ app.use(
       : ':method :url :status :response-time ms :x-cache'
   )
 );
+// Thumbnails are mounted BEFORE the global limiter on purpose. One page can
+// request dozens of images, and counting them against a 200-request API budget
+// exhausted it in a single mega-menu hover — the browser then got 429s where it
+// expected pictures. They are cached and cheap, so they are not rate limited
+// alongside real API calls.
+app.use(`${API_PREFIX}/images`, imageRoutes);
+
 app.use(globalLimiter);
 
 // Crawler files live at the root (not under /api/v1) so they can be proxied
@@ -81,6 +93,8 @@ app.use(`${API}/shipping-rates`, shippingRoutes);
 app.use(`${API}/wallet`, walletRoutes);
 app.use(`${API}/staff`, staffRoutes);
 app.use(`${API}/email-marketing`, emailMarketingRoutes);
+app.use(`${API}/inventory`, inventoryRoutes);
+app.use(`${API}/whatsapp`, whatsappMarketingRoutes);
 
 app.get('/health', (_req, res) => res.json({ status: 'ok', env: process.env.NODE_ENV }));
 

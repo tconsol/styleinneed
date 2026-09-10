@@ -11,6 +11,8 @@ export interface AdminUser {
   permissions?: string[];
   /** Name of the staff role they hold, when they have one. */
   roleName?: string;
+  /** Whether this account requires a code at sign-in. */
+  twoFactorEnabled?: boolean;
 }
 
 /** An admin-defined staff role: a named bundle of feature keys. */
@@ -34,6 +36,8 @@ export interface StaffMember {
   role: 'admin' | 'manager';
   roleRef?: StaffRole | string;
   isActive: boolean;
+  /** Whether they have enrolled an authenticator app. */
+  twoFactorEnabled?: boolean;
   createdAt: string;
 }
 

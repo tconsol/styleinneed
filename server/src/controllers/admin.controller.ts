@@ -1,7 +1,10 @@
 import { Request, Response, NextFunction } from 'express';
+import { Types } from 'mongoose';
 import User from '../models/User';
 import Order from '../models/Order';
 import Product from '../models/Product';
+import Category from '../models/Category';
+import Collection from '../models/Collection';
 import Review from '../models/Review';
 import AuditLog from '../models/AuditLog';
 import Newsletter from '../models/Newsletter';
@@ -101,6 +104,101 @@ export const getTopProducts = async (_req: Request, res: Response, next: NextFun
       { $project: { _id: 0, product: { _id: 1, name: 1, slug: 1, images: { $slice: ['$product.images', 1] } }, totalSold: 1, revenue: 1 } },
     ]);
     sendSuccess(res, 'Top products', data);
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * Customer-behaviour metrics the revenue chart can't show: how many buyers come
+ * back, what a customer is worth over their lifetime, and where the funnel from
+ * account to purchase leaks.
+ *
+ * "Settled" means paid, or COD that wasn't cancelled — a pending online payment
+ * isn't revenue, and counting it would inflate every figure here.
+ */
+export const getCustomerAnalytics = async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const settled = {
+      $or: [{ paymentStatus: 'paid' }, { paymentMethod: 'cod', status: { $ne: 'cancelled' } }],
+    };
+
+    const [perCustomer, totals, funnel] = await Promise.all([
+      Order.aggregate<{ _id: unknown; orders: number; spent: number; first: Date; last: Date }>([
+        { $match: settled },
+        {
+          $group: {
+            _id: '$user',
+            orders: { $sum: 1 },
+            spent: { $sum: '$total' },
+            first: { $min: '$createdAt' },
+            last: { $max: '$createdAt' },
+          },
+        },
+      ]),
+      Order.aggregate<{ _id: null; revenue: number; orders: number }>([
+        { $match: settled },
+        { $group: { _id: null, revenue: { $sum: '$total' }, orders: { $sum: 1 } } },
+      ]),
+      Promise.all([
+        User.countDocuments({ role: 'customer' }),
+        Cart.countDocuments({ 'items.0': { $exists: true } }),
+        Order.countDocuments(),
+        Order.countDocuments(settled),
+      ]),
+    ]);
+
+    const buyers = perCustomer.length;
+    const repeatBuyers = perCustomer.filter((c) => c.orders > 1).length;
+    const revenue = totals[0]?.revenue || 0;
+    const orders = totals[0]?.orders || 0;
+
+    // Distribution of order counts — shows whether repeat business is a broad
+    // habit or a handful of very loyal customers.
+    const buckets = { one: 0, two: 0, threeToFive: 0, sixPlus: 0 };
+    perCustomer.forEach((c) => {
+      if (c.orders === 1) buckets.one += 1;
+      else if (c.orders === 2) buckets.two += 1;
+      else if (c.orders <= 5) buckets.threeToFive += 1;
+      else buckets.sixPlus += 1;
+    });
+
+    const top = [...perCustomer].sort((a, b) => b.spent - a.spent).slice(0, 10);
+    const topIds = top.map((t) => t._id);
+    const topUsers = await User.find({ _id: { $in: topIds } }).select('name email').lean();
+    const nameById = new Map(topUsers.map((u) => [String(u._id), u]));
+
+    const [customers, activeCarts, allOrders, paidOrders] = funnel;
+
+    sendSuccess(res, 'Customer analytics', {
+      repeat: {
+        buyers,
+        repeatBuyers,
+        // Share of buyers who came back at least once.
+        rate: buyers ? Math.round((repeatBuyers / buyers) * 1000) / 10 : 0,
+        buckets,
+      },
+      lifetime: {
+        // Average revenue per buyer to date. Not a projection — it only
+        // reflects orders already placed.
+        averageValue: buyers ? Math.round(revenue / buyers) : 0,
+        averageOrders: buyers ? Math.round((orders / buyers) * 10) / 10 : 0,
+        averageOrderValue: orders ? Math.round(revenue / orders) : 0,
+        totalRevenue: Math.round(revenue),
+      },
+      topCustomers: top.map((t) => ({
+        name: nameById.get(String(t._id))?.name || 'Deleted customer',
+        email: nameById.get(String(t._id))?.email || '',
+        orders: t.orders,
+        spent: Math.round(t.spent),
+      })),
+      funnel: [
+        { stage: 'Registered', count: customers },
+        { stage: 'Active cart', count: activeCarts },
+        { stage: 'Placed order', count: allOrders },
+        { stage: 'Paid', count: paidOrders },
+      ],
+    });
   } catch (err) {
     next(err);
   }
@@ -482,31 +580,188 @@ export const getAllOrders = async (req: Request, res: Response, next: NextFuncti
   }
 };
 
+/**
+ * Units sold per product, from settled orders.
+ *
+ * Product carries no denormalised sales counter, so this is derived. One
+ * aggregation keyed by product id is far cheaper than a $lookup per row, and
+ * the result doubles as the "most bought" sort key and a visible column.
+ */
+const soldCountMap = async (): Promise<Map<string, number>> => {
+  const rows = await Order.aggregate([
+    {
+      $match: {
+        $or: [
+          { paymentStatus: 'paid' },
+          { paymentMethod: 'cod', status: { $nin: ['cancelled', 'returned'] } },
+        ],
+      },
+    },
+    { $unwind: '$items' },
+    { $group: { _id: '$items.product', sold: { $sum: '$items.quantity' } } },
+  ]);
+  return new Map(rows.map((r) => [String(r._id), r.sold as number]));
+};
+
+/** Resolve a slug-or-id reference to an ObjectId. */
+const resolveCategoryRef = async (value: string): Promise<Types.ObjectId | null> => {
+  if (Types.ObjectId.isValid(value)) return new Types.ObjectId(value);
+  const doc = await Category.findOne({ slug: value }).select('_id').lean();
+  return doc?._id ?? null;
+};
+
+const resolveCollectionRef = async (value: string): Promise<Types.ObjectId | null> => {
+  if (Types.ObjectId.isValid(value)) return new Types.ObjectId(value);
+  const doc = await Collection.findOne({ slug: value }).select('_id').lean();
+  return doc?._id ?? null;
+};
+
 export const getAdminProducts = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { page, limit, sort = '-createdAt', search, isActive } = req.query as Record<string, string>;
+    const {
+      page, limit, sort = '-createdAt', search, isActive,
+      productType, category, collection, provider,
+      minPrice, maxPrice, stockStatus, lowStockThreshold,
+    } = req.query as Record<string, string>;
     const { page: p, limit: l, skip } = getPagination(page, limit);
 
     const filter: Record<string, unknown> = {};
-    if (isActive !== undefined) filter.isActive = isActive === 'true';
-    if (search) filter.$text = { $search: search };
-    // Providers only ever see the products they own.
-    if (req.user?.role === 'provider') filter.provider = req.user.providerRef;
+    if (isActive !== undefined && isActive !== '') filter.isActive = isActive === 'true';
 
-    const [products, total] = await Promise.all([
-      Product.find(filter)
-        .select('+purchasePrice') // internal cost column, admin-only
+    // Regex rather than $text: an admin looks a product up by a fragment of its
+    // name or SKU, and a text index only matches whole words.
+    if (search) {
+      const safe = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      filter.$or = [
+        { name: { $regex: safe, $options: 'i' } },
+        { sku: { $regex: safe, $options: 'i' } },
+        { 'variants.sku': { $regex: safe, $options: 'i' } },
+      ];
+    }
+
+    if (productType) filter.productType = productType;
+
+    if (category) {
+      const id = await resolveCategoryRef(category);
+      // An unknown slug must return nothing, not silently drop the filter.
+      filter.category = id ?? new Types.ObjectId();
+    }
+    if (collection) {
+      const id = await resolveCollectionRef(collection);
+      filter.collections = id ?? new Types.ObjectId();
+    }
+
+    const min = Number(minPrice);
+    const max = Number(maxPrice);
+    if (Number.isFinite(min) || Number.isFinite(max)) {
+      const range: Record<string, number> = {};
+      if (Number.isFinite(min)) range.$gte = min;
+      if (Number.isFinite(max)) range.$lte = max;
+      filter.salePrice = range;
+    }
+
+    const lowAt = Number(lowStockThreshold) > 0 ? Number(lowStockThreshold) : 5;
+    if (stockStatus === 'out') filter.variants = { $not: { $elemMatch: { stock: { $gt: 0 } } } };
+    else if (stockStatus === 'low') filter.variants = { $elemMatch: { stock: { $gt: 0, $lte: lowAt } } };
+    else if (stockStatus === 'in') filter.variants = { $elemMatch: { stock: { $gt: lowAt } } };
+
+    // Providers only ever see their own products. Set last so a `provider`
+    // query param can never widen it.
+    if (req.user?.role === 'provider') filter.provider = req.user.providerRef;
+    else if (provider && Types.ObjectId.isValid(provider)) filter.provider = new Types.ObjectId(provider);
+
+    const sold = await soldCountMap();
+    const bySales = sort === '-sold' || sort === 'sold';
+
+    let products: Record<string, unknown>[];
+    let total: number;
+
+    if (bySales) {
+      // Sales live outside the products collection, so the ordering happens
+      // here: pull matching ids, rank them by the sales map, then fetch only
+      // the page. Ids are small, so this stays cheap.
+      const ids = await Product.find(filter).select('_id').lean();
+      total = ids.length;
+      const ordered = ids
+        .map((d) => String(d._id))
+        .sort((a, b) => {
+          const diff = (sold.get(b) || 0) - (sold.get(a) || 0);
+          return sort === 'sold' ? -diff : diff;
+        })
+        .slice(skip, skip + l);
+
+      const docs = await Product.find({ _id: { $in: ordered.map((id) => new Types.ObjectId(id)) } })
+        .select('+purchasePrice')
         .populate('category', 'name slug')
         .populate('collections', 'name slug')
-        .sort(sort)
-        .skip(skip)
-        .limit(l)
-        .lean(),
-      Product.countDocuments(filter),
+        .lean();
+
+      // `$in` returns natural order, so restore the ranking.
+      const byId = new Map(docs.map((d) => [String(d._id), d as Record<string, unknown>]));
+      products = ordered.map((id) => byId.get(id)).filter(Boolean) as Record<string, unknown>[];
+    } else {
+      const [rows, count] = await Promise.all([
+        Product.find(filter)
+          .select('+purchasePrice') // internal cost column, admin-only
+          .populate('category', 'name slug')
+          .populate('collections', 'name slug')
+          .sort(sort)
+          .skip(skip)
+          .limit(l)
+          .lean(),
+        Product.countDocuments(filter),
+      ]);
+      products = rows as Record<string, unknown>[];
+      total = count;
+    }
+
+    const withSales = products.map((doc) => ({
+      ...doc,
+      sold: sold.get(String(doc._id)) || 0,
+    }));
+
+    sendSuccess(res, 'Products fetched', withSales, 200, {
+      page: p, limit: l, total, pages: Math.ceil(total / l),
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * GET /admin/products/filters — the values the filter bar offers.
+ *
+ * Derived from what actually exists, so a category with no products never
+ * shows up as a dead option.
+ */
+export const getProductFilterOptions = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const scope: Record<string, unknown> = {};
+    if (req.user?.role === 'provider') scope.provider = req.user.providerRef;
+
+    const [types, categoryIds, collectionIds, priceRange] = await Promise.all([
+      Product.distinct('productType', scope),
+      Product.distinct('category', scope),
+      Product.distinct('collections', scope),
+      Product.aggregate([
+        { $match: scope },
+        { $group: { _id: null, min: { $min: '$salePrice' }, max: { $max: '$salePrice' } } },
+      ]),
     ]);
 
-    sendSuccess(res, 'Products fetched', products, 200, {
-      page: p, limit: l, total, pages: Math.ceil(total / l),
+    const [categories, collections] = await Promise.all([
+      Category.find({ _id: { $in: categoryIds } }).select('name slug').sort('name').lean(),
+      Collection.find({ _id: { $in: collectionIds } }).select('name slug').sort('name').lean(),
+    ]);
+
+    sendSuccess(res, 'Filter options', {
+      productTypes: (types as string[]).filter(Boolean).sort(),
+      categories,
+      collections,
+      price: {
+        min: Math.floor(priceRange[0]?.min ?? 0),
+        max: Math.ceil(priceRange[0]?.max ?? 0),
+      },
     });
   } catch (err) {
     next(err);
@@ -619,6 +874,162 @@ export const deleteOrder = async (req: AuthRequest, res: Response, next: NextFun
     });
 
     sendSuccess(res, 'Order deleted');
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * GET /admin/analytics/insights — the detail the revenue chart doesn't show.
+ *
+ * "Settled" here means paid, or COD that hasn't been cancelled — the same
+ * definition the customer analytics uses, so the numbers agree across pages.
+ */
+export const getAnalyticsInsights = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const days = Math.min(Math.max(Number(req.query.days) || 30, 7), 365);
+    const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+    const settled = {
+      $or: [
+        { paymentStatus: 'paid' },
+        { paymentMethod: 'cod', status: { $nin: ['cancelled', 'returned'] } },
+      ],
+    };
+
+    const [
+      statusMix, paymentMix, byCategory, byHour, byWeekday,
+      aovTrend, discountStats, fulfilment, topStates,
+    ] = await Promise.all([
+      // Where orders currently sit — the operational picture.
+      Order.aggregate([
+        { $group: { _id: '$status', count: { $sum: 1 }, value: { $sum: '$total' } } },
+        { $sort: { count: -1 } },
+      ]),
+
+      // Which payment methods people actually use.
+      Order.aggregate([
+        { $match: settled },
+        { $group: { _id: '$paymentMethod', count: { $sum: 1 }, revenue: { $sum: '$total' } } },
+        { $sort: { revenue: -1 } },
+      ]),
+
+      // Revenue by category, via the product each line item points at.
+      Order.aggregate([
+        { $match: { ...settled, createdAt: { $gte: since } } },
+        { $unwind: '$items' },
+        { $lookup: { from: 'products', localField: 'items.product', foreignField: '_id', as: 'p' } },
+        { $unwind: '$p' },
+        { $lookup: { from: 'categories', localField: 'p.category', foreignField: '_id', as: 'c' } },
+        { $unwind: { path: '$c', preserveNullAndEmptyArrays: true } },
+        {
+          $group: {
+            _id: { $ifNull: ['$c.name', 'Uncategorised'] },
+            revenue: { $sum: { $multiply: ['$items.price', '$items.quantity'] } },
+            units: { $sum: '$items.quantity' },
+          },
+        },
+        { $sort: { revenue: -1 } },
+        { $limit: 8 },
+      ]),
+
+      // When people order — drives staffing and campaign send times.
+      Order.aggregate([
+        { $match: { ...settled, createdAt: { $gte: since } } },
+        { $group: { _id: { $hour: '$createdAt' }, orders: { $sum: 1 }, revenue: { $sum: '$total' } } },
+        { $sort: { _id: 1 } },
+      ]),
+
+      Order.aggregate([
+        { $match: { ...settled, createdAt: { $gte: since } } },
+        { $group: { _id: { $dayOfWeek: '$createdAt' }, orders: { $sum: 1 }, revenue: { $sum: '$total' } } },
+        { $sort: { _id: 1 } },
+      ]),
+
+      // Average order value over time — a revenue rise means something
+      // different depending on whether AOV or order count moved.
+      Order.aggregate([
+        { $match: { ...settled, createdAt: { $gte: since } } },
+        {
+          $group: {
+            _id: { y: { $year: '$createdAt' }, m: { $month: '$createdAt' }, d: { $dayOfMonth: '$createdAt' } },
+            revenue: { $sum: '$total' },
+            orders: { $sum: 1 },
+          },
+        },
+        { $project: { revenue: 1, orders: 1, aov: { $divide: ['$revenue', '$orders'] } } },
+        { $sort: { '_id.y': 1, '_id.m': 1, '_id.d': 1 } },
+      ]),
+
+      // What discounting actually costs.
+      Order.aggregate([
+        { $match: { ...settled, createdAt: { $gte: since } } },
+        {
+          $group: {
+            _id: null,
+            orders: { $sum: 1 },
+            revenue: { $sum: '$total' },
+            discount: { $sum: { $ifNull: ['$discount', 0] } },
+            shipping: { $sum: { $ifNull: ['$shippingCharge', 0] } },
+            withCoupon: { $sum: { $cond: [{ $ifNull: ['$coupon', false] }, 1, 0] } },
+          },
+        },
+      ]),
+
+      // How long orders take to reach delivered.
+      Order.aggregate([
+        { $match: { status: 'delivered', createdAt: { $gte: since } } },
+        { $project: { hours: { $divide: [{ $subtract: ['$updatedAt', '$createdAt'] }, 1000 * 60 * 60] } } },
+        { $group: { _id: null, avgHours: { $avg: '$hours' }, count: { $sum: 1 } } },
+      ]),
+
+      // Where the money comes from geographically.
+      Order.aggregate([
+        { $match: { ...settled, createdAt: { $gte: since } } },
+        { $group: { _id: '$shippingAddress.state', orders: { $sum: 1 }, revenue: { $sum: '$total' } } },
+        { $sort: { revenue: -1 } },
+        { $limit: 8 },
+      ]),
+    ]);
+
+    const d = discountStats[0] || { orders: 0, revenue: 0, discount: 0, shipping: 0, withCoupon: 0 };
+    const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+    sendSuccess(res, 'Analytics insights', {
+      days,
+      statusMix: statusMix.map((s) => ({ status: s._id || 'unknown', count: s.count, value: s.value })),
+      paymentMix: paymentMix.map((p) => ({ method: p._id || 'unknown', count: p.count, revenue: p.revenue })),
+      byCategory: byCategory.map((c) => ({ name: c._id, revenue: c.revenue, units: c.units })),
+      byHour: Array.from({ length: 24 }, (_, h) => {
+        const hit = byHour.find((x) => x._id === h);
+        return { hour: `${String(h).padStart(2, '0')}:00`, orders: hit?.orders || 0, revenue: hit?.revenue || 0 };
+      }),
+      // Mongo's $dayOfWeek is 1=Sunday.
+      byWeekday: byWeekday.map((w) => ({ day: WEEKDAYS[(w._id as number) - 1], orders: w.orders, revenue: w.revenue })),
+      aovTrend: aovTrend.map((a) => ({
+        label: `${String(a._id.d).padStart(2, '0')}/${String(a._id.m).padStart(2, '0')}`,
+        aov: Math.round(a.aov),
+        orders: a.orders,
+      })),
+      economics: {
+        orders: d.orders,
+        revenue: d.revenue,
+        discount: d.discount,
+        shipping: d.shipping,
+        withCoupon: d.withCoupon,
+        couponRate: d.orders ? Math.round((d.withCoupon / d.orders) * 1000) / 10 : 0,
+        discountRate: d.revenue + d.discount
+          ? Math.round((d.discount / (d.revenue + d.discount)) * 1000) / 10
+          : 0,
+      },
+      fulfilment: {
+        avgHours: fulfilment[0]?.avgHours ? Math.round(fulfilment[0].avgHours * 10) / 10 : null,
+        delivered: fulfilment[0]?.count || 0,
+      },
+      topStates: topStates
+        .filter((s) => s._id)
+        .map((s) => ({ state: s._id, orders: s.orders, revenue: s.revenue })),
+    });
   } catch (err) {
     next(err);
   }

@@ -3,7 +3,7 @@ import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 import mongoSanitize from 'express-mongo-sanitize';
 import compression from 'compression';
-import { Express } from 'express';
+import { Express, RequestHandler } from 'express';
 
 const requireEnv = (name: string): string => {
   const val = process.env[name];
@@ -38,26 +38,46 @@ export const applySecurityMiddleware = (app: Express): void => {
   app.use(compression());
 };
 
-export const globalLimiter = rateLimit({
+/**
+ * Rate limiting is off by default and enabled with RATE_LIMIT_ENABLED=true.
+ *
+ * It was turned off because the limits were interrupting normal use — the
+ * global 200/15min in particular was being consumed by ordinary page traffic.
+ *
+ * The trade-off is real and worth naming: with `authLimiter` inert there is
+ * nothing throttling password guesses against /auth/login, nor OTP guesses
+ * against /auth/verify-email (a 6-digit code is 10^6 tries). Turn this on
+ * before the store is publicly reachable.
+ */
+const limitsEnabled = (): boolean =>
+  String(process.env.RATE_LIMIT_ENABLED || '').toLowerCase() === 'true';
+
+/** A limiter that does nothing while limiting is disabled. */
+const optionalLimiter = (options: Parameters<typeof rateLimit>[0]): RequestHandler => {
+  const limiter = rateLimit(options);
+  return (req, res, next) => (limitsEnabled() ? limiter(req, res, next) : next());
+};
+
+export const globalLimiter = optionalLimiter({
   windowMs: 15 * 60 * 1000,
-  max: 200,
+  max: Number(process.env.RATE_LIMIT_GLOBAL_MAX) || 1000,
   message: { success: false, message: 'Too many requests, please try again later.' },
   standardHeaders: true,
   legacyHeaders: false,
 });
 
-export const authLimiter = rateLimit({
+export const authLimiter = optionalLimiter({
   windowMs: 15 * 60 * 1000,
-  max: 10,
+  max: Number(process.env.RATE_LIMIT_AUTH_MAX) || 30,
   message: { success: false, message: 'Too many auth attempts, please try again later.' },
   standardHeaders: true,
   legacyHeaders: false,
 });
 
-export const otpLimiter = rateLimit({
+export const otpLimiter = optionalLimiter({
   windowMs: 60 * 1000,
-  max: 3,
-  message: { success: false, message: 'Too many OTP requests, please wait 1 minute.' },
+  max: Number(process.env.RATE_LIMIT_OTP_MAX) || 10,
+  message: { success: false, message: 'Too many OTP requests, please wait a minute.' },
   standardHeaders: true,
   legacyHeaders: false,
 });

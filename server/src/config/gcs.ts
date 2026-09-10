@@ -53,6 +53,52 @@ export const uploadToGCS = async (
 };
 
 /**
+ * Upload media in a format the destination actually accepts.
+ *
+ * `uploadToGCS` converts everything to WebP, which WhatsApp rejects for
+ * template headers — and video and PDF cannot pass through sharp at all. So
+ * images are re-encoded to JPEG (universally accepted, still compressed) and
+ * everything else is stored byte-for-byte with its original content type.
+ */
+export const uploadMediaToGCS = async (
+  file: Express.Multer.File,
+  folder: string
+): Promise<{ url: string; contentType: string; filename: string }> => {
+  const isImage = /^image\//.test(file.mimetype) && !/gif/i.test(file.mimetype);
+
+  let body: Buffer = file.buffer;
+  let contentType = file.mimetype || 'application/octet-stream';
+  let ext = (file.originalname.split('.').pop() || 'bin').toLowerCase();
+
+  if (isImage) {
+    body = await sharp(file.buffer)
+      .rotate()
+      .resize({ width: 1600, height: 1600, fit: 'inside', withoutEnlargement: true })
+      .jpeg({ quality: 82 })
+      .toBuffer();
+    contentType = 'image/jpeg';
+    ext = 'jpg';
+  }
+
+  const key = `${folder}/${Date.now()}-${crypto.randomBytes(6).toString('hex')}.${ext}`;
+  const blob = bucket.file(key);
+
+  await blob.save(body, {
+    contentType,
+    resumable: false,
+    metadata: { cacheControl: 'public, max-age=31536000' },
+  });
+
+  try {
+    await blob.makePublic();
+  } catch {
+    /* uniform bucket-level access — public read handled by bucket IAM */
+  }
+
+  return { url: blob.publicUrl(), contentType, filename: file.originalname };
+};
+
+/**
  * Delete an object from the bucket given its public URL. Best-effort —
  * never throws (missing objects are ignored), so it won't block deletes.
  */

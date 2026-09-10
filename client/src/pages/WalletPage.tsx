@@ -43,6 +43,7 @@ export default function WalletPage() {
   const [referral, setReferral] = useState<Referral | null>(null);
   const [loading, setLoading] = useState(true);
   const [code, setCode] = useState('');
+  const [pin, setPin] = useState('');
   const [redeeming, setRedeeming] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -65,9 +66,9 @@ export default function WalletPage() {
     if (!code.trim()) return;
     setRedeeming(true);
     try {
-      const { data } = await walletApi.redeemGiftCard(code.trim());
+      const { data } = await walletApi.redeemGiftCard(code.trim(), pin.trim() || undefined);
       toast.success(data.message || 'Gift card redeemed');
-      setCode('');
+      setCode(''); setPin('');
       load();
     } catch { /* interceptor toasts the reason */ } finally { setRedeeming(false); }
   };
@@ -106,17 +107,28 @@ export default function WalletPage() {
           <p className="mb-3 flex items-center gap-2 font-heading text-base font-semibold text-brand-text">
             <Gift size={16} className="text-primary" /> Redeem a gift card
           </p>
-          <div className="flex gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row">
             <input
               value={code}
               onChange={(e) => setCode(e.target.value.toUpperCase())}
               placeholder="GIFT-XXXX-XXXX-XXXX-XXXX"
               className="flex-1 rounded-lg border border-brand-border bg-brand-bg px-3.5 py-2.5 font-body font-mono text-sm uppercase tracking-wide outline-none transition-colors focus:border-primary"
             />
+            <input
+              value={pin}
+              onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 6))}
+              placeholder="PIN"
+              inputMode="numeric"
+              autoComplete="off"
+              className="w-full rounded-lg border border-brand-border bg-brand-bg px-3.5 py-2.5 text-center font-body font-mono text-sm tracking-[0.3em] outline-none transition-colors focus:border-primary sm:w-28"
+            />
             <button type="submit" disabled={redeeming || !code.trim()} className="btn-primary whitespace-nowrap disabled:opacity-50">
               {redeeming ? 'Checking…' : 'Redeem'}
             </button>
           </div>
+          <p className="mt-2 font-body text-xs text-brand-muted">
+            Both are on the card in your gift card email. Each card can be redeemed once.
+          </p>
         </form>
 
         {/* Referral */}

@@ -29,6 +29,12 @@ export interface IUser extends Document {
   emailChangeOtpExpiry?: Date;
   passwordResetToken?: string;
   passwordResetExpiry?: Date;
+  twoFactorSecret?: string;
+  twoFactorEnabled: boolean;
+  twoFactorRecoveryCodes?: string[];
+  twoFactorEnabledAt?: Date;
+  twoFactorLastCode?: string;
+  twoFactorLastUsedAt?: Date;
   pushToken?: string;
   createdAt: Date;
   updatedAt: Date;

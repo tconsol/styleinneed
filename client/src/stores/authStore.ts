@@ -14,6 +14,8 @@ interface AuthState {
   googleLogin: (credential: string) => Promise<boolean>;
   logout: () => Promise<void>;
   setUser: (user: User) => void;
+  /** Adopt a session issued by something other than the login form. */
+  setSession: (data: { accessToken: string; refreshToken: string; user: User }) => void;
   setTokens: (access: string, refresh: string) => void;
   fetchMe: () => Promise<void>;
   clearAuth: () => void;
@@ -29,6 +31,12 @@ export const useAuthStore = create<AuthState>()(
       refreshToken: null,
       isAuthenticated: false,
       isLoading: false,
+
+      setSession: ({ accessToken, refreshToken, user }) => {
+        localStorage.setItem('accessToken', accessToken);
+        localStorage.setItem('refreshToken', refreshToken);
+        set({ user, accessToken, refreshToken, isAuthenticated: true, isLoading: false });
+      },
 
       login: async (email, password) => {
         set({ isLoading: true });

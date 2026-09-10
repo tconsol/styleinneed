@@ -2,15 +2,17 @@ import { Request, Response, NextFunction } from 'express';
 import User from '../models/User';
 import Order from '../models/Order';
 import Newsletter from '../models/Newsletter';
+import MarketingContact from '../models/MarketingContact';
 import AuditLog from '../models/AuditLog';
 import { AuthRequest } from '../types';
-import { sendSuccess, sendError } from '../utils/apiResponse';
+import { sendSuccess, sendError, getPagination } from '../utils/apiResponse';
+import { parseContactSheet, buildImportTemplate } from '../utils/contactImport';
 import { sendPromotionEmail, PromotionEmail } from '../services/email.service';
 import { primaryClientUrl } from '../middleware/security';
 import { getAppearance } from './settings.controller';
 import logger from '../utils/logger';
 
-export type AudienceSource = 'registrations' | 'orders' | 'newsletter';
+export type AudienceSource = 'registrations' | 'orders' | 'newsletter' | 'imported';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const clean = (e?: string | null): string | null => {
@@ -35,10 +37,11 @@ interface AudienceEntry {
  * keep marketing to them after they've opted out.
  */
 const buildAudience = async () => {
-  const [registered, orders, subscribers, optedOut] = await Promise.all([
+  const [registered, orders, subscribers, imported, optedOut] = await Promise.all([
     User.find({ role: 'customer', isGuest: { $ne: true } }).select('email').lean(),
     Order.find().select('shippingAddress.email user').populate('user', 'email').limit(50_000).lean(),
     Newsletter.find({ isSubscribed: true }).select('email').lean(),
+    MarketingContact.find({ email: { $type: 'string' } }).select('email').lean(),
     Newsletter.find({ isSubscribed: false }).select('email').lean(),
   ]);
 
@@ -54,6 +57,7 @@ const buildAudience = async () => {
   };
 
   registered.forEach((u) => add(u.email, 'registrations'));
+  imported.forEach((c) => add(c.email, 'imported'));
   subscribers.forEach((n) => add(n.email, 'newsletter'));
   orders.forEach((o) => {
     add(o.shippingAddress?.email, 'orders');
@@ -72,6 +76,7 @@ const buildAudience = async () => {
       registrations: countBy('registrations'),
       orders: countBy('orders'),
       newsletter: countBy('newsletter'),
+      imported: countBy('imported'),
       /** Unique addresses after merging all three. */
       total: entries.length,
       /** Present in more than one source — the overlap the raw counts hide. */
@@ -201,6 +206,87 @@ export const exportAudience = async (req: Request, res: Response, next: NextFunc
       { header: 'Sources', value: (e) => e.sources.join(' | ') },
     ]);
     sendCsv(res, `email-audience-${dateStamp()}.csv`, csv);
+  } catch (err) {
+    next(err);
+  }
+};
+
+/* ───────────────────── Spreadsheet import ───────────────────── */
+
+/** GET /email-marketing/import/template */
+export const downloadImportTemplate = async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const buffer = await buildImportTemplate('email');
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', 'attachment; filename="email-contacts-template.xlsx"');
+    res.send(buffer);
+  } catch (err) {
+    next(err);
+  }
+};
+
+/** POST /email-marketing/import */
+export const importContacts = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    if (!req.file?.buffer) { sendError(res, 'Attach an .xlsx, .xls or .csv file', 400); return; }
+
+    const listName = String(req.body.listName || '').trim() || `Import ${new Date().toLocaleDateString('en-IN')}`;
+    const result = await parseContactSheet(req.file.buffer, 'email', listName, req.user!._id);
+
+    await AuditLog.create({
+      user: req.user!._id,
+      action: 'IMPORT_EMAIL_CONTACTS',
+      resource: 'email-marketing',
+      changes: { imported: result.imported, duplicates: result.duplicates, invalid: result.invalid },
+    }).catch(() => {});
+
+    sendSuccess(res, `${result.imported} address(es) imported`, result);
+  } catch (err) {
+    next(err);
+  }
+};
+
+/** GET /email-marketing/imported */
+export const listImported = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { page, limit, search } = req.query as Record<string, string>;
+    const { page: p, limit: l, skip } = getPagination(page, limit);
+
+    const filter: Record<string, unknown> = { email: { $type: 'string' } };
+    if (search) {
+      const safe = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      filter.$or = [
+        { email: { $regex: safe, $options: 'i' } },
+        { name: { $regex: safe, $options: 'i' } },
+      ];
+    }
+
+    const [rows, total, lists] = await Promise.all([
+      MarketingContact.find(filter).sort('-createdAt').skip(skip).limit(l).lean(),
+      MarketingContact.countDocuments(filter),
+      MarketingContact.distinct('listName', { email: { $type: 'string' } }),
+    ]);
+
+    sendSuccess(res, 'Imported addresses', { rows, lists }, 200,
+      { page: p, limit: l, total, pages: Math.ceil(total / l) || 1 });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/** DELETE /email-marketing/imported */
+export const deleteImported = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const ids: string[] = Array.isArray(req.body.ids) ? req.body.ids : [];
+    const listName = req.body.listName ? String(req.body.listName) : '';
+    if (!ids.length && !listName) { sendError(res, 'Nothing selected', 400); return; }
+
+    const filter = ids.length
+      ? { _id: { $in: ids }, email: { $type: 'string' } }
+      : { listName, email: { $type: 'string' } };
+
+    const { deletedCount } = await MarketingContact.deleteMany(filter);
+    sendSuccess(res, `${deletedCount} address(es) removed`, { deleted: deletedCount });
   } catch (err) {
     next(err);
   }

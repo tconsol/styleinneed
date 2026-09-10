@@ -7,8 +7,8 @@ export const authApi = {
   verifyEmail: (data: { email: string; otp: string }) =>
     client.post('/auth/verify-email', data),
 
-  resendOtp: (email: string) =>
-    client.post('/auth/resend-otp', { email }),
+  resendOtp: (email: string, channel?: 'email' | 'whatsapp') =>
+    client.post('/auth/resend-otp', { email, ...(channel ? { channel } : {}) }),
 
   login: (data: { email: string; password: string }) =>
     client.post('/auth/login', data),

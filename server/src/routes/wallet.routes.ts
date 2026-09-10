@@ -2,6 +2,7 @@ import { Router } from 'express';
 import {
   getMyWallet, redeemGiftCard, getMyReferral,
   listGiftCards, createGiftCards, deactivateGiftCard, adjustWallet, getUserWallet,
+  listGiftCardRecipients, resendGiftCard,
 } from '../controllers/wallet.controller';
 import { protect, isAdminOrManager, adminOrFeature } from '../middleware/auth';
 
@@ -16,7 +17,9 @@ router.get('/referral', getMyReferral);
 
 // Admin — gift cards + manual balance corrections
 router.get('/gift-cards', adminOrFeature('gift-cards'), listGiftCards);
+router.get('/gift-cards/recipients', adminOrFeature('gift-cards'), listGiftCardRecipients);
 router.post('/gift-cards', adminOrFeature('gift-cards'), createGiftCards);
+router.post('/gift-cards/:id/resend', adminOrFeature('gift-cards'), resendGiftCard);
 router.patch('/gift-cards/:id/deactivate', adminOrFeature('gift-cards'), deactivateGiftCard);
 router.post('/adjust', isAdminOrManager, adjustWallet);
 router.get('/user/:id', adminOrFeature('customers'), getUserWallet);

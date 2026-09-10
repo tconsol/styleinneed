@@ -1,7 +1,7 @@
 import axios from 'axios';
 import toast from 'react-hot-toast';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1';
+const API_BASE = import.meta.env.VITE_API_URL;
 
 const client = axios.create({
   baseURL: API_BASE,
@@ -37,7 +37,11 @@ client.interceptors.response.use(
   (res) => res,
   async (err) => {
     const original = err.config;
-    if (err.response?.status === 401 && original && !original._retry) {
+    // A 401 from sign-in means bad credentials or a missing 2FA code, not an
+    // expired session — refreshing or force-logging-out there would be wrong.
+    const isLoginCall = typeof original?.url === 'string' && original.url.includes('/auth/login');
+
+    if (err.response?.status === 401 && original && !original._retry && !isLoginCall) {
       original._retry = true;
       const refreshToken = localStorage.getItem('adminRefreshToken');
 

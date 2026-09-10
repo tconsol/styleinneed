@@ -1,8 +1,11 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import Sidebar, { NAV_ITEMS } from './Sidebar';
 import Topbar from './Topbar';
 import NewOrderIsland from './NewOrderIsland';
+import CommandPalette from './CommandPalette';
+import { useRecentPagesStore } from '../../stores/recentPagesStore';
+import { useAdminShortcuts } from '../../hooks/useAdminShortcuts';
 import { useThemeStore } from '../../stores/themeStore';
 import { useAuthStore } from '../../stores/authStore';
 import { useBadgeStore } from '../../hooks/useAdminBadges';
@@ -32,6 +35,13 @@ export default function AdminLayout() {
   const { fetchMe, user } = useAuthStore();
   const { fetch: fetchBadges, incrementOrders, incrementSupport, markViewed } = useBadgeStore();
   const [orderAlert, setOrderAlert] = useState<OrderAlert | null>(null);
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const visitPage = useRecentPagesStore((s) => s.visit);
+
+  // Stable identity, or the shortcut listener would be torn down and rebound
+  // on every render of the layout.
+  const openPalette = useCallback(() => setPaletteOpen(true), []);
+  useAdminShortcuts(openPalette, paletteOpen);
   const alertIdRef = useRef(0);
   const mainRef = useRef<HTMLElement>(null);
 
@@ -45,11 +55,26 @@ export default function AdminLayout() {
     mainRef.current?.scrollTo({ top: 0, left: 0 });
   }, [location.pathname]);
 
-  // Providers may only use the Products area + their own change-password page.
+  // Record the visit for the palette's "recently opened" list. Only named
+  // pages are kept — a detail route like /orders/:id would otherwise fill the
+  // history with entries that read identically.
+  useEffect(() => {
+    const named = [
+      ...NAV_ITEMS.flatMap((s) => s.items).map((i) => ({ href: i.href, label: i.label })),
+      { href: '/settings', label: 'Settings' },
+      { href: '/profile', label: 'My Profile' },
+      { href: '/change-password', label: 'Change Password' },
+    ];
+    const match = named.find((i) => i.href === location.pathname);
+    if (match) visitPage(match);
+  }, [location.pathname, visitPage]);
+
+  // Providers may only use the Products area + their own account pages.
   // Any other route is bounced back to Products.
+  const PROVIDER_ACCOUNT_ROUTES = ['/change-password', '/profile', '/security'];
   useEffect(() => {
     if (user?.role !== 'provider') return;
-    const allowed = location.pathname.startsWith('/products') || location.pathname === '/change-password' || location.pathname === '/profile';
+    const allowed = location.pathname.startsWith('/products') || PROVIDER_ACCOUNT_ROUTES.includes(location.pathname);
     if (!allowed) navigate('/products', { replace: true });
   }, [location.pathname, user?.role, navigate]);
 
@@ -93,7 +118,8 @@ export default function AdminLayout() {
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden lg:pl-[220px]">
         <div className="flex-shrink-0">
-          <Topbar onMenuClick={() => setSidebarOpen(true)} title={title} />
+          <Topbar onMenuClick={() => setSidebarOpen(true)} title={title}
+            onSearchClick={() => setPaletteOpen(true)} />
         </div>
         <main ref={mainRef} className="flex-1 overflow-y-auto overflow-x-hidden p-5 md:p-6">
           <Outlet />
@@ -102,6 +128,7 @@ export default function AdminLayout() {
 
       {/* Dynamic Island — fires when a new order arrives */}
       <NewOrderIsland alert={orderAlert} onClose={() => setOrderAlert(null)} />
+      <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
     </div>
   );
 }

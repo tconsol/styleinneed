@@ -135,6 +135,110 @@ export const sendPromotionEmail = async (email: string, p: PromotionEmail): Prom
   });
 };
 
+export interface GiftCardEmail {
+  code: string;
+  pin?: string;
+  amount: number;
+  recipientName?: string;
+  note?: string;
+  expiresAt?: Date;
+  ctaUrl: string;
+  theme?: PromotionEmailTheme;
+}
+
+/**
+ * The gift card itself, rendered as a card the recipient can read the code and
+ * PIN straight off.
+ *
+ * Built with tables and inline styles because Outlook ignores flexbox and grid,
+ * and the "card" is a background gradient on a <td> rather than an image so it
+ * still renders when a client blocks remote content.
+ */
+export const sendGiftCardEmail = async (email: string, g: GiftCardEmail): Promise<void> => {
+  const t = { ...DEFAULT_PROMO_THEME, ...g.theme };
+  const expiry = g.expiresAt
+    ? g.expiresAt.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+    : null;
+
+  const field = (label: string, value: string, spaced: boolean) => `
+    <td style="padding: 0 6px;">
+      <div style="color: rgba(255,255,255,0.65); font-size: 9px; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 5px;">${label}</div>
+      <div style="color: #fff; font-family: 'Courier New', Courier, monospace; font-size: ${spaced ? '17' : '20'}px; font-weight: 700; letter-spacing: ${spaced ? '1.5' : '4'}px;">${value}</div>
+    </td>`;
+
+  await transporter.sendMail({
+    from,
+    to: email,
+    subject: `Your ₹${g.amount} Style In Need gift card`,
+    html: `
+      <div style="font-family: Inter, Arial, sans-serif; max-width: 560px; margin: auto; background: ${t.bg}; border: 1px solid ${t.border}; border-radius: 12px; overflow: hidden;">
+        <div style="padding: 32px 32px 8px; text-align: center;">
+          <h1 style="font-family: 'Playfair Display', Georgia, serif; color: ${t.text}; font-size: 26px; margin: 0 0 6px;">
+            ${g.recipientName ? `${g.recipientName}, a` : 'A'} gift for you
+          </h1>
+          <p style="color: ${t.muted}; font-size: 14px; line-height: 1.6; margin: 0;">
+            ${g.note ? g.note : 'Use it on anything in the store — it goes straight into your wallet.'}
+          </p>
+        </div>
+
+        <!-- The card -->
+        <div style="padding: 24px 32px;">
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"
+            style="border-radius: 16px; background: ${t.primaryDark}; background-image: linear-gradient(135deg, ${t.primary} 0%, ${t.primaryDark} 100%);">
+            <tr>
+              <td style="padding: 24px 22px 20px;">
+                <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                  <tr>
+                    <td style="color: rgba(255,255,255,0.8); font-size: 10px; letter-spacing: 2.5px; text-transform: uppercase; font-weight: 700;">
+                      Style In Need
+                    </td>
+                    <td align="right" style="color: #fff; font-size: 30px; font-weight: 800; line-height: 1;">
+                      &#8377;${g.amount}
+                    </td>
+                  </tr>
+                </table>
+
+                <div style="height: 1px; background: rgba(255,255,255,0.25); margin: 18px 0;"></div>
+
+                <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                  <tr>${field('Gift card number', g.code, true)}</tr>
+                </table>
+
+                ${g.pin ? `
+                <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-top: 16px;">
+                  <tr>
+                    ${field('PIN', g.pin, false)}
+                    <td align="right" style="padding: 0 6px; color: rgba(255,255,255,0.65); font-size: 10px;">
+                      ${expiry ? `Valid till<br /><span style="color:#fff; font-weight:700; font-size:12px;">${expiry}</span>` : ''}
+                    </td>
+                  </tr>
+                </table>` : (expiry ? `
+                <div style="margin-top: 14px; color: rgba(255,255,255,0.65); font-size: 10px;">
+                  Valid till <span style="color:#fff; font-weight:700;">${expiry}</span>
+                </div>` : '')}
+              </td>
+            </tr>
+          </table>
+        </div>
+
+        <div style="padding: 0 32px 28px; text-align: center;">
+          <a href="${g.ctaUrl}" style="display: inline-block; padding: 14px 40px; background: ${t.primaryDark}; color: #fff; text-decoration: none; border-radius: 999px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; font-size: 13px;">
+            Redeem it now
+          </a>
+          <p style="color: ${t.muted}; font-size: 12px; line-height: 1.7; margin: 18px 0 0;">
+            Sign in, open <strong style="color: ${t.text};">Wallet</strong>, and enter the number${g.pin ? ' and PIN' : ''} above.
+            It can only be redeemed once, so keep this email to yourself.
+          </p>
+        </div>
+
+        <div style="padding: 16px 32px; background: ${t.surface}; border-top: 1px solid ${t.border}; text-align: center;">
+          <p style="color: ${t.muted}; font-size: 11px; margin: 0;">Style In Need Fashions — Elegance Redefined</p>
+        </div>
+      </div>
+    `,
+  });
+};
+
 /** Internal ops alert — tells the admins a variant needs restocking. */
 export const sendLowStockEmail = async (
   to: string[],

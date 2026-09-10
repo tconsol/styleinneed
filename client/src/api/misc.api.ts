@@ -1,7 +1,7 @@
 import axios from 'axios';
 import client from './client';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1';
+const API_BASE = import.meta.env.VITE_API_URL;
 // Public, unauthenticated axios — used for storefront reads that must NEVER
 // trigger the auth interceptor's refresh/logout on a 4xx (e.g. promotions).
 const publicClient = axios.create({ baseURL: API_BASE });
@@ -92,6 +92,6 @@ export const supportApi = {
 
 export const walletApi = {
   getMine: () => client.get('/wallet/me'),
-  redeemGiftCard: (code: string) => client.post('/wallet/redeem', { code }),
+  redeemGiftCard: (code: string, pin?: string) => client.post('/wallet/redeem', { code, pin }),
   getReferral: () => client.get('/wallet/referral'),
 };
